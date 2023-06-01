@@ -121,7 +121,7 @@ def NME(X, Y, W = None, step1Only = False, x_range = False, premasked = False):
     YA = removeVar(Y)
 
     nmeA = metric(XA, YA)
-
+    if  np.isnan(nmeA): set_trace()
     return pd.DataFrame(np.array([nme1, nme2, nme3, nmeA]), 
                         index=['NME1', 'NME2','NME3', 'NMEA'])
   
@@ -227,7 +227,7 @@ def NME_cube(X, Y, *args, **kw):
     YD = YD[mask]
     weights = weights[mask]
     
-    return NME(XD, YD, W = weights, premasked = True)
+    return NME(XD, YD, W = weights, premasked = True, *args, **kw)
 
 def NME_null_cube(X, *args, **kw):
     if len(X.shape) == 3:
@@ -236,12 +236,13 @@ def NME_null_cube(X, *args, **kw):
         mask = ~(np.any(XD.mask, axis = 0) | np.any(np.isnan(XD), axis = 0))
         XD = XD[:,mask].T
     else:
-        weights = iris.analysis.cartography.area_weights(X[0]).flatten()
+        weights = iris.analysis.cartography.area_weights(X).flatten()
         XD =  X.data.flatten()
         mask = ~(XD.mask | np.isnan(XD.data))
         XD = XD[mask]
+
     weights = weights[mask]
-    
-    return NME_null(XD, W = weights, premasked = True)
+         
+    return NME_null(XD, W = weights, premasked = True, *args, **kw)
     
     

@@ -95,13 +95,17 @@ def eval_trends_over_AR6_regions(filenames_observation, observations_names = Non
     
     return result
 
-def NME_by_obs(obs_name):
+def NME_by_obs(obs_name, *arg, **kw):
+    if obs_name == 'All':
+        X = result[result.index.str.contains('observation')].values.T.astype(float)
+        Y = result[result.index.str.contains('simulation')].values.T.astype(float)
+        Y = np.mean(Y, axis = 1)
+    else:
+        X = result.loc['observation ' + obs_name].values.astype(float)
+        Y = result.loc['simulations ' + obs_name].values.astype(float)
     
-    X = result.loc['observation ' + obs_name].values.astype(float)
-    Y = result.loc['simulations ' + obs_name].values.astype(float)
-    
-    nme = NME(X, Y)        
-    nme_null = NME_null(X)
+    nme = NME(X, Y, *arg, **kw)        
+    nme_null = NME_null(X, *arg, **kw)
     
     return pd.DataFrame(np.append(nme_null, nme), index = np.append(nme_null.index, nme.index))
     
@@ -129,11 +133,11 @@ if __name__=="__main__":
     obs_scale = [1.0, 1.0, 1.0/100.0]
 
     units = '1'
-    output_file = 'outputs/trend_burnt_area_metric_results.csv'
+    output_file = 'outputs/trend_burnt_area_metric_results'
     output_maps = 'outputs/burnt_area/'
 
     result = eval_trends_over_AR6_regions(filenames_observation, observations_names,
-                                          output_file, True,
+                                          output_file + '-region.csv', True,
                                           observations_names, filename_model, 
                                           mod_scale, obs_scale,
                                           year_range, n_itertations, tracesID)
@@ -142,6 +146,7 @@ if __name__=="__main__":
     subset_function_args = [{'year_range': year_range},
                             {'annual_aggregate' : iris.analysis.SUM}]
     
+    def annaul_averge_from_map(cube): return np.mean(make_time_series(cube).data)
     def open_compare_obs_mod(filename_obs, scale, name_obs, output_maps, openOnly = False):
         makeDir(output_maps)
         output_maps = output_maps + '/' + name_obs + '/'
@@ -172,13 +177,13 @@ if __name__=="__main__":
         scores = pd.DataFrame(np.append(nme_null, nme), 
                               index = np.append(nme_null.index, nme.index))
         
-        return scores, X, Y, year_range
+        return scores, X, Y, year_range, annaul_averge_from_map(X), annaul_averge_from_map(Y)
     
     temp_file_path = 'temp/eval_trends_nme_over_obs_pickle-' + tracesID + '.pkl'
 
     if os.path.isfile(temp_file_path):
         with open(temp_file_path, "rb") as file:
-            X, Y, nme_over_obs = pickle.load(file)
+            X, Y, nme_over_obs, nme_cube_all, nme_null_cube_all = pickle.load(file)
     else:
         nme_over_obs = list(map(lambda x, y, z: open_compare_obs_mod(x, y, z, output_maps), 
                                 filenames_observation, obs_scale, observations_names))
@@ -212,19 +217,44 @@ if __name__=="__main__":
         Y_filename = output_maps + 'simulation.nc'
         iris.save(X, X_filename)
         iris.save(Y, Y_filename)
-
+        nme_cube_all = NME_cube(X, Y, x_range = True)
+        nme_null_cube_all = NME_null_cube(X, x_range = True)
         with open(temp_file_path, "wb") as file:
-            pickle.dump((X, Y, nme_over_obs), file)
+            pickle.dump((X, Y, nme_over_obs, nme_cube_all, nme_null_cube_all), file)
 
     
-    nme = NME_cube(X, Y)
-    nme_null = NME_null_cube(X)
+    def select_i_from_out(i):  return np.array([out[i] for out in nme_over_obs])
+    nme_by_cell_obs = select_i_from_out(0)[:,:,0]
+    glob_tot_obs = select_i_from_out(4)[:, np.newaxis]
+    glob_tot_mod = select_i_from_out(5)[:, np.newaxis]
+    nme_by_cell_obs = np.concatenate((glob_tot_obs, glob_tot_mod, nme_by_cell_obs), axis=1)
+
+    
+    nme_by_cell_all =  np.concatenate((np.array([annaul_averge_from_map(X)]), 
+                                       np.array([annaul_averge_from_map(Y)]), 
+                                       nme_null_cube_all.values.flatten(),
+                                       nme_cube_all.values.flatten() ))
+    nme_by_cell = np.vstack((nme_by_cell_obs, nme_by_cell_all))
+    
+    nme_by_reg_obs = list(map(NME_by_obs, observations_names))
+    nme_by_reg_obs = np.array(nme_by_reg_obs)[:,:,0]
+    nme_by_reg_all = np.array(NME_by_obs('All', x_range = True))[:,0]
+    nme_by_reg = np.vstack((nme_by_reg_obs, nme_by_reg_all))
+    nme_by_reg = np.hstack((nme_by_cell[:,0:2], nme_by_reg))
+
+    nme_by_both = np.vstack((nme_by_cell, nme_by_reg))
+    index = ['Obs total', 'Mod total', 'Median Null', 'Mean Null', 
+             'Randomly Resampled Null - mean', 'Randomly Resampled Null - sdev',
+             'NME step 1', 'NME step 2', 'NME step 2', 'NME step A']
+    
+    
+    cnames = flatten_list([[obs + ' over cell'] for obs in observations_names + ['All']] + \
+                          [[obs + ' over region'] for obs in observations_names + ['All']])   
+        
+    nme_by_both = pd.DataFrame(nme_by_both.T, index = index, columns = cnames)
+    nme_by_both.to_csv(output_file + '-global.csv')
+    
+
     set_trace()
-    
-    #open_compare_obs_mod(filenames_observation[0], observations_names[0], output_maps)
-    nme_obs = list(map(NME_by_obs, observations_names))
-
-    
-    
     #plot_AR6_hexagons(result, resultID = 41, colorbar_label = 'Gradient Overlap')
 
