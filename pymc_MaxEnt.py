@@ -154,15 +154,27 @@ def predict_MaxEnt_model(trace, y_filen, x_filen_list, scalers, dir = '',
         return np.reshape(out, new_shape)
 
     def sample_model(i): 
-        powers =select_post_param('powers')[i,:]
-        betas =select_post_param('betas')[i,:]
-        return MaxEntFire(betas, powers).fire_model(X)
+        print(i)
+        powers = select_post_param('powers')[i,:]
+        betas = select_post_param('betas')[i,:]
+        model = MaxEntFire(betas, powers)
+        #ys = model.linear_comination(X)
+        burnt_area = model.burnt_area(X = X)
+        burnt_area_probs = model.burnt_area_likelihoods(BA = burnt_area, nesembles = 10)
+        return burnt_area, burnt_area_probs
 
     nits = np.prod(trace.posterior['betas'].values.shape[0:2])
     idx = range(0, nits, int(np.floor(nits/sample_for_plot)))
 
-    Sim = np.array(list(map(sample_model, idx)))
+    ys = list(map(sample_model, idx))
+    
+    Sim = np.array([y[0] for y in ys])
+    Uncertainty = np.array([y[1] for y in ys])
+    Uncertainty = Uncertainty.reshape([Uncertainty.shape[0] * Uncertainty.shape[1], 
+                                       Uncertainty.shape[2]])
+    
     Sim = np.percentile(Sim, q = [10, 90], axis = 0)
+    Uncertainty = np.percentile(Uncertainty, q = [10, 90], axis = 0)
 
     def insert_sim_into_cube(x):
         Pred = Obs.copy()
@@ -174,16 +186,18 @@ def predict_MaxEnt_model(trace, y_filen, x_filen_list, scalers, dir = '',
 
     def plot_map(cube, plot_name, plot_n):
         plot_annual_mean(cube, levels, cmap, plot_name = plot_name, scale = 100*12, 
-                     Nrows = 1, Ncols = 3, plot_n = plot_n)
+                     Nrows = 2, Ncols = 3, plot_n = plot_n)
   
     plot_map(Obs, "Observtations", 1)
     plot_map(insert_sim_into_cube(Sim[0,:]), "Simulation - 10%", 2)
     plot_map(insert_sim_into_cube(Sim[1,:]), "Simulation - 90%", 3)
+    plot_map(insert_sim_into_cube(Uncertainty[0,:]), "Simulation - 10%", 5)
+    plot_map(insert_sim_into_cube(Uncertainty[1,:]), "Simulation - 90%", 6)
     plt.gcf().set_size_inches(8, 6)
     
     fig_dir = dir_outputs + '/figs/'
     if not os.path.exists(fig_dir): os.makedirs(fig_dir)
-    plt.savefig(fig_dir + filename_out + '-maps.png')
+    plt.savefig(fig_dir + filename_out + '-maps-2.png')
 
 
 if __name__=="__main__":

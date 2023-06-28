@@ -4,6 +4,7 @@ import os
 from   io     import StringIO
 import numpy  as np
 import math
+import sys
 
 import pymc  as pm
 import pytensor
@@ -39,7 +40,8 @@ class MaxEntFire(object):
         self.betas = betas
         self.powers = powers
 
-    def fire_model(self, X):
+    
+    def linear_comination(self, X):
         """calculated predicted burnt area based on indepedant variables. 
             At the moment, just a linear model fed through a logistic function to convert to 
             burnt area/fire probablity. But we'll adapt that.   
@@ -50,18 +52,45 @@ class MaxEntFire(object):
             numpy or tensor (depdaning on 'inference' option) 1 d array of length equal to 
 	    no. rows in X of burnt area/fire probabilities.
         """
+        if X is None: sys.exit("Please define X")
+
         def dot_fun(x, p): return self.numPCK.dot(x, p)
         
         y = dot_fun(X, self.betas)
-
+        
         if self.powers is not None:
             X_powers = self.power_response_curve(X)
             y = y + dot_fun(X_powers, self.powers[0,:])        
+        
+        return y
+
+    def burnt_area(self, X = None, y = None):
+        if y is None: y = self.linear_comination(X)
 
         BA = 1.0/(1.0 + self.numPCK.exp(-y))
-    
+        
         return BA
-     
+
+    def burnt_area_likelihoods(self,
+                               burnt_areas_samples = np.linspace(start=0, stop=1, num=101),
+                               BA = None, 
+                               nesembles = None, *args, **kw):
+        if BA is None: BA = self.burnt_area(*args, **kw)
+
+        def prob_y_given_model(y):
+            return (BA**y) * ((1-BA)**(1-y))
+        
+        probs = np.array([prob_y_given_model(i) for i in burnt_areas_samples])
+        
+        if nesembles is not None:
+            def bootstrap_burntArea(p):
+                return np.random.choice(burnt_areas_samples, nesembles, p = p/np.sum(p))
+            
+            probs = np.apply_along_axis(bootstrap_burntArea, 0, probs)
+            
+        return probs    
+
+
     def hinge_1(x0, y0, a, b):
         """ fits a hinge curve function
         x -- numpy array 
