@@ -71,7 +71,7 @@ def fit_MaxEnt_probs_to_data(Y, X, niterations,
     
     ## check if trace file exsts and return if wanted
     if os.path.isfile(trace_file) and grab_old_trace: 
-        return az.from_netcdf(trace_file)
+        return az.from_netcdf(trace_file), trace_file
 
     trace_callback = None
     try:
@@ -103,7 +103,7 @@ def fit_MaxEnt_probs_to_data(Y, X, niterations,
                           callback = trace_callback, *arg, **kw)
         ## save trace file
         trace.to_netcdf(trace_file)
-    return trace
+    return trace, trace_file
 
 def train_MaxEnt_model(y_filen, x_filen_list, dir = '', filename_out = '',
                        dir_outputs = '',
@@ -119,9 +119,10 @@ def train_MaxEnt_model(y_filen, x_filen_list, dir = '', filename_out = '',
                                                      subset_function = subset_function, 
                                                      subset_function_args = subset_function_args)
     
-    trace = fit_MaxEnt_probs_to_data(Y, X, out_dir = dir_outputs, filename = filename, 
-                                     niterations = niterations, cores = cores,
-                                     grab_old_trace = grab_old_trace)
+    trace, trace_file = fit_MaxEnt_probs_to_data(Y, X, out_dir = dir_outputs, 
+                                                 filename = filename, 
+                                                 niterations = niterations, cores = cores,
+                                                 grab_old_trace = grab_old_trace)
     
     az.plot_trace(trace)
     fig_dir = dir_outputs + '/figs/'
@@ -129,12 +130,13 @@ def train_MaxEnt_model(y_filen, x_filen_list, dir = '', filename_out = '',
 
     plt.savefig(fig_dir + filename + '-traces.png')
     
-    return trace, scalers
+    return trace, trace_file, scalers
 
 def predict_MaxEnt_model(trace, y_filen, x_filen_list, scalers, dir = '', 
                          dir_outputs = '', filename_out = '',
                          subset_functionm = None, subset_function_args = None,
-                         sample_for_plot = 1):
+                         paramSamples = 1, hyperparamSamples = 1,
+                         trace_file = None):
 
     Y, X, lmask, scalers = read_all_data_from_netcdf(y_filen, x_filen_list, 
                                                      add_1s_columne = True, dir = dir,
@@ -146,53 +148,88 @@ def predict_MaxEnt_model(trace, y_filen, x_filen_list, scalers, dir = '',
                                     subset_function = subset_function, 
                                     subset_function_args = subset_function_args)
 
-    def select_post_param(name): 
+    def select_post_param(name, i = None): 
         out = trace.posterior[name].values
         A = out.shape[0]
         B = out.shape[1]
         new_shape = ((A * B), *out.shape[2:])
-        return np.reshape(out, new_shape)
+        out = np.reshape(out, new_shape)
+        if i is not None: out = out[i,:]
+        return out
 
     def sample_model(i): 
-        print(i)
-        powers = select_post_param('powers')[i,:]
-        betas = select_post_param('betas')[i,:]
+        print("Sampling interation:" + str(i))
+        powers = select_post_param('powers', i)
+        betas = select_post_param('betas', i)
         model = MaxEntFire(betas, powers)
-        #ys = model.linear_comination(X)
         burnt_area = model.burnt_area(X = X)
-        burnt_area_probs = model.burnt_area_likelihoods(BA = burnt_area, nesembles = 10)
+        burnt_area_probs = model.burnt_area_likelihoods(BA = burnt_area, 
+                                                        nesembles = hyperparamSamples)
         return burnt_area, burnt_area_probs
-
-    nits = np.prod(trace.posterior['betas'].values.shape[0:2])
-    idx = range(0, nits, int(np.floor(nits/sample_for_plot)))
-
-    ys = list(map(sample_model, idx))
     
-    Sim = np.array([y[0] for y in ys])
-    Uncertainty = np.array([y[1] for y in ys])
-    Uncertainty = Uncertainty.reshape([Uncertainty.shape[0] * Uncertainty.shape[1], 
-                                       Uncertainty.shape[2]])
-    
-    Sim = np.percentile(Sim, q = [10, 90], axis = 0)
-    Uncertainty = np.percentile(Uncertainty, q = [10, 90], axis = 0)
+    def insert_sim_into_cube(data, eg_cube, dimname = 'realization'):
+        def addEnsemble_member(i):  
+            Pred = eg_cube.copy()
+            pred = Pred.data.copy().flatten()
+            pred[lmask] = data[i,:]
+            Pred.data = pred.reshape(Pred.data.shape)
+            
+            coord =  iris.coords.AuxCoord(i, dimname)
+            try:
+                Pred.remove_coord(dimname)
+            except:
+                pass        
+            Pred.add_aux_coord(coord)
 
-    def insert_sim_into_cube(x):
-        Pred = Obs.copy()
-        pred = Pred.data.copy().flatten()
+            return(Pred)
         
-        pred[lmask] = x
-        Pred.data = pred.reshape(Pred.data.shape)
-        return(Pred)
+        Preds = [addEnsemble_member(i) for i in range(data.shape[0])]
+        
+        return iris.cube.CubeList(Preds).merge_cube()
+
+    if trace_file is not None:
+        posterior_file = trace_file[:-3] + '-posterior_samples-' + str(paramSamples)
+        posterior_file_uncertainty = posterior_file + '-uncertainty.nc'        
+        posterior_file_error = posterior_file + \
+                               '-hyperSamples-' + str(hyperparamSamples) + '-uncertainty.nc'
+    if  trace_file is not None and os.path.isfile(posterior_file_uncertainty) and \
+        os.path.isfile(posterior_file_error) and grab_old_trace: 
+        Uncertainty = iris.load_cube(posterior_file_uncertainty)
+        Error = iris.load_cube(posterior_file_error)
+    else:   
+        nits = np.prod(trace.posterior['betas'].values.shape[0:2])
+        idx = range(0, nits, int(np.floor(nits/paramSamples)))
+
+        ys = list(map(sample_model, idx))
+        
+        Uncertainty = np.array([y[0] for y in ys])
+        Error = np.array([y[1] for y in ys])
+        Error = Error.reshape([Error.shape[0] * Error.shape[1], Error.shape[2]])
+        
+        Uncertainty = insert_sim_into_cube(Uncertainty, Obs)
+        Error = insert_sim_into_cube(Error, Obs)
+
+        iris.save(Uncertainty, posterior_file_uncertainty)
+        iris.save(Error, posterior_file_error)
+    
+    def annual_mean_percentile(cube, q = [5, 95]):
+        cube = cube.collapsed('time', iris.analysis.MEAN)
+        cube = cube.collapsed('realization', iris.analysis.PERCENTILE, percent=q)
+        return cube
+    
+    
+    Uncertainty = annual_mean_percentile(Uncertainty)
+    Error = annual_mean_percentile(Error)
 
     def plot_map(cube, plot_name, plot_n):
         plot_annual_mean(cube, levels, cmap, plot_name = plot_name, scale = 100*12, 
                      Nrows = 2, Ncols = 3, plot_n = plot_n)
   
     plot_map(Obs, "Observtations", 1)
-    plot_map(insert_sim_into_cube(Sim[0,:]), "Simulation - 10%", 2)
-    plot_map(insert_sim_into_cube(Sim[1,:]), "Simulation - 90%", 3)
-    plot_map(insert_sim_into_cube(Uncertainty[0,:]), "Simulation - 10%", 5)
-    plot_map(insert_sim_into_cube(Uncertainty[1,:]), "Simulation - 90%", 6)
+    plot_map(Uncertainty[0], "Uncertainty - 10%", 2)
+    plot_map(Uncertainty[1], "Uncertainty - 90%", 3)
+    plot_map(Error[0], "Error - 10%", 5)
+    plot_map(Error[1], "Error - 90%", 6)
     plt.gcf().set_size_inches(8, 6)
     
     fig_dir = dir_outputs + '/figs/'
@@ -225,10 +262,12 @@ if __name__=="__main__":
             (though you should be able to adpated this easily if required). 
             Doesnt need dependant variable, but if there, this will (once
             we've implmented it) attempt some evaluation.
-        sample_for_plot -- how many iterations (samples) from optimixation should be used 
+        paramSamples -- how many iterations (samples) from optimization should be used 
             for plotting and evaluation.
-        levels -- levels on teh colourbar on observtation and prodiction maps
-        cmap -- levels on teh colourbar on observtation and prodiction maps
+        hyperparamSamples -- how many samples using error hyperparameters per paramSamples
+            for plotting and evaluation.
+        levels -- levels on the colourbar on observtation and prodiction maps
+        cmap -- levels on the colourbar on observtation and prodiction maps
     Returns:
         trace file, maps, etc (to be added too)
     """
@@ -259,7 +298,8 @@ if __name__=="__main__":
     dir_projecting = "../ConFIRE_attribute/isimip3a/driving_data/GSWP3-W5E5-20yrs/Brazil/AllConFire_2010_2019/"
     #dir_training = "/gws/nopw/j04/jules/mbarbosa/driving_and_obs_overlap/AllConFire_2000_2009/"
 
-    sample_for_plot = 20
+    paramSamples = 100
+    hyperparamSamples = 10
 
     levels = [0, 0.1, 1, 2, 5, 10, 20, 50, 100] 
     cmap = 'OrRd'
@@ -276,11 +316,11 @@ if __name__=="__main__":
               '-Month_' +  '_'.join([str(mn) for mn in months_of_year])
 
     #### Optimize
-    trace, scalers = train_MaxEnt_model(y_filen, x_filen_list, dir_training, 
-                                        filename, dir_outputs,
-                                        fraction_data_for_sample,
-                                        subset_function, subset_function_args,
-                                        niterations, cores, grab_old_trace)
+    trace, trace_file, scalers = train_MaxEnt_model(y_filen, x_filen_list, dir_training, 
+                                                    filename, dir_outputs,
+                                                    fraction_data_for_sample,
+                                                    subset_function, subset_function_args,
+                                                    niterations, cores, grab_old_trace)
 
 
     """ 
@@ -290,13 +330,12 @@ if __name__=="__main__":
     predict_MaxEnt_model(trace, y_filen, x_filen_list, scalers, dir_projecting,
                          dir_outputs, filename,
                          subset_function, subset_function_args,
-                         sample_for_plot)
+                         paramSamples, hyperparamSamples, trace_file = trace_file)
     
 
     '''
     #Run the model with first iteration
-    simulation1 = fire_model(trace.posterior['betas'].values[0,0,:], X, False)
-
+    simulation1 = fire_model(trace.posterior['betas'].values[0,0,:], X,10False)10
     #Plot against observations (Y)
     plt.plot(Y, simulation1, '.')
     plt.show()

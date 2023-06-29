@@ -11,6 +11,7 @@ import pytensor
 import pytensor.tensor as tt
 
 from pdb import set_trace
+
 class MaxEntFire(object):
     """
     Maximum Entropy fire model which takes indepedant variables and coefficants. 
@@ -72,22 +73,35 @@ class MaxEntFire(object):
         return BA
 
     def burnt_area_likelihoods(self,
-                               burnt_areas_samples = np.linspace(start=0, stop=1, num=101),
+                               burnt_areas_samples = None, #np.linspace(start=0, stop=1, num=101),
                                BA = None, 
                                nesembles = None, *args, **kw):
         if BA is None: BA = self.burnt_area(*args, **kw)
+        if burnt_areas_samples is None:
+            burnt_areas_samples = np.linspace(start = np.log(1/20000), 
+                                              stop = -np.log(1/20000), num = 101)
+            burnt_areas_samples = 1.0/(1.0+np.exp(-burnt_areas_samples))
 
         def prob_y_given_model(y):
             return (BA**y) * ((1-BA)**(1-y))
         
+        #BA = 0.33
         probs = np.array([prob_y_given_model(i) for i in burnt_areas_samples])
         
         if nesembles is not None:
             def bootstrap_burntArea(p):
-                return np.random.choice(burnt_areas_samples, nesembles, p = p/np.sum(p))
+                try:
+                    denom =  np.sum(p)
+                    if denom == 0: 
+                        p[:] = 1.0/len(p)
+                        denom = 1.0
+                    return np.random.choice(burnt_areas_samples, nesembles, p = p/denom)
+                except:
+                    yay = p
+                    set_trace()
             
             probs = np.apply_along_axis(bootstrap_burntArea, 0, probs)
-            
+        
         return probs    
 
 
