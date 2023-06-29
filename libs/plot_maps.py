@@ -20,7 +20,10 @@ def plot_annual_mean(cube, levels, cmap, plot_name = None, scale = None,
                      Nrows = 1, Ncols = 1, plot_n = 1, *args, **kw):
 
    
-    aa = cube.collapsed('time', iris.analysis.MEAN)
+    try:
+        aa = cube.collapsed('time', iris.analysis.MEAN)
+    except:
+        aa = cube
     if plot_name is not None: aa.long_name = plot_name
     if scale is not None: aa.data = aa.data * scale
     
