@@ -1,8 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
-'''
-def hinge_1(x0, y0, a, b):
 
+def loadPCK(inference):
+    if inference: 
+        numPCK =  __import__('pytensor').tensor
+    else:
+        numPCK = __import__('numpy')
+    return(
+
+def hinge_1(x0, y0, a, b):
     """ fits a hinge curve function
     x -- numpy array 
      -- hinge point

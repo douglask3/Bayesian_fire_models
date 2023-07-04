@@ -40,15 +40,23 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
         else:
             dataset = iris.load_cube(dir + filename[0], filename[1], callback=sort_time)
     except:
+        print("==============\nERROR!")
+        print("can't open data.")
+        print("Check directory (''" + dir + "''), filename (''" + filename + \
+              "'') or file format")
+        print("==============")
         set_trace()
+    if dataset is None: return None
     if units is not None: dataset.units = units
     if subset_function is not None:
         if isinstance(subset_function, list):
             for FUN, args in zip(subset_function, subset_function_args):
-                dataset = FUN(dataset, **args)
-        else: dataset = subset_function(dataset, **subset_function_args)     
-        
-    
+                try:
+                    dataset = FUN(dataset, **args)
+                except:
+                    print("Warning! function: " + FUN.__name__ + " not applied to file: " + \
+                          dir + filename)
+        else: dataset = subset_function(dataset, **subset_function_args)  
     if make_flat: 
         if time_series is not None: years = dataset.coord('year').points
         dataset = dataset.data.flatten()
@@ -61,7 +69,8 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
     return dataset
 
 def read_all_data_from_netcdf(y_filename, x_filename_list, add_1s_columne = False, 
-                              y_threshold = None, check_mask = True, *args, **kw):
+                              y_threshold = None, x_normalise01 = False, scalers = None,
+                              check_mask = True, frac_random_sample = 1.0, *args, **kw):
     """Read data from netCDF files 
         
     Arguments:
@@ -70,11 +79,16 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, add_1s_columne = Fals
         x_filename_list -- a python list of filename containing the feature variables
         y_threshold -- if converting y into boolean, the threshold we use to spit into 
             0's and 1's
-        add_1s_columne --useful for if using for regressions. Adds a variable of 
+        add_1s_columne -- useful for if using for regressions. Adds a variable of 
             just 1's t rperesent y = SUM(a_i * x_i) + c
+        x_normalise01 -- Boolean. If True, then X's are normalised between 0 and 1.
+        scalers -- None or numpy array of shape 2 by n. columns of X.
+            Defines what scalers (min and max) to apply to each X column. 
+            If None, doesn't appky anything.
         check_mask -- Boolean. If True, simple checks if there are any large negtaive numbers 
-            and makes them out. Assunes that values < -9E9, you dont want. This could be different 
-            in some circumstances
+            and makes them out. Assunes that values < -9E9, you dont want. 
+            This could be different in some circumstances
+        frac_random_sample -- fraction of data to be returned
         see read_variable_from_netcdf comments for *arg and **kw.
     Returns:
         Y - a numpy array of the target variable
@@ -96,14 +110,37 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, add_1s_columne = Fals
     
     for i, filename in enumerate(x_filename_list):
         X[:, i]=read_variable_from_netcdf(filename, make_flat = True, *args, **kw)
+        
 
     if add_1s_columne: 
         X = np.column_stack((X, np.ones(len(X)))) # add a column of ones to X 
+    
     
     if check_mask:
         cells_we_want = np.array([np.all(rw > -9e9) for rw in np.column_stack((X, Y))])
         Y = Y[cells_we_want]
         X = X[cells_we_want, :]
+        
+    if x_normalise01: 
+        scalers = np.array([np.min(X, axis=0), np.max(X, axis=0)])
+        squidge = (scalers[1,:]-scalers[0,:])/(X.shape[0])
+        scalers[0,:] = scalers[0,:] - squidge
+        scalers[1,:] = scalers[1,:] + squidge
+        
+        test = scalers[1,:] == scalers[0,:]
+        scalers[0,test] = 0.0
+        scalers[1,test] = 1.0
+    
+    if frac_random_sample is not None and frac_random_sample < 1:
+        M = X.shape[0]
+        selected_rows = np.random.choice(M, size = int(M * frac_random_sample), replace=False)
+        Y = Y[selected_rows]
+        X = X[selected_rows, :]
+        
+    if scalers is not None:
+        X = (X-scalers[0, :]) / (scalers[1, :] - scalers[0, :])
+        if check_mask: return Y, X, cells_we_want, scalers
 
-        return Y, X, cells_we_want
+    if check_mask or frac_random_sample: return Y, X, cells_we_want
+
     return Y, X
