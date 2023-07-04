@@ -8,9 +8,10 @@ import matplotlib.pyplot as plt
 from pdb import set_trace
 import os
 import pickle
+import glob
     
 def trend_prob_for_region(ar6_region_code, value, observations_names, filename_model, mod_scale,
-                          obs_scale, year_range, n_itertations, tracesID):# in ar6_regions:   
+                          obs_scale, year_range, n_itertations, tracesID, *arg, **kw):# in ar6_regions:   
     
     if not isinstance(ar6_region_code, str): return 
     if ar6_region_code == 'EAN' or ar6_region_code == 'WAN': return
@@ -37,7 +38,8 @@ def trend_prob_for_region(ar6_region_code, value, observations_names, filename_m
         Y, X = read_all_data_from_netcdf(filename_model, filenames_observation, 
                                          time_series = year_range, check_mask = False,
                                          subset_function = subset_functions, 
-                                         subset_function_args = subset_function_args)
+                                         subset_function_args = subset_function_args,
+                                         *arg, **kw)
         Y = Y * mod_scale
         X = X * obs_scale
         np.save(Y_temp_file, Y)  
@@ -95,7 +97,7 @@ def eval_trends_over_AR6_regions(filenames_observation, observations_names = Non
     
     return result
 
-def NME_by_obs(obs_name, *arg, **kw):
+def NME_by_obs(obs_name, result, *arg, **kw):
     if obs_name == 'All':
         X = result[result.index.str.contains('observation')].values.T.astype(float)
         Y = result[result.index.str.contains('simulation')].values.T.astype(float)
@@ -115,32 +117,32 @@ def makeDir(directory):
     except:
         pass
 
-if __name__=="__main__":    
-    filename_model = "/scratch/hadea/isimip3a/u-cc669_isimip3a_fire/20CRv3-ERA5_obsclim/jules-vn6p3_20crv3-era5_obsclim_histsoc_default_burntarea-total_global_monthly_1901_2021.nc"
+def run_for_model(filename_model, name_model, variable_model,
+                  filenames_observation, observations_names,
+                  year_range, 
+                  n_itertations, tracesID, mod_scale,  obs_scale, units,
+                  output_file, output_maps, filename_model_exclude = 'rcp2p6'):
 
-    dir_observation = "/data/dynamic/dkelley/fireMIPbenchmarking/data/benchmarkData/"
-    filenames_observation = ["ISIMIP3a_obs/GFED4.1s_Burned_Fraction.nc", \
-                             "ISIMIP3a_obs/FireCCI5.1_Burned_Fraction.nc", \
-                             "ISIMIP3a_obs/GFED500m_Burned_Percentage.nc"]
-    filenames_observation = [dir_observation + file for file in filenames_observation]
-    
-    observations_names = ['GFED4.1s', 'FireCCI5.1', 'GFED500m']
+    output_file = output_file + '-' +  name_model
+    tracesID = tracesID + '-' + name_model
 
-    year_range = [1996, 2020]
-    n_itertations = 1000
-    tracesID = 'burnt_area_u-cc669'
-    mod_scale = 1.0/100.0
-    obs_scale = [1.0, 1.0, 1.0/100.0]
+    if '*' in filename_model:
+        filename_model = sorted(glob.glob(filename_model))
+        if filename_model_exclude is not None:
+            filename_model = [file for file in filename_model \
+                               if filename_model_exclude not in file]
+        def file_with_year(i):
+            return np.where([str(year_range[i]) in file for file in filename_model])[0][0]
+        id0 = file_with_year(0)
+        id1 = file_with_year(1)
+        filename_model = filename_model[id0:id1]
 
-    units = '1'
-    output_file = 'outputs/trend_burnt_area_metric_results'
-    output_maps = 'outputs/burnt_area/'
-
-    result = eval_trends_over_AR6_regions(filenames_observation, observations_names,
+    result = eval_trends_over_AR6_regions(filenames_observation, observations_names, 
                                           output_file + '-region.csv', True,
                                           observations_names, filename_model, 
                                           mod_scale, obs_scale,
-                                          year_range, n_itertations, tracesID)
+                                          year_range, n_itertations, tracesID, 
+                                          y_variable = variable_model)
 
     subset_functions = [sub_year_range, annual_average]
     subset_function_args = [{'year_range': year_range},
@@ -152,22 +154,23 @@ if __name__=="__main__":
         output_maps = output_maps + '/' + name_obs + '/'
         makeDir(output_maps)
         print(name_obs)
-        def readFUN(filename, subset_function_args):
-            return read_variable_from_netcdf(filename,subset_function = subset_functions, 
+        def readFUN(filename, subset_function_args, *args, **kw):
+            return read_variable_from_netcdf(filename, subset_function = subset_functions, 
                                              make_flat = False, 
-                                             subset_function_args = subset_function_args)
+                                             subset_function_args = subset_function_args,
+                                             *args, **kw)
         
 
         X, year_range = readFUN(filename_obs, subset_function_args)
         subset_function_args[0]['year_range'] = year_range
-        Y, nn = readFUN(filename_model, subset_function_args)
+        Y, nn = readFUN(filename_model, subset_function_args, y_variable = variable_model)
         if mod_scale is not None: Y.data = Y.data * mod_scale
         if scale is not None: X.data = X.data * scale
         if units is not None: Y.units = units
         if units is not None: X.units = units
         
         if openOnly: return X, Y
-        X_filename = output_maps + 'observation.nc'
+        X_filename = output_maps +              'observation.nc'
         Y_filename = output_maps + 'simulation.nc'
         iris.save(X, X_filename)
         iris.save(Y, Y_filename)
@@ -235,10 +238,10 @@ if __name__=="__main__":
                                        nme_null_cube_all.values.flatten(),
                                        nme_cube_all.values.flatten() ))
     nme_by_cell = np.vstack((nme_by_cell_obs, nme_by_cell_all))
-    
-    nme_by_reg_obs = list(map(NME_by_obs, observations_names))
+     
+    nme_by_reg_obs = list(map(lambda obs: NME_by_obs(obs, result), observations_names))
     nme_by_reg_obs = np.array(nme_by_reg_obs)[:,:,0]
-    nme_by_reg_all = np.array(NME_by_obs('All', x_range = True))[:,0]
+    nme_by_reg_all = np.array(NME_by_obs('All', result, x_range = True))[:,0]
     nme_by_reg = np.vstack((nme_by_reg_obs, nme_by_reg_all))
     nme_by_reg = np.hstack((nme_by_cell[:,0:2], nme_by_reg))
 
@@ -258,3 +261,33 @@ if __name__=="__main__":
     set_trace()
     #plot_AR6_hexagons(result, resultID = 41, colorbar_label = 'Gradient Overlap')
 
+
+
+if __name__=="__main__":    
+    filenames_model = ["/scratch/hadea/isimip3a/u-cc669_isimip3a_fire/20CRv3-ERA5_obsclim/jules-vn6p3_20crv3-era5_obsclim_histsoc_default_burntarea-total_global_monthly_1901_2021.nc",
+                      "/hpc/data/d05/cburton/jules_output/u-cf137/GFDL-ESM2M/*.ilamb.*.nc"]
+    names_model = ['isimip3a-era5-obsclim', "isimip2b-GFDL-ESM2M"]
+    variable_model = 'burnt_area_gb'
+    dir_observation = "/data/dynamic/dkelley/fireMIPbenchmarking/data/benchmarkData/"
+    filenames_observation = ["ISIMIP3a_obs/GFED4.1s_Burned_Fraction.nc", \
+                             "ISIMIP3a_obs/FireCCI5.1_Burned_Fraction.nc", \
+                             "ISIMIP3a_obs/GFED500m_Burned_Percentage.nc"]
+    filenames_observation = [dir_observation + file for file in filenames_observation]
+    
+    observations_names = ['GFED4.1s', 'FireCCI5.1', 'GFED500m']
+
+    year_range = [1996, 2020]
+    n_itertations = 1000
+    tracesID = 'burnt_area_trace'
+    mod_scale = 1.0/100.0
+    obs_scale = [1.0, 1.0, 1.0/100.0]
+
+    units = '1'
+    output_file = 'outputs/trend_burnt_area_metric_results'
+    output_maps = 'outputs/burnt_area/'
+
+    run_for_model(filenames_model[1], names_model[1], variable_model,
+                  filenames_observation, observations_names,
+                  year_range, 
+                  n_itertations, tracesID, mod_scale,  obs_scale, units,
+                  output_file, output_maps)

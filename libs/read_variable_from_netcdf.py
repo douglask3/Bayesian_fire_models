@@ -1,12 +1,18 @@
 import numpy as np
 from pdb import set_trace
+import sys
 
 import iris
 from libs.iris_plus import *
 from libs.constrain_cubes_standard import *
 from libs.read_variable_from_netcdf import *
+try:
+    sys.path.append('/home/h03/kwilliam/other_fcm/jules_py/trunk/jules/')
+    import jules
+except:
+    pass
 
-def read_variable_from_netcdf(filename, dir = '', subset_function = None, 
+def read_variable_from_netcdf(filename, dir = '', variable = None, subset_function = None, 
                               make_flat = False, units = None, 
                               subset_function_args = None,
                               time_series = None, 
@@ -34,11 +40,22 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
     print("Opening:")
     print(filename)
     
+    def load_cube(filename, variable):
+        try:
+            out =  jules.load_cube(dir + filename, variable, callback=sort_time)
+        except:
+            out =  iris.load_cube(dir + filename, variable, callback=sort_time)
+        return out
+        
     try:
         if isinstance(filename, str):        
-            dataset = iris.load_cube(dir + filename, callback=sort_time)
+            dataset = load_cube(filename, variable)
+        elif 'nc' not in filename[1]:
+            dataset = load_cube(filename[0], filename[0])
         else:
-            dataset = iris.load_cube(dir + filename[0], filename[1], callback=sort_time)
+            dataset = [load_cube(file, variable) for file in filename]
+            dataset = [cube for cube in dataset if cube.shape[0] > 0]
+            dataset = iris.cube.CubeList(dataset).concatenate_cube()
     except:
         print("==============\nERROR!")
         print("can't open data.")
@@ -68,7 +85,8 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
     
     return dataset
 
-def read_all_data_from_netcdf(y_filename, x_filename_list, add_1s_columne = False, 
+def read_all_data_from_netcdf(y_filename, x_filename_list, y_variable = None, x_variable = None,
+                              add_1s_columne = False, 
                               y_threshold = None, x_normalise01 = False, scalers = None,
                               check_mask = True, frac_random_sample = 1.0, *args, **kw):
     """Read data from netCDF files 
@@ -77,6 +95,7 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, add_1s_columne = Fals
         y_filename -- a two element python list containing the name of the file and the target 
             variable name
         x_filename_list -- a python list of filename containing the feature variables
+        y_variable -- variable we want to extract from y_file
         y_threshold -- if converting y into boolean, the threshold we use to spit into 
             0's and 1's
         add_1s_columne -- useful for if using for regressions. Adds a variable of 
@@ -94,7 +113,8 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, add_1s_columne = Fals
         Y - a numpy array of the target variable
         X - an n-D numpy array of the feature variables 
     """
-    Y = read_variable_from_netcdf(y_filename, make_flat = True, *args, **kw)
+    Y = read_variable_from_netcdf(y_filename, make_flat = True, variable = y_variable,
+                                  *args, **kw)
    
     # Create a new categorical variable based on the threshold
     if y_threshold is not None:
@@ -109,7 +129,8 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, add_1s_columne = Fals
     X = np.zeros([n,m])
     
     for i, filename in enumerate(x_filename_list):
-        X[:, i]=read_variable_from_netcdf(filename, make_flat = True, *args, **kw)
+        X[:, i]=read_variable_from_netcdf(filename, make_flat = True, variable = x_variable,
+                                          *args, **kw)
         
 
     if add_1s_columne: 
