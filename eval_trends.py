@@ -23,6 +23,7 @@ def trend_prob_for_region(region_code, value, region_type, observations_names, f
         region_constrain_function = constrain_GFED
     
     print(region_code)
+    
     subset_functions = [sub_year_range, region_constrain_function, make_time_series]
     subset_function_args = [{'year_range': year_range},
                         {'region_code' : [region_code]}, 
@@ -37,7 +38,7 @@ def trend_prob_for_region(region_code, value, region_type, observations_names, f
     Y_temp_file = tracesID_save + '-Y' + '.npy'
     X_temp_file = tracesID_save + '-X' + '.npy'
     
-    if os.path.isfile(Y_temp_file) and os.path.isfile(X_temp_file) and False: 
+    if os.path.isfile(Y_temp_file) and os.path.isfile(X_temp_file): 
         Y = np.load(Y_temp_file)
         X = np.load(X_temp_file)
     else :
@@ -154,8 +155,8 @@ def run_for_model(filename_model, name_model, variable_model,
                                       region_type,
                                       observations_names, filename_model, 
                                       mod_scale, obs_scale,
-                                      year_range, n_itertations, tracesID,                         
-                                          y_variable = variable_model)
+                                      year_range, n_itertations, tracesID,
+                                      y_variable = variable_model)
 
     subset_functions = [sub_year_range, annual_average]
     subset_function_args = [{'year_range': year_range},
@@ -176,7 +177,7 @@ def run_for_model(filename_model, name_model, variable_model,
 
         X, year_range = readFUN(filename_obs, subset_function_args)
         subset_function_args[0]['year_range'] = year_range
-        Y, nn = readFUN(filename_model, subset_function_args, y_variable = variable_model)
+        Y, nn = readFUN(filename_model, subset_function_args, variable = variable_model)
         if mod_scale is not None: Y.data = Y.data * mod_scale
         if scale is not None: X.data = X.data * scale
         if units is not None: Y.units = units
