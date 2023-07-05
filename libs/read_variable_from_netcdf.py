@@ -39,14 +39,18 @@ def read_variable_from_netcdf(filename, dir = '', variable = None, subset_functi
 
     print("Opening:")
     print(filename)
-    
+    print(variable)
     def load_cube(filename, variable):
         try:
             out =  jules.load_cube(dir + filename, variable, callback=sort_time)
         except:
-            out =  iris.load_cube(dir + filename, variable, callback=sort_time)
+            try:
+                out =  iris.load_cube(dir + filename, variable, callback=sort_time)
+            except:
+                out =  iris.load_cube(dir + filename, callback=sort_time)
         return out
-        
+    
+    filename_print = filename[0] if isinstance(filename, list) else filename 
     try:
         if isinstance(filename, str):        
             dataset = load_cube(filename, variable)
@@ -57,12 +61,15 @@ def read_variable_from_netcdf(filename, dir = '', variable = None, subset_functi
             dataset = [cube for cube in dataset if cube.shape[0] > 0]
             dataset = iris.cube.CubeList(dataset).concatenate_cube()
     except:
+        
         print("==============\nERROR!")
         print("can't open data.")
-        print("Check directory (''" + dir + "''), filename (''" + filename + \
+        print("Check directory (''" + dir + "''), filename (''" + filename_print + \
               "'') or file format")
         print("==============")
+        
         set_trace()
+        
     if dataset is None: return None
     if units is not None: dataset.units = units
     if subset_function is not None:
@@ -72,7 +79,7 @@ def read_variable_from_netcdf(filename, dir = '', variable = None, subset_functi
                     dataset = FUN(dataset, **args)
                 except:
                     print("Warning! function: " + FUN.__name__ + " not applied to file: " + \
-                          dir + filename)
+                          dir + filename_print)
         else: dataset = subset_function(dataset, **subset_function_args)  
         
     if make_flat: 

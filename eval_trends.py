@@ -129,7 +129,7 @@ def makeDir(directory):
     except:
         pass
 
-def run_for_model(filename_model, name_model, variable_model,
+def run_all_eval_for_model(filename_model, name_model, variable_model,
                   filenames_observation, observations_names,
                   year_range, 
                   n_itertations, tracesID, mod_scale,  obs_scale, units,
@@ -184,7 +184,7 @@ def run_for_model(filename_model, name_model, variable_model,
         if units is not None: X.units = units
         
         if openOnly: return X, Y
-        X_filename = output_maps +              'observation.nc'
+        X_filename = output_maps + 'observation.nc'
         Y_filename = output_maps + 'simulation.nc'
         iris.save(X, X_filename)
         iris.save(Y, Y_filename)
@@ -271,11 +271,11 @@ def run_for_model(filename_model, name_model, variable_model,
     nme_by_both = pd.DataFrame(nme_by_both.T, index = index, columns = cnames)
     nme_by_both.to_csv(output_file + '-global.csv')
     
-
-    set_trace()
     #plot_AR6_hexagons(result, resultID = 41, colorbar_label = 'Gradient Overlap')
 
-
+def run_all_eval_for_models(filenames_model, names_model, *args, **kw):
+    [run_all_eval_for_model(filename_model, name_model, *args, **kw) \
+        for filename_model, name_model in zip(filenames_model, names_model)]
 
 if __name__=="__main__":    
     filenames_model = ["/scratch/hadea/isimip3a/u-cc669_isimip3a_fire/20CRv3-ERA5_obsclim/jules-vn6p3_20crv3-era5_obsclim_histsoc_default_burntarea-total_global_monthly_1901_2021.nc",
@@ -302,8 +302,8 @@ if __name__=="__main__":
 
     region_type = 'gfed'
 
-    run_for_model(filenames_model[1], names_model[1], variable_model,
-                  filenames_observation, observations_names,
-                  year_range, 
-                  n_itertations, tracesID, mod_scale,  obs_scale, units,
-                  output_file, output_maps, region_type = region_type)
+    run_all_eval_for_models(filenames_model, names_model, variable_model,
+                            filenames_observation, observations_names,
+                            year_range, 
+                            n_itertations, tracesID, mod_scale,  obs_scale, units,
+                            output_file, output_maps, region_type = region_type)
