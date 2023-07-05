@@ -194,17 +194,39 @@ def constrain_cube_by_cube_and_numericIDs(cube, regions, region):
     mask.data[:] = 0.0
     for reg in region: mask.data += regions.data == reg
     
-    mask.data[mask.data.mask] = 0.0
+    try:
+        mask.data[mask.data.mask] = 0.0
+    except:
+        pass
     mask = mask.data == 0
 
     for layer in cube.data:
-        layer.mask[mask] = False
+        try:
+            layer.mask[mask] = False
+        except:
+            pass
         layer[mask] = np.nan
     
     cube_out = constrain_to_data(cube)
     return cube_out
 
-def constrain_GFED(cube, region, *args, **kw):
+gfed_region_codes = {('BONA', 1),
+                     ('TENA', 2),
+                     ('CEAM', 3),
+                     ('NHSA', 4),
+                     ('SHSA', 5),
+                     ('EURO', 6),
+                     ('MIDE', 7),
+                     ('NHAF', 8),
+                     ('SHAF', 9),
+                     ('BOAS', 10),
+                     ('CEAS', 11),
+                     ('SEAS', 12),
+                     ('EQAS', 13),
+                     ('AUST', 14)}
+
+
+def constrain_GFED(cube, region_code, region = None):
     """constrains a cube to GFED region
         Assumes that the cube is iris and on a 0.5 degree grid
     Arguments:
@@ -231,6 +253,10 @@ def constrain_GFED(cube, region, *args, **kw):
     """
     
     regions = iris.load_cube('data/GFEDregions.nc')
+    if region is None:
+        def seatch_for_region(rc):
+            return [item[1] for item in gfed_region_codes if item[0] == rc][0]
+        region = [seatch_for_region(rc) for rc in region_code]
     return constrain_cube_by_cube_and_numericIDs(cube, regions, region)
 
 def constrain_olson(cube, ecoregions):

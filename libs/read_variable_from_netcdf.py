@@ -74,6 +74,7 @@ def read_variable_from_netcdf(filename, dir = '', variable = None, subset_functi
                     print("Warning! function: " + FUN.__name__ + " not applied to file: " + \
                           dir + filename)
         else: dataset = subset_function(dataset, **subset_function_args)  
+        
     if make_flat: 
         if time_series is not None: years = dataset.coord('year').points
         dataset = dataset.data.flatten()

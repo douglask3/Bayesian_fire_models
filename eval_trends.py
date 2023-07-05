@@ -10,20 +10,26 @@ import os
 import pickle
 import glob
     
-def trend_prob_for_region(ar6_region_code, value, observations_names, filename_model, mod_scale,
-                          obs_scale, year_range, n_itertations, tracesID, *arg, **kw):# in ar6_regions:   
+def trend_prob_for_region(region_code, value, region_type, observations_names, filename_model, 
+                          mod_scale,
+                          obs_scale, year_range, n_itertations, tracesID, *arg, **kw):# in ar6_regions: 
     
-    if not isinstance(ar6_region_code, str): return 
-    if ar6_region_code == 'EAN' or ar6_region_code == 'WAN': return
-    if len(ar6_region_code) > 5: return
-    print(ar6_region_code)
-    subset_functions = [sub_year_range, ar6_region, make_time_series]
+    if region_type is None or region_type == 'ar6':
+        if not isinstance(region_code, str): return 
+        if region_code == 'EAN' or region_code == 'WAN': return
+        if len(region_code) > 5: return
+        region_constrain_function = ar6_region
+    elif region_type == 'gfed':        
+        region_constrain_function = constrain_GFED
+    
+    print(region_code)
+    subset_functions = [sub_year_range, region_constrain_function, make_time_series]
     subset_function_args = [{'year_range': year_range},
-                        {'region_code' : [ar6_region_code]}, 
+                        {'region_code' : [region_code]}, 
                         {'annual_aggregate' : iris.analysis.SUM}]
     
     tracesID_save = 'temp/eval_trends' + tracesID + '-' + \
-                    'REGION---' + ar6_region_code + '---' + \
+                    'REGION---' + region_code + '---' + \
                      '_'.join([str(year) for year in year_range]) + \
                      '-model_scale_' +  str(mod_scale) + \
                      '-obs_scale_' + '_'.join([str(i) for i in obs_scale])
@@ -57,7 +63,7 @@ def trend_prob_for_region(ar6_region_code, value, observations_names, filename_m
     mod_mean = np.nanmean(Yspread, axis = 0)
         
         
-    out =  ar6_region_code, value, obs_mean, mod_mean, nme
+    out =  region_code, value, obs_mean, mod_mean, nme
     
     out = [out[0], out[1]] + list(np.concatenate(out[2:4])) + list(out[4].values.flatten()) + \
           list(nme_null.values.flatten()) + \
@@ -65,14 +71,19 @@ def trend_prob_for_region(ar6_region_code, value, observations_names, filename_m
     
     return(out)
 
-def eval_trends_over_AR6_regions(filenames_observation, observations_names = None,
-                                 output_file = '', grab_output = False,
+def eval_trends_over_regions(filenames_observation, observations_names = None,
+                                 output_file = '', grab_output = False, region_type = 'ar6',
                                  *args, **kw):
     
     if grab_output and os.path.isfile(output_file): 
         return pd.read_csv(output_file, index_col = 0)
-    ar6_regions =  regionmask.defined_regions.ar6.land.region_ids
-
+    if region_type is None or region_type == 'ar6':
+        region_codes =  regionmask.defined_regions.ar6.land.region_ids.items()
+    elif region_type == 'gfed':
+        region_codes = gfed_region_codes
+    else:
+        sys.exit("ERROR: region type not defined")
+        
     if observations_names is None:
         observations_names = [str(i) for i in range(len(filenames_observation))] + ['All']
     
@@ -88,8 +99,8 @@ def eval_trends_over_AR6_regions(filenames_observation, observations_names = Non
                                   'Mod trend - 10%', 'Mod trend - 90%']
     index = flatten_list(index)
     
-    result = list(map(lambda item: trend_prob_for_region(item[0], item[1], *args, **kw), \
-                                    ar6_regions.items()))
+    result = list(map(lambda item: trend_prob_for_region(item[0], item[1], region_type, \
+                                                         *args, **kw), region_codes))
     result = list(filter(lambda x: x is not None, result))
     
     result = pd.DataFrame(np.array(result).T, index = index, columns = np.array(result)[:,0])
@@ -121,10 +132,11 @@ def run_for_model(filename_model, name_model, variable_model,
                   filenames_observation, observations_names,
                   year_range, 
                   n_itertations, tracesID, mod_scale,  obs_scale, units,
-                  output_file, output_maps, filename_model_exclude = 'rcp2p6'):
+                  output_file, output_maps, filename_model_exclude = 'rcp2p6',
+                  region_type = None):
     
-    output_file = output_file + '-' +  name_model
-    tracesID = tracesID + '-' + name_model
+    output_file = output_file + '-' +  name_model + '-' + region_type
+    tracesID = tracesID + '-' + name_model + '-' + region_type
 
     if '*' in filename_model:
         filename_model = sorted(glob.glob(filename_model))
@@ -137,11 +149,12 @@ def run_for_model(filename_model, name_model, variable_model,
         id1 = file_with_year(1)
         filename_model = filename_model[id0:id1]
 
-    result = eval_trends_over_AR6_regions(filenames_observation, observations_names, 
-                                          output_file + '-region.csv', True,
-                                          observations_names, filename_model, 
-                                          mod_scale, obs_scale,
-                                          year_range, n_itertations, tracesID, 
+    result = eval_trends_over_regions(filenames_observation, observations_names, 
+                                      output_file + '-region.csv', True,
+                                      region_type,
+                                      observations_names, filename_model, 
+                                      mod_scale, obs_scale,
+                                      year_range, n_itertations, tracesID,                         
                                           y_variable = variable_model)
 
     subset_functions = [sub_year_range, annual_average]
@@ -286,8 +299,10 @@ if __name__=="__main__":
     output_file = 'outputs/trend_burnt_area_metric_results'
     output_maps = 'outputs/burnt_area/'
 
+    region_type = 'gfed'
+
     run_for_model(filenames_model[1], names_model[1], variable_model,
                   filenames_observation, observations_names,
                   year_range, 
                   n_itertations, tracesID, mod_scale,  obs_scale, units,
-                  output_file, output_maps)
+                  output_file, output_maps, region_type = region_type)
