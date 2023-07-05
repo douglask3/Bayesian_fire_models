@@ -207,6 +207,11 @@ def NME_null(X, axis = 0, x_range = False, return_RR_sample = False, premasked =
 
 
 def NME_cube(X, Y, *args, **kw):
+
+    Y.coord(axis='x').coord_system = X.coord(axis='x').coord_system
+    Y.coord(axis='y').coord_system = X.coord(axis='y').coord_system
+    X = X.regrid(Y, iris.analysis.Linear())
+    
     weights = iris.analysis.cartography.area_weights(Y).flatten()
     if len(X.shape) == (len(Y.shape)+1):
         XD = X.data.reshape(X.shape[0], -1)
@@ -217,7 +222,11 @@ def NME_cube(X, Y, *args, **kw):
     
     YD = Y.data.flatten()
 
-    mask = mask | YD.mask | np.isnan(YD.data)
+    mask = mask | np.isnan(YD.data)
+    try:
+        mask = mask | yd.mask
+    except:
+        pass
     mask = ~mask
     
     if len(XD.shape) == 2:
