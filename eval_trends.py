@@ -35,7 +35,7 @@ def trend_prob_for_region(ar6_region_code, value, observations_names, filename_m
         Y = np.load(Y_temp_file)
         X = np.load(X_temp_file)
     else :
-        Y, X = read_all_data_from_netcdf(filename_model, filenames_observation, 
+        Y, X, = read_all_data_from_netcdf(filename_model, filenames_observation, 
                                          time_series = year_range, check_mask = False,
                                          subset_function = subset_functions, 
                                          subset_function_args = subset_function_args,
@@ -122,7 +122,7 @@ def run_for_model(filename_model, name_model, variable_model,
                   year_range, 
                   n_itertations, tracesID, mod_scale,  obs_scale, units,
                   output_file, output_maps, filename_model_exclude = 'rcp2p6'):
-
+    
     output_file = output_file + '-' +  name_model
     tracesID = tracesID + '-' + name_model
 

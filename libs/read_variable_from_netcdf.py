@@ -136,7 +136,7 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, y_variable = None, x_
     if add_1s_columne: 
         X = np.column_stack((X, np.ones(len(X)))) # add a column of ones to X 
     
-    
+    cells_we_want = None
     if check_mask:
         cells_we_want = np.array([np.all(rw > -9e9) for rw in np.column_stack((X, Y))])
         Y = Y[cells_we_want]
@@ -162,6 +162,7 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, y_variable = None, x_
         X = (X-scalers[0, :]) / (scalers[1, :] - scalers[0, :])
         if check_mask: return Y, X, cells_we_want, scalers
 
-    if check_mask or frac_random_sample: return Y, X, cells_we_want
+    if (check_mask or frac_random_sample) and cells_we_want is not None:
+        return Y, X, cells_we_want
 
     return Y, X
