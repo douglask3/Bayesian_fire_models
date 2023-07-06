@@ -49,9 +49,17 @@ def trend_prob_for_region(region_code, value, region_type, observations_names, f
                                          *arg, **kw)
         Y = Y * mod_scale
         X = X * obs_scale
-        np.save(Y_temp_file, Y)  
-        np.save(X_temp_file, X)
-        
+
+        def save_arrany(x, file):
+            try:
+                x = x.toflex()
+            except:
+                pass
+            np.save(file, x)  
+
+        save_arrany(Y, Y_temp_file)
+        save_arrany(X, X_temp_file)
+
     gradient_compare = find_and_compare_gradients(Y, X, tracesID_save, 
                                                   n_itertations = n_itertations)
         
