@@ -23,7 +23,6 @@ if __name__=="__main__":
     
     observations_names = ['GFED4.1s', 'FireCCI5.1', 'GFED500m']
 
-
     year_range = [1996, 2020]
     n_itertations = 1000
     tracesID = 'burnt_area_trace'
