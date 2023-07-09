@@ -6,7 +6,7 @@ import pandas as pd
 from pdb import set_trace
 import os
 
-def find_and_compare_gradients(Y0, X0, tracesID_save, *args, **kw):
+def find_and_compare_gradients(Y0, X0, tracesID_save, log_transform = False, *args, **kw):
     """ Calculates the prbablity distribution of a log-transformed linear model gradient of 
         Y0 and X0 stepping over each row (assuming each row represents e.g. time) and 
         compares their overlap.
@@ -16,17 +16,23 @@ def find_and_compare_gradients(Y0, X0, tracesID_save, *args, **kw):
             gradient but differnt intercept for each 
         tracesID_save -- string, with path and start of filename where traces and output 
             will be saved.
+        log_transform -- Boolean. should X, Y variables be logged transformed first.
         *args, **kw -- argumements passed to 'run_time_series_regression'
     Returns.
         pandas dataframe of how much the graident of Y0 overlaps with X0 and 10-90% percentile
         range of Y0 and X0.
     """
-    Y = np.log(Y0 + 0.000000000000001)
-    X = np.log(X0 + 0.000000000000001)
+    if log_transform:
+        Y = np.log(Y0 + 0.000000000000001)
+        X = np.log(X0 + 0.000000000000001)
+    else:
+        Y = Y0
+        X = X0
     
+
     Y_grad = run_time_series_regression(Y, tracesID_save + '-Y', *args, **kw)
     X_grad = run_time_series_regression(X, tracesID_save + '-X', *args, **kw)
-
+    
     def get_values(trace, var): 
         out = trace.posterior[var].values
         return out.reshape((-1,) + out.shape[2:])
@@ -44,7 +50,10 @@ def find_and_compare_gradients(Y0, X0, tracesID_save, *args, **kw):
 
     outFile = tracesID_save + '-TRACE.csv'
     
-    outarr = np.vstack((betaY, alphaY, betaX, alphaX.T)).T
+    try:
+        outarr = np.vstack((betaY, alphaY, betaX, alphaX.T)).T
+    except:
+        set_trace()
     np.savetxt(outFile, outarr, delimiter=',')
     
     out = np.concatenate(([prob], np.percentile(betaY, [15, 95]), 

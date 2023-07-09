@@ -12,6 +12,74 @@ try:
 except:
     pass
 
+import operator
+
+ops = {
+    '+' : operator.add,
+    '-' : operator.sub,
+    '*' : operator.mul,
+    '/' : operator.truediv,  # use operator.div for Python 2
+    '%' : operator.mod,
+    '^' : operator.xor,
+}
+'''def load_cube_variable(filename, variable):
+        def openVar(var):       
+            print(var)     
+            if not var[0].isalpha(): var = var[1:]
+            try:
+                out = jules.load_cube(filename, var, callback=sort_time)
+            except:
+                out =  iris.load_cube(filename, var, callback=sort_time) 
+            return out
+    
+        if isinstance(variable, list): 
+            datas = [openVar(var) for var in variable] 
+            
+            operations = [var[0] if not var[0].isalpha() else '+' for var in variable]
+            out = datas[0].copy()
+            out.data = ops[operations[0]](0, out[0].data)
+            set_trace()
+            for dat, op in zip(datas, operations): out.data = ops[op]( out.data, dat.data)
+             
+            set_trace()         
+        else:
+            out = openVar(variable)
+        return out
+'''
+def load_cube_from_file(filename, dir = '', variable = None):
+    def load_cube(filename, variable):
+        print("Opening:")
+        print(filename)
+        print(variable)
+        try:
+            out =  jules.load_cube(dir + filename, variable, callback=sort_time)
+        except:
+            try:
+                out =  iris.load_cube(dir + filename, variable, callback=sort_time)
+            except:
+                out =  iris.load_cube(dir + filename, callback=sort_time)
+        return out
+
+    filename_print = filename[0] if isinstance(filename, list) else filename 
+    try:
+        if isinstance(filename, str):        
+            dataset = load_cube(filename, variable)
+        elif not filename[1][-2:] == 'nc':
+            dataset = load_cube(filename[0], filename[1])
+        else:
+            dataset = [load_cube(file, variable) for file in filename]
+            dataset = [cube for cube in dataset if cube.shape[0] > 0]
+            dataset = iris.cube.CubeList(dataset).concatenate_cube()
+    except:
+        
+        print("==============\nERROR!")
+        print("can't open data.")
+        print("Check directory (''" + dir + "''), filename (''" + filename_print + \
+              "'') or file format")
+        print("==============")
+        set_trace()
+    return(dataset)
+
 def read_variable_from_netcdf(filename, dir = '', variable = None, subset_function = None, 
                               make_flat = False, units = None, 
                               subset_function_args = None,
@@ -36,52 +104,44 @@ def read_variable_from_netcdf(filename, dir = '', variable = None, subset_functi
     Returns:
         Y - if make_flat, a numpy vector of the target variable, otherwise returns iris cube
     """
-
-    print("Opening:")
-    print(filename)
-    print(variable)
-    def load_cube(filename, variable):
-        try:
-            out =  jules.load_cube(dir + filename, variable, callback=sort_time)
-        except:
-            try:
-                out =  iris.load_cube(dir + filename, variable, callback=sort_time)
-            except:
-                out =  iris.load_cube(dir + filename, callback=sort_time)
-        return out
     
-    filename_print = filename[0] if isinstance(filename, list) else filename 
-    try:
-        if isinstance(filename, str):        
-            dataset = load_cube(filename, variable)
-        elif 'nc' not in filename[1]:
-            dataset = load_cube(filename[0], filename[0])
-        else:
-            dataset = [load_cube(file, variable) for file in filename]
-            dataset = [cube for cube in dataset if cube.shape[0] > 0]
-            dataset = iris.cube.CubeList(dataset).concatenate_cube()
-    except:
+    def load_variable(var):
+        dataset = load_cube_from_file(filename, dir, var)
         
-        print("==============\nERROR!")
-        print("can't open data.")
-        print("Check directory (''" + dir + "''), filename (''" + filename_print + \
-              "'') or file format")
-        print("==============")
+        if dataset is None: return None
+        if units is not None: dataset.units = units
+        if subset_function is not None:
+            if isinstance(subset_function, list):
+                for FUN, args in zip(subset_function, subset_function_args):
+                    try:
+                        dataset = FUN(dataset, **args)
+                    except:
+                        print("Warning! function: " + FUN.__name__ + \
+                               " not applied to file: " + dir + filename_print)
+            else: dataset = subset_function(dataset, **subset_function_args)  
         
-        set_trace()
+        return dataset
+
+    if isinstance(variable, list):
         
-    if dataset is None: return None
-    if units is not None: dataset.units = units
-    if subset_function is not None:
-        if isinstance(subset_function, list):
-            for FUN, args in zip(subset_function, subset_function_args):
-                try:
-                    dataset = FUN(dataset, **args)
-                except:
-                    print("Warning! function: " + FUN.__name__ + " not applied to file: " + \
-                          dir + filename_print)
-        else: dataset = subset_function(dataset, **subset_function_args)  
         
+        operations = [var[0] if not var[0].isalpha() else '+' for var in variable]        
+        vars = [var if var[0].isalpha() else var[1:] for var in variable]
+        datas = [load_variable(var) for var in vars] 
+        
+        
+        andYrs = isinstance(datas[0], tuple) or isinstance(datas[0], list) 
+        dataset = datas[0][0].copy() if andYrs else datas[0].copy()
+        dataset.data[:] = 0.0
+        #dataset.data = ops[operations[0]](0, dataset.data)
+        
+        for dat, op in zip(datas, operations): 
+            datDat = dat[0].data if andYrs else dat.data
+            dataset.data = ops[op]( dataset.data, datDat)
+        if andYrs: dataset = (dataset, datas[0][1])
+    else:
+        dataset = load_variable(variable)
+           
     if make_flat: 
         if time_series is not None: years = dataset.coord('year').points
         dataset = dataset.data.flatten()

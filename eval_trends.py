@@ -10,9 +10,10 @@ import os
 import pickle
 import glob
     
-def trend_prob_for_region(region_code, value, region_type, observations_names, filename_model, 
-                          mod_scale,
-                          obs_scale, year_range, n_itertations, tracesID, *arg, **kw):# in ar6_regions: 
+def trend_prob_for_region(region_code, value, region_type, 
+                          filenames_observation, filename_model, 
+                          mod_scale, obs_scale, year_range, 
+                          n_itertations, tracesID, log_transform = False, *arg, **kw):# in ar6_regions: 
     
     if region_type is None or region_type == 'ar6':
         if not isinstance(region_code, str): return 
@@ -49,24 +50,22 @@ def trend_prob_for_region(region_code, value, region_type, observations_names, f
                                          *arg, **kw)
         Y = Y * mod_scale
         X = X * obs_scale
-
-        def save_arrany(x, file):
-            try:
-                x = x.toflex()
-            except:
-                pass
-            np.save(file, x)  
-
-        save_arrany(Y, Y_temp_file)
-        save_arrany(X, X_temp_file)
-
-    gradient_compare = find_and_compare_gradients(Y, X, tracesID_save, 
-                                                  n_itertations = n_itertations)
         
+        def save_arrany(x, file):
+            if np.ma.isMaskedArray(x): x = x.data
+            np.save(file, x)  
+            return(x)
+        
+        Y = save_arrany(Y, Y_temp_file)
+        X = save_arrany(X, X_temp_file)
+        
+    gradient_compare = find_and_compare_gradients(Y, X, tracesID_save, log_transform = log_transform, 
+                                                  n_itertations = n_itertations)
+    
     nme = NME(X, Y)        
     nme_null = NME_null(X)
     obs_mean = np.nanmean(X, axis = 0)
-
+    
     Yspread = np.reshape(np.repeat(Y, X.shape[1]), X.shape)
     Yspread[np.isnan(X)] = np.nan
     mod_mean = np.nanmean(Yspread, axis = 0)
@@ -86,6 +85,7 @@ def eval_trends_over_regions(filenames_observation, observations_names = None,
     
     if grab_output and os.path.isfile(output_file): 
         return pd.read_csv(output_file, index_col = 0)
+    
     if region_type is None or region_type == 'ar6':
         region_codes =  regionmask.defined_regions.ar6.land.region_ids.items()
     elif region_type == 'gfed':
@@ -109,7 +109,9 @@ def eval_trends_over_regions(filenames_observation, observations_names = None,
     index = flatten_list(index)
     
     result = list(map(lambda item: trend_prob_for_region(item[0], item[1], region_type, \
-                                                         *args, **kw), region_codes))
+                                                         filenames_observation, *args, **kw), \
+                      region_codes))
+
     result = list(filter(lambda x: x is not None, result))
     
     result = pd.DataFrame(np.array(result).T, index = index, columns = np.array(result)[:,0])
@@ -142,7 +144,7 @@ def run_all_eval_for_model(filename_model, name_model, variable_model,
                   year_range, 
                   n_itertations, tracesID, mod_scale,  obs_scale, units,
                   output_file, output_maps, filename_model_exclude = 'rcp2p6',
-                  region_type = None):
+                  region_type = None, *args, **kw):
     
     output_file = output_file + '-' +  name_model + '-' + region_type
     tracesID = tracesID + '-' + name_model + '-' + region_type
@@ -157,14 +159,13 @@ def run_all_eval_for_model(filename_model, name_model, variable_model,
         id0 = file_with_year(0)
         id1 = file_with_year(1)
         filename_model = filename_model[id0:id1]
-
+    
     result = eval_trends_over_regions(filenames_observation, observations_names, 
                                       output_file + '-region.csv', True,
-                                      region_type,
-                                      observations_names, filename_model, 
+                                      region_type, filename_model, 
                                       mod_scale, obs_scale,
                                       year_range, n_itertations, tracesID,
-                                      y_variable = variable_model)
+                                      y_variable = variable_model, *args, **kw)
 
     subset_functions = [sub_year_range, annual_average]
     subset_function_args = [{'year_range': year_range},
@@ -205,16 +206,16 @@ def run_all_eval_for_model(filename_model, name_model, variable_model,
         return scores, X, Y, year_range, annaul_averge_from_map(X), annaul_averge_from_map(Y)
     
     temp_file_path = 'temp/eval_trends_nme_over_obs_pickle-' + tracesID + '.pkl'
-
-    if os.path.isfile(temp_file_path):
+    
+    try:
         with open(temp_file_path, "rb") as file:
             X, Y, nme_over_obs, nme_cube_all, nme_null_cube_all = pickle.load(file)
-    else:
+    except:
         nme_over_obs = list(map(lambda x, y, z: open_compare_obs_mod(x, y, z, output_maps), 
                                 filenames_observation, obs_scale, observations_names))
-        
-        with open(temp_file_path, "wb") as file:
-            pickle.dump(nme_over_obs, file)
+         
+        #with open(temp_file_path, "wb") as file:
+        #    pickle.dump(nme_over_obs, file)
     
         year_range = np.array([out[3] for out in nme_over_obs])
         year_range = [np.min(year_range[:,0]), np.max(year_range[:,1])]
@@ -310,8 +311,11 @@ if __name__=="__main__":
 
     region_type = 'gfed'
 
+    log_transform = False
+
     run_all_eval_for_models(filenames_model, names_model, variable_model,
                             filenames_observation, observations_names,
                             year_range, 
                             n_itertations, tracesID, mod_scale,  obs_scale, units,
-                            output_file, output_maps, region_type = region_type)
+                            output_file, output_maps, region_type = region_type,
+                            log_transform = log_transform)
