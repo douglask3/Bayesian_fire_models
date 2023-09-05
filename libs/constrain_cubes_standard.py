@@ -210,7 +210,12 @@ def constrain_cube_by_cube_and_numericIDs(cube, regions, region):
     cube_out = constrain_to_data(cube)
     return cube_out
 
-gfed_region_codes = {('BONA', 1),
+
+gfed_region_order = ['GLOB', 'BONA', 'TENA', 'CEAM', 'NHSA', 'SHSA', 'EURO', 'MIDE', 'NHAF',
+                     'SHAF', 'BOAS', 'CEAS', 'SEAS', 'EQAS', 'AUST']
+
+gfed_region_codes = {('GLOB', 0),
+                     ('BONA', 1),
                      ('TENA', 2),
                      ('CEAM', 3),
                      ('NHSA', 4),
@@ -257,6 +262,9 @@ def constrain_GFED(cube, region_code, region = None):
         def seatch_for_region(rc):
             return [item[1] for item in gfed_region_codes if item[0] == rc][0]
         region = [seatch_for_region(rc) for rc in region_code]
+    
+    
+    if len(region) == 1 and region[0] == 0: return cube
     return constrain_cube_by_cube_and_numericIDs(cube, regions, region)
 
 def constrain_olson(cube, ecoregions):
