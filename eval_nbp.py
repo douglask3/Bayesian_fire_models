@@ -23,14 +23,13 @@ if __name__=="__main__":
 
 
     year_range = [2001, 2017]
-    year_range = [2008, 2011]
     n_itertations = 1000
-    tracesID = 'nbp_test_del_trace'
-    mod_scale = 1
-    obs_scale = [86400*12/1000*360*-1, 1000/30/1000*360*-1, 360*-1/1000]
+    tracesID = 'nbp_test-with_fire'
+    mod_scale = 1/12
+    obs_scale = [86400*12/1000*360*(-1)/12, 1000/30/1000*360*(-1)/12, 360*-1/1000/12]
 
     units = '1'
-    output_file = 'outputs/nbp_test_del_trace'
+    output_file = 'outputs/nbp_test-with_fire'
     output_maps = 'outputs/NBP/'
 
     region_type = 'gfed'
@@ -40,3 +39,23 @@ if __name__=="__main__":
                             year_range, 
                             n_itertations, tracesID, mod_scale,  obs_scale, units,
                             output_file, output_maps, region_type = region_type)
+
+    
+    jules_out_dir = "/hpc/data/d01/hadcam/jules_output/ALL_u-bk886_isimip_0p5deg_origsoil_dailytrif/"
+    filenames_model = [jules_out_dir + "/GFDL-ESM2M/*.ilamb.*.nc",
+                       jules_out_dir + "/HADGEM2-ES/*.ilamb.*.nc",
+                       jules_out_dir + "/IPSL-CM5A-LR/*.ilamb.*.nc",
+                       jules_out_dir + "/MIROC5/*.ilamb.*.nc"]
+
+    variable_model = ['npp_n_gb', '-resp_s_to_atmos_gb', '-WP_fast_out', '-WP_med_out', '-WP_slow_out', '-harvest_gb']
+
+    tracesID = 'nbp_test-without_fire'
+    output_file = 'outputs/nbp_test-withouts_fire'
+
+
+    run_all_eval_for_models(filenames_model, names_model, variable_model,
+                            filenames_observation, observations_names,
+                            year_range, 
+                            n_itertations, tracesID, mod_scale,  obs_scale, units,
+                            output_file, output_maps, region_type = region_type)
+    
