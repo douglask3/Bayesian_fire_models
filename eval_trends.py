@@ -80,10 +80,10 @@ def trend_prob_for_region(region_code, value, region_type,
     return(out)
 
 def eval_trends_over_regions(filenames_observation, observations_names = None,
-                                 output_file = '', grab_output = False, region_type = 'ar6',
-                                 *args, **kw):
+                             output_file = '', grab_output = False, region_type = 'ar6',
+                             *args, **kw):
     
-    if grab_output and os.path.isfile(output_file): 
+    if grab_output and os.path.isfile(output_file) and False: 
         return pd.read_csv(output_file, index_col = 0)
     
     if region_type is None or region_type == 'ar6':
@@ -113,6 +113,10 @@ def eval_trends_over_regions(filenames_observation, observations_names = None,
                       region_codes))
 
     result = list(filter(lambda x: x is not None, result))
+    
+    if region_type == 'gfed':
+        colOrder = [np.where(np.array(result)[:,0] == rc)[0][0] for rc in gfed_region_order]
+        result = [result[i] for i in colOrder]
     
     result = pd.DataFrame(np.array(result).T, index = index, columns = np.array(result)[:,0])
     result.to_csv(output_file)
