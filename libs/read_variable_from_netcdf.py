@@ -107,13 +107,15 @@ def read_variable_from_netcdf(filename, dir = '', variable = None, subset_functi
     
     def load_variable(var):
         dataset = load_cube_from_file(filename, dir, var)
-        
+        filename_print = filename[0] if isinstance(filename, list) else filename 
         if dataset is None: return None
         if units is not None: dataset.units = units
+        
         if subset_function is not None:
             if isinstance(subset_function, list):
                 for FUN, args in zip(subset_function, subset_function_args):
                     try:
+                        dataset0 = dataset.copy()
                         dataset = FUN(dataset, **args)
                     except:
                         print("Warning! function: " + FUN.__name__ + \
@@ -122,18 +124,14 @@ def read_variable_from_netcdf(filename, dir = '', variable = None, subset_functi
         
         return dataset
 
-    if isinstance(variable, list):
-        
-        
+    if isinstance(variable, list):        
         operations = [var[0] if not var[0].isalpha() else '+' for var in variable]        
         vars = [var if var[0].isalpha() else var[1:] for var in variable]
         datas = [load_variable(var) for var in vars] 
         
-        
         andYrs = isinstance(datas[0], tuple) or isinstance(datas[0], list) 
         dataset = datas[0][0].copy() if andYrs else datas[0].copy()
         dataset.data[:] = 0.0
-        #dataset.data = ops[operations[0]](0, dataset.data)
         
         for dat, op in zip(datas, operations): 
             datDat = dat[0].data if andYrs else dat.data
