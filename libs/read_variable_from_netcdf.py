@@ -51,6 +51,8 @@ def load_cube_from_file(filename, dir = '', variable = None):
         print("Opening:")
         print(filename)
         print(variable)
+        if filename[0] == '~' or filename[0] == '/' or filename[0] == '.':
+            dir = ''
         try:
             out =  jules.load_cube(dir + filename, variable, callback=sort_time)
         except:
