@@ -3,6 +3,7 @@ from libs.plot_AR6_hexagons import *
 from libs.NME import *
 from libs.flatten_list import *
 from libs.time_series_comparison import *
+from libs.combine_path_and_make_dir import *
 import numpy  as np
 import matplotlib.pyplot as plt
 from pdb import set_trace
@@ -13,7 +14,7 @@ import glob
 def trend_prob_for_region(region_code, value, region_type, 
                           filenames_observation, filename_model, 
                           mod_scale, obs_scale, year_range, 
-                          n_itertations, tracesID, log_transform = False, *arg, **kw):# in ar6_regions: 
+                          n_itertations, traces_dir, log_transform = False, *arg, **kw):# in ar6_regions: 
     
     if region_type is None or region_type == 'ar6':
         if not isinstance(region_code, str): return 
@@ -30,14 +31,14 @@ def trend_prob_for_region(region_code, value, region_type,
                         {'region_code' : [region_code]}, 
                         {'annual_aggregate' : iris.analysis.SUM}]
     
-    tracesID_save = 'temp/eval_trends' + tracesID + '-' + \
-                    'REGION---' + region_code + '---' + \
+    traces_dir = combine_path_and_make_dir(traces_dir, 'REGION-' + region_code)
+    trace_file_save = traces_dir + \
                      '_'.join([str(year) for year in year_range]) + \
                      '-model_scale_' +  str(mod_scale) + \
                      '-obs_scale_' + '_'.join([str(i) for i in obs_scale])
     
-    Y_temp_file = tracesID_save + '-Y' + '.npy'
-    X_temp_file = tracesID_save + '-X' + '.npy'
+    Y_temp_file = trace_file_save + '-Y' + '.npy'
+    X_temp_file = trace_file_save + '-X' + '.npy'
     
     if os.path.isfile(Y_temp_file) and os.path.isfile(X_temp_file): 
         Y = np.load(Y_temp_file)
@@ -59,7 +60,8 @@ def trend_prob_for_region(region_code, value, region_type,
         Y = save_arrany(Y, Y_temp_file)
         X = save_arrany(X, X_temp_file)
         
-    gradient_compare = find_and_compare_gradients(Y, X, tracesID_save, log_transform = log_transform, 
+    gradient_compare = find_and_compare_gradients(Y, X, trace_file_save, 
+                                                  log_transform = log_transform, 
                                                   n_itertations = n_itertations)
     
     nme = NME(X, Y)        
@@ -80,9 +82,10 @@ def trend_prob_for_region(region_code, value, region_type,
     return(out)
 
 def eval_trends_over_regions(filenames_observation, observations_names = None,
-                             output_file = '', grab_output = False, region_type = 'ar6',
+                             model_name = '', output_table = 'table/', grab_output = False, 
+                             region_type = 'ar6',
                              *args, **kw):
-    
+    output_file = output_table + model_name + '-results.csv'
     if grab_output and os.path.isfile(output_file) and False: 
         return pd.read_csv(output_file, index_col = 0)
     
@@ -137,21 +140,22 @@ def NME_by_obs(obs_name, result, *arg, **kw):
     
     return pd.DataFrame(np.append(nme_null, nme), index = np.append(nme_null.index, nme.index))
     
-def makeDir(directory):
-    try:
-        os.mkdir(directory)
-    except:
-        pass
 
 def run_all_eval_for_model(filename_model, name_model, variable_model,
                   filenames_observation, observations_names,
                   year_range, 
                   n_itertations, tracesID, mod_scale,  obs_scale, units,
-                  output_file, output_maps, filename_model_exclude = 'rcp2p6',
+                  output_dir, filename_model_exclude = 'rcp2p6',
                   region_type = None, *args, **kw):
     
-    output_file = output_file + '-' +  name_model + '-' + region_type
-    tracesID = tracesID + '-' + name_model + '-' + region_type
+    combine_path_and_make_dir(output_dir)
+    output_dir   = combine_path_and_make_dir(output_dir, region_type)
+    output_table = combine_path_and_make_dir(output_dir, '/table/')
+    output_figs  = combine_path_and_make_dir(output_dir, '/figs/' )
+    output_ncdfs = combine_path_and_make_dir(output_dir, '/gen_data/')
+    
+    
+    traces_dir = output_ncdfs + name_model + '-gradient_trace'
 
     if '*' in filename_model:
         filename_model = sorted(glob.glob(filename_model))
@@ -165,21 +169,21 @@ def run_all_eval_for_model(filename_model, name_model, variable_model,
         filename_model = filename_model[id0:id1]
     
     result = eval_trends_over_regions(filenames_observation, observations_names, 
-                                      output_file + '-region.csv', True,
+                                      name_model, output_table, True,
                                       region_type, filename_model, 
                                       mod_scale, obs_scale,
-                                      year_range, n_itertations, tracesID,
+                                      year_range, n_itertations, traces_dir, 
                                       y_variable = variable_model, *args, **kw)
-
+    
     subset_functions = [sub_year_range, annual_average]
     subset_function_args = [{'year_range': year_range},
                             {'annual_aggregate' : iris.analysis.SUM}]
     
     def annaul_averge_from_map(cube): return np.mean(make_time_series(cube).data)
     def open_compare_obs_mod(filename_obs, scale, name_obs, output_maps, openOnly = False):
-        makeDir(output_maps)
+        combine_path_and_make_dir(output_maps)
         output_maps = output_maps + '/' + name_obs + '/'
-        makeDir(output_maps)
+        combine_path_and_make_dir(output_maps)
         print(name_obs)
         def readFUN(filename, subset_function_args, *args, **kw):
             return read_variable_from_netcdf(filename, subset_function = subset_functions, 
@@ -241,7 +245,7 @@ def run_all_eval_for_model(filename_model, name_model, variable_model,
         X = iris.cube.CubeList(cubes).merge_cube()    
         Y = XYs[0][1]
         output_maps = output_maps + '/All/'
-        makeDir(output_maps)
+        combine_path_and_make_dir(output_maps)
     
         X_filename = output_maps + 'observation.nc'
         Y_filename = output_maps + 'simulation.nc'
@@ -254,6 +258,7 @@ def run_all_eval_for_model(filename_model, name_model, variable_model,
 
     
     def select_i_from_out(i):  return np.array([out[i] for out in nme_over_obs])
+
     nme_by_cell_obs = select_i_from_out(0)[:,:,0]
     glob_tot_obs = select_i_from_out(4)[:, np.newaxis]
     glob_tot_mod = select_i_from_out(5)[:, np.newaxis]
