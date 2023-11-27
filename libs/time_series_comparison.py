@@ -143,7 +143,7 @@ def compare_gradients(beta_Y, beta_X):
     beta_X = beta_X.flatten()
     
     min_beta = np.min(np.append(beta_Y, beta_X))
-    max_beta = np.max(np.append(beta_X, beta_X))
+    max_beta = np.max(np.append(beta_Y, beta_X))
     nbins = int(np.ceil(np.sqrt(beta_X.size))) 
 
     bins = np.linspace(min_beta, max_beta, nbins)
