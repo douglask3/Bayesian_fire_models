@@ -16,7 +16,7 @@ priors:: {'pname': "lin_betas",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10
 priors:: {'pname': "lin_betas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 20}
 priors:: {'pname': "pow_betas",'np': 'nvars', 'dist': 'Normal', 'mu': 0.0, 'sigma': 100}
 priors:: {'pname': "pow_power",'np': 'nvars', 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1}
-priors:: {'pname': "interaction",'np': 'nvars*2', 'dist': 'Normal', 'mu': 0.0, 'sigma': 100}
+priors:: {'pname': "interaction",'np': 'nvars*2', 'dist': 'Normal', 'mu': 0.0, 'sigma': 1}
 
 ### optimization info
 niterations:: 100
