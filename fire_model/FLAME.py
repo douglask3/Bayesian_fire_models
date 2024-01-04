@@ -172,7 +172,9 @@ class FLAME(object):
             if self.interaction is not None:
                 for i in range(X.shape[1]):
                     for j in range(X.shape[1]):
-                        y += self.interaction[i,j] * X[:, i] * X[:, j]
+                        
+                        y = y + self.interaction[i,j] * X[:, i] * X[:, j]
+            
                 
             # y = add_response_curve(paramers, function, y)
             # Maria: add yours here 
