@@ -70,7 +70,10 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None, niterations = 100, priors = None, 
                 kws.pop('np')
                 kws.pop('dist')
                 shape = prior['np']
-                if shape == 'nvars': shape = nvars 
+                if shape == 'nvars': 
+                    shape = nvars 
+                elif shape == 'nvars*2':
+                    shape = (nvars, nvars)
                 
                 return getattr(pm, prior['dist'])(prior['pname'] + str(pn), 
                                       shape = shape, **kws)

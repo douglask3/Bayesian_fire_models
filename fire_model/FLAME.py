@@ -52,6 +52,7 @@ class FLAME(object):
         self.comb_betas = self.select_key_or_defualt(params, 'comb_betas', None)   
         self.comb_X0 = self.select_key_or_defualt(params, 'comb_X0', None) 
         self.comb_p = self.select_key_or_defualt(params, 'comb_p', None)
+        self.interaction = self.select_key_or_defualt(params, 'interaction', None)
         
         #Maria: add your response curve parameter selection thing
         
@@ -136,7 +137,7 @@ class FLAME(object):
                 y = add_response_curve(self.pow_betas, self.power_response_curve, y)
                 y = add_response_curve(self.x2s_betas, self.X2_response_curve   , y)
                 y = add_response_curve(self.comb_betas, self.linear_combined_response_curve , y)
-            
+                if self.interaction is not None: set_trace()
                 #y = add_response_curve(paramers, function, y)
                 # Maria: add yours here 
             
@@ -168,6 +169,11 @@ class FLAME(object):
             y = add_response_curve(self.x2s_betas, self.X2_response_curve   , y)
             y = add_response_curve(self.comb_betas, self.linear_combined_response_curve , y)
         
+            if self.interaction is not None:
+                for i in range(X.shape[1]):
+                    for j in range(X.shape[1]):
+                        y += self.interaction[i,j] * X[:, i] * X[:, j]
+                
             # y = add_response_curve(paramers, function, y)
             # Maria: add yours here 
 
