@@ -19,7 +19,7 @@ import pymc  as pm
 import arviz as az
 
 
-def fit_MaxEnt_probs_to_data(Y, X, CA = None, niterations = 100, priors = None, *arg, **kw):
+def fit_MaxEnt_probs_to_data(Y, X, CA = None, niterations = 100, priors = None, elastic_net_alpha = None, *arg, **kw):
     """ Bayesian inerence routine that fits independant variables, X, to dependant, Y.
         Based on the MaxEnt solution of probabilities. 
     Arguments:
@@ -96,22 +96,34 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None, niterations = 100, priors = None, 
             result_list = list(grouped_items.values())
             
             priors_names = list(dict.fromkeys(priors_names))
-            priors = {priors_names[idx]: item[0] if len(item) == 1 else item \
+            priors = {priors_names[idx]: item[0] if len(item) == 1 else tt.stack(item)[:,0] \
                       for idx, item in enumerate(result_list)}
             
-        
+        if elastic_net_alpha is not None:
+            betas = [priors[name] for name in priors if 'betas' in name]
+                    
+            nterms = len(betas)
+            
+            lambda_elastic_net = pm.HalfCauchy('lambda_elastic_net', beta=1, shape=nterms)
+            
+            penalty = sum(lambda_elastic_net[i] * (elastic_net_alpha * abs(betas[i]) + (1 - elastic_net_alpha) * betas[i] * betas[i])
+                               for i in range(nterms))
+            penalty = sum(penalty) #/ ( nterms * X.shape[1])
+            
+        else:
+            penalty = 1.0
         ## run model
         model = FLAME(priors, inference = True)
         prediction = model.burnt_area(X)  
         
         ## define error measurement
         if CA is None:
-            error = pm.DensityDist("error", prediction, priors['q'], 
+            error = pm.DensityDist("error", prediction, priors['q'], penalty,
                                    logp = logistic_probability_tt, 
                                    observed = Y)
         else:
             CA = CA.data
-            error = pm.DensityDist("error", prediction, priors['q'], CA, 
+            error = pm.DensityDist("error", prediction, priors['q'], penalty, CA, 
                                    logp = logistic_probability_tt, 
                                    observed = Y)
                 
@@ -140,13 +152,13 @@ def train_MaxEnt_model_from_namelist(namelist = None, **kwargs):
     
     if 'dir' not in variables and 'dir_training' in variables:
         variables['dir'] = variables['dir_training']
-
     
     return train_MaxEnt_model(**variables)
 
 
 
-def train_MaxEnt_model(y_filen, x_filen_list, CA_filen = None, priors = None,
+def train_MaxEnt_model(y_filen, x_filen_list, CA_filen = None, priors = None, 
+                       elastic_net_alpha = None,
                        dir = '', filename_out = '',
                        dir_outputs = '',
                        fraction_data_for_sample = 1.0,
@@ -249,7 +261,8 @@ def train_MaxEnt_model(y_filen, x_filen_list, CA_filen = None, priors = None,
         print("Running trace")
         print("======================")
         trace = fit_MaxEnt_probs_to_data(Y, X, CA = CA,  niterations = niterations, 
-                                         cores = cores, priors = priors)
+                                         cores = cores, priors = priors, 
+                                         elastic_net_alpha = elastic_net_alpha)
     
         ## save trace file
         trace.to_netcdf(trace_file)
@@ -337,8 +350,8 @@ if __name__=="__main__":
 
     x_filen_list= ["ed.nc", "consec_dry_mean.nc", "savanna.nc", "cveg.nc", "rhumid.nc",
                    "lightn.nc", "popDens.nc", "forest.nc", "precip.nc",
-                   "pasture.nc", "cropland.nc", "grassland.nc", #"np.nc",
-                   "tas_max.nc", "mpa.nc", # "tca.nc",, "te.nc", "tas_mean.nc"
+                   "pasture.nc", "cropland.nc", "grassland.nc", "np.nc",
+                   "tas_max.nc", "mpa.nc",  "tca.nc", "te.nc", "tas_mean.nc"
                    "vpd.nc", "soilM.nc"]
 
     priors =  [{'pname': "q",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0},

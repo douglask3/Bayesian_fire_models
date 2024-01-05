@@ -32,7 +32,7 @@ def select_post_param(trace):
     params = [select_post_param_name(var) for var in params_names]
     return params, [var for var in params_names]
 
-def logistic_probability_tt(Y, fx, qSpread = None, CA = None):
+def logistic_probability_tt(Y, fx, qSpread = None, penalty = 1.0, CA = None):
     """calculates the log-transformed continuous logit likelihood for Y given fx when Y
        and fx are probabilities between 0-1 with relative areas, CA
        Works with tensor variables.   
@@ -55,6 +55,9 @@ def logistic_probability_tt(Y, fx, qSpread = None, CA = None):
         prob =  Y*CA*tt.log(fx) + (1.0-Y)*CA*tt.log((1-fx))
     else:
         prob = Y*tt.log(fx) + (1.0-Y)*tt.log((1-fx))
+    
+    prob = prob - 0.01* tt.log(penalty)
+    
     return prob
 
 def logistic_how_likely(Y, X):

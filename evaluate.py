@@ -298,7 +298,7 @@ if __name__=="__main__":
         SETPUT 
     """
     ### input data paths and filenames
-    training_namelist = "outputs//simple_example_model-interaction///variables_info-Forest_consec_dry_mean_tas_max_crop_pas_cveg-frac_points_0.005-nvariables_-frac_random_sample0.005-nvars_6-niterations_100.txt"
+    training_namelist = "outputs//simple_example_model-interaction-log///variables_info-Forest_consec_dry_mean_tas_max_cropland_pasture_cveg_savanna_np_lightn-frac_points_0.005-nvariables_-frac_random_sample0.005-nvars_9-niterations_100.txt"
 
     config_namelist = "namelists/simple_example.txt"
 
