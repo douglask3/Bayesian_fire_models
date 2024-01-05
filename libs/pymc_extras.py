@@ -67,12 +67,15 @@ def logistic_how_likely(Y, X):
         return (y**X) * ((1-y)**X1)
     prob = prob_fun(Y)/prob_fun(X)
     return prob
-    
+ 
+def returnTruesFromList(my_list, my_array):
+    return [x for x, flag in zip(my_list, my_array) if flag]   
 
 def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name, 
                       dir_samples, grab_old_trace, 
                       class_object = FLAME, method = 'burnt_area',
-                      test_eg_cube = False, out_index = None, *args, **kw):  
+                      test_eg_cube = False, out_index = None, 
+                      exclusions = ['_mu', '_sigma'], *args, **kw):  
     
     def sample_model(i, run_name = 'control'):   
         dir_sample =  combine_path_and_make_dir(dir_samples, run_name)
@@ -117,8 +120,14 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
         else:
             return out
         
+    
+    params, params_names = select_post_param(trace) 
+    exclude = [[exclusion in name for name in params_names] for exclusion in exclusions]
+    not_exclude = ~np.any(np.array(exclude), axis = 0)
 
-    params, params_names = select_post_param(trace)  
+    params = returnTruesFromList(params, not_exclude)
+    params_names = returnTruesFromList(params_names, not_exclude)
+    
     nits = len(trace.posterior.chain)*len(trace.posterior.draw)
     idx = range(0, nits, int(np.floor(nits/sample_for_plot)))
     out = np.array(list(map(lambda id: sample_model(id, run_name), idx)))
