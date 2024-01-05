@@ -75,8 +75,34 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None, niterations = 100, priors = None, 
                 elif shape == 'nvars*2':
                     shape = (nvars, nvars)
                 
-                return getattr(pm, prior['dist'])(prior['pname'] + str(pn), 
+                dist = prior['dist']
+                if dist[-2:] == '_t':
+                    negative = True
+                    dist = dist[:-2]
+                else:
+                    negative = False
+
+                if dist[-2:] == '_h':
+                    mu = pm.Normal(prior['pname'] + '_mu' + str(pn),  shape = shape,
+                                   mu = prior['mu'], sigma = prior['sigma_mu'])
+                    sigma = pm.HalfNormal(prior['pname'] + '_sigma' + str(pn), shape = shape,
+                                        sigma = prior['sigma_sigma'])
+                    
+                    dist = dist[:-2]
+                    kws.pop('mu')
+                    kws.pop('sigma_mu')
+                    kws.pop('sigma_sigma')
+                    out = getattr(pm, dist)(prior['pname'] + str(pn), mu = mu, sigma = sigma,
                                       shape = shape, **kws)
+                    #set_trace()
+                
+                else:
+                    out = getattr(pm, dist)(prior['pname'] + str(pn), 
+                                      shape = shape, **kws)
+
+                if negative: out = -out
+                
+                return out
 
             priors_names =[prior['pname'] for prior in priors]
 
