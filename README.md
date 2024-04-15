@@ -1,7 +1,7 @@
-# FLAME -  Fogo local Analisado pela Máxima Entropia
+# FLAME -  Fire Landscape using the Maximum Entropy
 
 ## Introduction
-FLAME (Fogo local Analisado pela Máxima Entropia) is a Bayesian inference implementation of a maximum entropy fire model specifically tailored to simulating fires in heterogeneous territories like Brazil. 
+FLAME (Fire Landscape using the Maximum Entropy) is a Bayesian inference implementation of a maximum entropy fire model specifically tailored to simulating fires in heterogeneous territories like Brazil. 
 
 ## Model overview
 
