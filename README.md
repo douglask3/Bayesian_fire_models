@@ -44,7 +44,7 @@ Follow these steps to install the necessary software and dependencies:
 
 1. Clone the repository:
     ```bash
-    git clone [https://github.com/yourusername/your-repo.git](https://github.com/douglask3/Bayesian_fire_models.git)
+    git clone https://github.com/douglask3/Bayesian_fire_models.git
     ```
 2. Navigate into the project directory:
     ```bash
@@ -109,7 +109,7 @@ Available models:
 ## Link distribution options 
 ConFire is working. FLAME works in the original repo: [https://github.com/malu-barbosa/FLAME](https://github.com/malu-barbosa/FLAME) but is untested here. Others are under develop,ent
 There are a couple of link distributions.  Zero Inflated logit function works just fine, MaxEnt needs some updates
-*	[Zero Inflated logit function](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/Zero%20Inflated%20logit%20function)
+*	[Zero Inflated logit function](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/Zero_inflated_logit_function.md)
 *	[MaxEnt](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/MaxEnt)
 *	`normal` technical runs but is having issues.
 
