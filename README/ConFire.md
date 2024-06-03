@@ -1,7 +1,10 @@
 # ConFire
 Model description can be found here: [ConFire_info.pdf](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/ConFire_info.pdf). Basically, though, the model assigns drivers to "controls" and these controls are multiplied to give burnt area.
 
-To run the model, there are some compulsory `priors` that you need to add to the namelists. `pname` needs to match these, but other parameters are examples:
+To run the model, you should set the following in the namelist:
+`model_class:: ConFire`
+
+There are also some compulsory `priors` that you need to add to the namelists. `pname` needs to match these, but other parameters are examples:
 
 * `priors:: {'pname': "controlID", 'value': [[1, 2], [0, 2, 3, 4, 5, 7, 8], [9, 10, 11, 12], [10, 11, 12]]}`
 
