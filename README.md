@@ -109,7 +109,7 @@ Available models:
 ## Link distribution options 
 ConFire is working. FLAME works in the original repo: [https://github.com/malu-barbosa/FLAME](https://github.com/malu-barbosa/FLAME) but is untested here. Others are under develop,ent
 There are a couple of link distributions.  Zero Inflated logit function works just fine, MaxEnt needs some updates
-*	[Zero Inflated logit function](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/Zero_inflated_logit_function.md)
+*	[Zero inflated logit function](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/Zero_inflated_logit_function.md)
 *	[MaxEnt](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/MaxEnt)
 *	`normal` technical runs but is having issues.
 
@@ -142,9 +142,11 @@ Please contact [Dougas Kelley] at [doukel@ceh.ac.uk] for any questions or issues
 The State of Wildfires report has been a major driver of this development. Here's some info for anyone whose found their way here and wants to perform those runs again
 
 ### 2023/24
-To reproduce results in the State of Wildfire's 2023/24 report, make sure you have the version at tag SoW23_sub (or download the Zenodo archived code that can be found with the paper: https://doi.org/10.5194/essd-2024-218, along with dataset information). The results from this paper were obtained using the [Running the Models](#running-the-models) commands above. It combines ConFire with zero inflated logistic function The namelists are already set within these files, but you may need to update paths in the following in the `namelists` directory:
+To reproduce results in the State of Wildfire's 2023/24 report, make sure you have the version at tag SoW23_v0.1 (0.1 because the paper is still in review). Or download the Zenodo archived code that can be found with the paper: https://doi.org/10.5194/essd-2024-218, along with dataset information. The achived driving and output data is [https://doi.org/10.5281/zenodo.11420743](https://doi.org/10.5281/zenodo.11420743).
+
+The results from this paper were obtained using the [Running the Models](#running-the-models) commands above. It combines [ConFire](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/ConFire.md) with the [zero inflated logit function](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/Zero_inflated_logit_function.md) logistic function The namelists are already set within these files, but you may need to update paths in the following in the `namelists` directory:
 * `isimip.txt` - used for attribution and future projections
-* `isimip-evaluation.txt` used to evalute the configuration for attribution and future projections
+* `isimip-evaluation.txt` used to evaluate the configuration for attribution and future projections
 * `nrt.txt` used for 2023 fire season driver analysis
 * `nrt-evalution.txt` - used to evaluate the driver analysis configuration
 
