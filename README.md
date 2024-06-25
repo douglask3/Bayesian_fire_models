@@ -15,11 +15,7 @@ FLAME (Fire Landscape using the Maximum Entropy) is a Bayesian inference impleme
 
 ### Posterior analysis
 
-### Jackknife
-
-### Response curves
-
-### NME
+## Potential and Sensitivity analysis
 
 ## Projections
 
