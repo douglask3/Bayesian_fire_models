@@ -13,9 +13,12 @@ def run_ConFire_nrt(namelist):
     
     run_info = read_variables_from_namelist(namelist) 
 
-    regions = run_info['regions']
+    try:
+        regions = run_info['regions']
+    except:
+        regions = ['']
     subset_function_args = run_info['subset_function_args'] 
-
+    set_trace()
     for region in regions:
         model_title = run_info['model_title'].replace('<<region>>', region)
         dir_training = run_info['dir_training'].replace('<<region>>', region)
@@ -45,10 +48,10 @@ def run_ConFire_nrt(namelist):
 
 
 if __name__=="__main__":
-    namelist = 'namelists/nrt.txt'
+    namelist = 'namelists/fapar_example.txt'
     run_ConFire_nrt(namelist)
-    namelist = 'namelists/nrt-evaluation.txt'
-    run_ConFire_nrt(namelist)
-    namelist = 'namelists/isimip-evaluation.txt'
-    run_ConFire_nrt(namelist)
+    #namelist = 'namelists/nrt-evaluation.txt'
+    #run_ConFire_nrt(namelist)
+    #namelist = 'namelists/isimip-evaluation.txt'
+    #run_ConFire_nrt(namelist)
 
