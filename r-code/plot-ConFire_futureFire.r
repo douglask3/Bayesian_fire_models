@@ -1,9 +1,11 @@
 library(raster)
+library(sf)
 source("../gitProjectExtras/gitBasedProjects/R/sourceAllLibs.r")
 sourceAllLibs("../rasterextrafuns/rasterPlotFunctions/R/")
 sourceAllLibs("../rasterextrafuns/rasterExtras/R/")
 sourceAllLibs("../gitProjectExtras/gitBasedProjects/R/")
 library(ncdf4)
+library(rnaturalearth)
 sourceAllLibs("../ConFIRE_attribute/libs/")
 source("../ConFIRE_attribute/libs/plotStandardMap.r")
 source("../LPX_equil/libs/legendColBar.r")
@@ -17,15 +19,20 @@ dcols2 = rev(c('#7f3b08','#b35806','#e08214','#fdb863','#fee0b6','#f7f7f7','#d8d
 
 
 levels = c(0.001, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5)#find_levels(c(mn[!is.na(mn)], mx[!is.na(mx)]), seq(10, 90, 10))
+levels = c(0.01, 0.03, 0.1, 0.3)
 
-dlevels = c(0.5, 0.6, 0.8, 1, 1.25, 1.75,2)
+dlevels = c(0.5, 0.667, 0.8, 1, 1.25, 1.75,2)
+dlevels_labs = c('half', '2/3', '4/5', 'no change', '1 1/4', '1 3/4', 'double')
 dlevels2 = c(0.1, 0.2, 0.5, 0.75, 1, 1.5, 2, 5, 10)
 nsample = 10
 
 
-region = 'NW_Amazon'
-dir = paste0("outputs/ConFire_", region, "-tuning12/samples/_13-frac_points_0.5/")
-eg_rast = raster(paste0("outputs/ConFire_", region, "-tuning12/samples/_13-frac_points_0.5/baseline-/control/sample-pred0.nc"))
+region = 'Canada'; countries = c('Canada')
+#region = 'Greece'; countries = c('Greece')
+#region = 'NW_Amazon'; countries = c('Brazil')
+
+dir = paste0("outputs/ConFire_", region, "-final/samples/_13-frac_points_0.5/")
+eg_rast = raster(paste0("outputs/ConFire_", region, "-final/samples/_13-frac_points_0.5/baseline-/control/sample-pred0.nc"))
 plt_width = c('Canada' = 1, 'NW_Amazon' = 1, 'Greece' = 0.67)[region]
 plt_height = plt_width*nrow(eg_rast)/ncol(eg_rast)
 
@@ -34,8 +41,14 @@ cols = make_col_vector(cols, ncols = length(levels)+1)
 dcols = make_col_vector(dcols, ncols = length(dlevels)+1)
 dcols2 = make_col_vector(dcols2, ncols = length(dlevels2)+1)
 
-
-
+addCoast <- function(countries) {
+    for (cntry in countries) { 
+        country <- ne_countries(country = cntry, scale = "medium", returnclass = "sf")
+        states <- ne_states(country = cntry, returnclass = "sf")
+        plot(st_geometry(country), add = TRUE, lwd = 1)
+        plot(st_geometry(states), add = TRUE, lwd = 0.5, lty = 3)
+    }
+}
 plot_control <- function(run, control, name, years = c(2000, 2019), cols, levels, dats0 = NULL, addLab = FALSE, ...) {
     
     tfile = paste0(c('temp2/plot-ConFire_futureFire/', region, run, control, name, years), 
@@ -86,7 +99,7 @@ plot_control <- function(run, control, name, years = c(2000, 2019), cols, levels
     
     #if (ncol(dats) > 40) dats = raster::aggregate(dats, fact = ncol(dats)/40)
 
-    tfile_cdat= paste0(tfile, ncol(dats), '-cut_dat.Rd')
+    tfile_cdat= paste0(c(tfile, ncol(dats), levels, '-cut_dat.Rd'), collapse = '-')
     if (file.exists(tfile_cdat)) {
         load(tfile_cdat)
     } else {
@@ -127,7 +140,9 @@ plot_control <- function(run, control, name, years = c(2000, 2019), cols, levels
     addLevel <- function(i) points(xydat[,1], xydat[,2], pch = 19, 
                                    cex = plt_width*3*vcdat[,i], col = cols[i])
     lapply(1:length(cols), addLevel) 
-    contour(is.na(eg_rast), levels = 0.5, drawlabels=FALSE, add = TRUE)   
+    
+    addCoast(countries)
+    #contour(is.na(eg_rast), levels = 0.5, drawlabels=FALSE, add = TRUE)   
     #legendColBar(c(0.1, 0.7), c(0.1, 0.9), cols = cols, limits = levels, ...)
     return(dats_out)
 }
@@ -140,7 +155,7 @@ plot_controls <- function(years, runs, control, name) {
     lmat = cbind(0, rbind(0, lmat, 0), 0)
    
     
-    heights = c(0.4, rep(c(0.02, plt_height), 3)[-1], 0.3, 0.1)
+    heights = c(0.4, rep(c(0.02, plt_height), 3)[-1], 0.35, 0.1)
     widths = c(0.2, plt_width, 0.02, plt_width, 0.02, plt_width, 0.2)
 
     png(paste("figs/ConFire_histMaps_fires", region, years, control, name, ".png", sep = '-'), 
@@ -195,7 +210,8 @@ plot_controls <- function(years, runs, control, name) {
                     col = dcols2[vs[3]], border = NA)
         }
         apply(xydat, 1, add_poly)
-        contour(is.na(eg_rast), levels = 0.5, drawlabels=FALSE, add = TRUE)
+        addCoast(countries)
+        #contour(is.na(eg_rast), levels = 0.5, drawlabels=FALSE, add = TRUE)
         if (run == runs[1]) {
             mtext(side = 3, 'Change in\n1-in-100 event', line = 2)
             axis(3)
@@ -205,17 +221,24 @@ plot_controls <- function(years, runs, control, name) {
     }
     lapply(runs, plot_ssp)
     
-    add_leg <- function(cols, levels) {
+    add_leg <- function(cols, levels, labs = levels) {
         plot(c(0, 1), c(0, 1), type = 'n', axes = FALSE, xlab = '', ylab = '')
         xp = seq(0.05, 0.95, length.out = length(cols))
         points(xp, rep(0.05, length(cols)), pch = 19, col = cols)
-        labs = c(0, levels, '+')
+        labs = c('', labs, '+')
         xt = c(xp[1], xp[-1] - diff(xp)/2, tail(xp, 1))
-        text(xt, rep(0.05, length(xt)), labs, adj = c(0.5, -1), srt = 30)
+        text(xt, rep(0.0, length(xt)), labs, adj = c(0, -1), srt = 30, xpd = NA)
     }
     add_leg(cols,  levels)
-    add_leg(dcols, dlevels) 
-    legendColBar(c(0.0, 0.37), c(0, 1), dcols2, dlevels2, transpose = TRUE, oneSideLabels=FALSE)
+    mtext(side = 1, line = 0, 'Burned area (%)', cex = 0.67)
+    add_leg(dcols, dlevels, dlevels_labs) 
+    mtext(side = 1, line = 0, 'Burned area extent change', cex = 0.67, xpd = NA)
+    legendColBar(c(0.1, 0.37), c(0, 1.1), dcols2, dlevels2, extend_min = FALSE, minLab = 0,
+                 transpose = TRUE, oneSideLabels=FALSE)
+    mtext(side = 1, line = 0, 'Extreme frequency change', cex = 0.67, xpd = NA)
+
+    mtext(side = 1, outer = TRUE, line = -5.5, expression(Longitude ~ (degree)), cex = 0.67)
+    mtext(side = 4, outer = TRUE, line = -1, expression(Latitude ~ (degree)), cex = 0.67)
     dev.off()
 }
 
