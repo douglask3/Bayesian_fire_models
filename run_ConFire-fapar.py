@@ -18,7 +18,7 @@ def run_ConFire_nrt(namelist):
     except:
         regions = ['']
     subset_function_args = run_info['subset_function_args'] 
-    set_trace()
+    
     for region in regions:
         model_title = run_info['model_title'].replace('<<region>>', region)
         dir_training = run_info['dir_training'].replace('<<region>>', region)
