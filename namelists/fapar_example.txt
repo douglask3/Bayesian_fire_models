@@ -23,7 +23,7 @@ priors:: {'pname': "betas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 10.
 link_func_class:: zero_inflated_logit
 niterations:: 20
 cores:: 5
-fraction_data_for_sample:: 0.01
+fraction_data_for_sample:: 0.002
 subset_function:: sub_year_range
 subset_function_args:: {'year_range': [2002, 2003]}
 subset_function_args_eval:: {'year_range': [2002, 2003]}
