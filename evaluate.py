@@ -66,11 +66,11 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
     #  Set new y-axis limits with the padding
     plt.ylim(y_min - padding, y_max + padding)
 
-    try:
-        plt.gcf().colorbar(plot_id[3], ax=ax)
-    except:
-        set_trace()
+    plt.gcf().colorbar(plot_id[3], ax=ax)
+    
+    
     at = np.unique(np.round(np.arange(np.min(Xf0), np.max(Xf0))))
+    if len(at) == 0: at = np.array(np.min(Xf0), np.min(Xf0) + 1)
     plt.xticks(at, 10**at)
     #labels = np.array([0, 0.3, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99])
     #plt.yticks(10**labels, labels)
