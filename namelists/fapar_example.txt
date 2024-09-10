@@ -2,10 +2,14 @@
 model_title::  'fapar_test'
 
 ## input data paths and filenames
-dir_training:: "data/data/faPAR_and_drivers/mask/"
+## Dougs
+#dir_training:: "data/data/faPAR_and_drivers/mask/"
+## Nings
+dir_training:: "/Users/ningdong/Documents/project/Pyrealm/Output/climate/mask/"
 y_filen:: "fapar_mask.nc"
 CA_filen:: None
 x_filen_list:: ["pre_mask.nc",  "vpd_mask.nc", "ph05_mask.nc"]
+
 ## Model info
 model_class:: ConFire
 priors:: {'pname': "link-sigma",'np': 1, 'dist': 'HalfNormal', 'sigma': 0.5}
@@ -23,12 +27,12 @@ priors:: {'pname': "betas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 10.
 link_func_class:: zero_inflated_logit
 niterations:: 20
 cores:: 5
-fraction_data_for_sample:: 0.002
+fraction_data_for_sample:: 0.01
 subset_function:: sub_year_range
 subset_function_args:: {'year_range': [2002, 2003]}
 subset_function_args_eval:: {'year_range': [2002, 2003]}
 
-grab_old_trace:: False # set to True till you get the code running. 
+grab_old_trace:: True # set to True till you get the code running. 
                       # Then set to False when you start adding in new response curves
 ### output info
 dir_outputs:: 'outputs/'
