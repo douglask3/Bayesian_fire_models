@@ -160,7 +160,7 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None,
         X[:, i] = read_variable_from_netcdf(filename, make_flat = True, 
                                             time_points = time_points,
                                             extent = extent, *args, **kw)
-    
+   
     if add_1s_columne: 
         X = np.column_stack((X, np.ones(len(X)))) # add a column of ones to X 
     
@@ -169,7 +169,13 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None,
             cells_we_want = np.array([np.all(rw > -9e9) and np.all(rw < 9e9) for rw in np.column_stack((X, Y, CA))])
             CA = CA[cells_we_want]
         else:
-            cells_we_want = np.array([np.all(rw > -9e9) and np.all(rw < 9e9) for rw in np.column_stack((X,Y))])
+            # Apply conditions separately to X and Y
+            X_mask = np.all((X > -9e9) & (X < 9e9), axis=1)  # Check all columns in X
+            Y_mask = (Y > -9e9) & (Y < 9e9)  # Apply directly to Y
+    
+            # Combine the two masks
+            cells_we_want = X_mask & Y_mask
+            
         Y = Y[cells_we_want]
         X = X[cells_we_want, :]
         
