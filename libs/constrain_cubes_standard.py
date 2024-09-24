@@ -273,7 +273,7 @@ def constrain_olson(cube, ecoregions):
     biomes = iris.load_cube('data/wwf_terr_ecos_0p5.nc')
     return constrain_cube_by_cube_and_numericIDs(cube, biomes, ecoregions)
 
-def constrain_natural_earth(cube, Country, Continent = None, shpfilename = None, 
+def constrain_natural_earth(cube, Country = None, Continent = None, shpfilename = None, 
                             constrain = True, *args, **kw):
     
     """constrains a cube to Natural Earth Country or continent.
@@ -298,20 +298,19 @@ def constrain_natural_earth(cube, Country, Continent = None, shpfilename = None,
     and mask areas outside of it. Uses Natural Earth
     """
     if shpfilename is None:
-        shpfilename = shpreader.natural_earth(resolution='110m', 
-                                              category='cultural', name='admin_0_countries')
+        shpfilename = shpreader.natural_earth(resolution='110m', category='cultural', name='admin_0_countries')
     natural_earth_file = shape.load_shp(shpfilename)
     if Country is not None:
         NAMES = [i.attributes.get('NAME') for i in natural_earth_file]
         NAME = [s for s in NAMES if Country in s][0]
         CountrySelect = shape.load_shp(shpfilename, NAME=NAME)
     elif Continent is not None:
-        CountrySelect = shape.load_shp(shpfilename, Continent='South America')
-        CountrySelect = Country.unary_union()
+        CountrySelect = shape.load_shp(shpfilename, Continent=Continent)
+        CountrySelect = CountrySelect.unary_union()
     
-    if constrain: cube = CountrySelect[0].constrain_cube(cube)
+    if constrain: cube = CountrySelect.constrain_cube(cube)
     
-    cube = CountrySelect[0].mask_cube(cube)
+    cube = CountrySelect.mask_cube(cube)
     return cube
 
 def constrain_region(cube, ecoregions = None, Country = None, Continent = None, *args, **kw):
