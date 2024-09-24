@@ -3,9 +3,9 @@ model_title::  'fapar_test-veryquick-SA'
 
 ## input data paths and filenames
 ## Dougs
-dir_training:: "data/data/faPAR_and_drivers/mask/"
+#dir_training:: "data/data/faPAR_and_drivers/mask/"
 ## Nings
-#dir_training:: "/Users/ningdong/Documents/project/Pyrealm/Output/climate/mask/"
+dir_training:: "/Users/ningdong/Documents/project/Pyrealm/Output/climate/mask/"
 y_filen:: "fapar_mask.nc"
 CA_filen:: None
 
