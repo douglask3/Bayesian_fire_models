@@ -16,7 +16,7 @@ model_class:: ConFire
 priors:: {'pname': "link-sigma",'np': 1, 'dist': 'HalfNormal', 'sigma': 0.5}
 priors:: {'pname': "link-p0",'np': 1, 'dist': 'Uniform', 'lower': 0.0, 'upper': 1.0}
 priors:: {'pname': "link-p1",'np': 1, 'dist': 'LogNormal', 'mu': -1.0, 'sigma': 1.0}
-
+control_names:: ['Climate', 'Soil']
 priors:: {'pname': "controlID", 'value': [[0, 1,2,3,4], [5,6]]}
 priors:: {'pname': "control_Direction", 'value': [1, 1]}
 priors:: {'pname': "driver_Direction", 'value': [[1,-1,1,1,1], [1,1]]}
@@ -35,7 +35,7 @@ subset_function_eval:: [sub_year_range, constrain_natural_earth]
 subset_function_args:: {'year_range': [2002, 2003]}
 subset_function_args_eval:: [{'year_range': [2002, 2003]}, {'Continent': 'South America'}]
 
-grab_old_trace:: False # set to True till you get the code running. 
+grab_old_trace:: True # set to True till you get the code running. 
                       # Then set to False when you start adding in new response curves
 ### output info
 dir_outputs:: 'outputs/'
