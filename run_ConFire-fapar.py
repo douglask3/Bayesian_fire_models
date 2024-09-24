@@ -39,12 +39,15 @@ def run_ConFire_nrt(namelist):
         except:
             control_names = None
         
+        subset_function = read_variables_from_namelist(namelist)['subset_function_eval']
         subset_function_args = read_variables_from_namelist(namelist)['subset_function_args_eval']
         
         run_experiment(training_namelist, namelist, control_direction, control_names,
                                   output_dir, output_file, 'baseline', 
                                   model_title = model_title, 
+                                  subset_function = subset_function,
                                   subset_function_args = subset_function_args)
+        
 
 
 if __name__=="__main__":
