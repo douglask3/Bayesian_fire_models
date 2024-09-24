@@ -19,7 +19,7 @@ priors:: {'pname': "link-p1",'np': 1, 'dist': 'LogNormal', 'mu': -1.0, 'sigma': 
 
 priors:: {'pname': "controlID", 'value': [[0, 1,2,3,4], [5,6]]}
 priors:: {'pname': "control_Direction", 'value': [1, 1]}
-priors:: {'pname': "driver_Direction", 'value': [[1,-1,1,1,1], [-1,-1]]}
+priors:: {'pname': "driver_Direction", 'value': [[1,-1,1,1,1], [1,1]]}
 priors:: {'pname': "Fmax",'np': 1, 'dist': 'Uniform', 'lower': 0.00001, 'upper': 0.999999}
 priors:: {'pname': "x0",'np': 2, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
 priors:: {'pname': "betas",'np': 5, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 10.0}
