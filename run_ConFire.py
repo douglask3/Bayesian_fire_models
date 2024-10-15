@@ -140,7 +140,7 @@ def make_both_time_series(*args, **kw):
 
 def run_experiment(training_namelist, namelist, control_direction, control_names, 
                    output_dir, output_file, 
-                   name = '', *args, **kws):
+                   name = '', make_time_series = False, *args, **kws):
     if "baseline" in name: 
         run_only = False
     else:
@@ -164,11 +164,12 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
                         sample_error = False,
                         *args, **kws)
     
+    if make_time_series:
+        evaluate_TS = make_both_time_series(Evaluate[0], 'Evaluate', figName, 
+                                            cube_assess = Control[0])
     
-    evaluate_TS = make_both_time_series(Evaluate[0], 'Evaluate', figName, 
-                                        cube_assess = Control[0])
-    
-    control_TS = make_both_time_series(Control[0], 'Control', figName, cube_assess = Control[0])
+        control_TS = make_both_time_series(Control[0], 'Control', figName, 
+                                           cube_assess = Control[0])
     
     if  control_names is None: return None
 
@@ -207,7 +208,8 @@ def run_ConFire(namelist):
         params = read_variables_from_namelist(training_namelist)
         output_dir = params['dir_outputs']
         output_file = params['filename_out']
-        
+        make_time_series = params['make_time_series']
+        set_trace()
         control_direction = read_variables_from_namelist(params['other_params_file'])
         control_direction = control_direction['control_Direction']
         try:
@@ -245,12 +247,14 @@ def run_ConFire(namelist):
         run_experiment(training_namelist, namelist, control_direction, control_names,
                                   output_dir, output_file, 'baseline', 
                                   model_title = model_title, 
+                                  make_time_series = make_time_series,
                                   subset_function_args = subset_function_args)
         
         [run_experiment(training_namelist, namelist, control_direction, 
                                      control_names,
                                      output_dir, output_file, name, dir = dir, 
                                      y_filen = y_filen, model_title = model_title,
+                                     make_time_series = make_time_series,
                                      subset_function_args = subset_function_args) \
                           for name, dir in zip(experiment_names, experiment_dirs)]
 
