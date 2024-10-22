@@ -51,7 +51,7 @@ def run_ConFire_nrt(namelist):
 
 
 if __name__=="__main__":
-    namelist = 'namelists/fapar_example.txt'
+    namelist = 'namelists/fapar_example_log.txt'
     run_ConFire_nrt(namelist)
     #namelist = 'namelists/nrt-evaluation.txt'
     #run_ConFire_nrt(namelist)
