@@ -1,11 +1,11 @@
 ## model info
-model_title::  'fapar_test-veryquick-SA'
+model_title::  'test_to_compare_with_Ning-mh'
 
 ## input data paths and filenames
 ## Dougs
-#dir_training:: "data/data/faPAR_and_drivers/mask/"
+dir_training:: "data/data/faPAR_and_drivers/mask/"
 ## Nings
-dir_training:: "/Users/ningdong/Documents/project/Pyrealm/Output/climate/mask/"
+#dir_training:: "/Users/ningdong/Documents/project/Pyrealm/Output/climate/mask/"
 y_filen:: "fapar_mask.nc"
 CA_filen:: None
 
@@ -41,6 +41,7 @@ priors:: {'pname': "betas",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 10.
 
 
 ### optimization info
+inference_step_type:: "metropolis"
 link_func_class:: zero_inflated_logit
 niterations:: 20
 cores:: 5
