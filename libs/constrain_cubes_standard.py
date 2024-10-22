@@ -9,8 +9,12 @@ import iris.coord_categorisation as icc
 import cartopy.io.shapereader as shpreader
 try:
     from ascend import shape
+    ascend_loaded = True
 except:
+    ascend_loaded = False
     print("WARNING: can't load shape from ascend. Some constraints calls might fail")
+import shapely.geometry as sgeom
+import shapely.ops as ops
 import numpy as np
 import cartopy.crs as ccrs
 import geopandas as gp
@@ -299,19 +303,74 @@ def constrain_natural_earth(cube, Country = None, Continent = None, shpfilename 
     """
     if shpfilename is None:
         shpfilename = shpreader.natural_earth(resolution='110m', category='cultural', name='admin_0_countries')
-    natural_earth_file = shape.load_shp(shpfilename)
-    if Country is not None:
-        NAMES = [i.attributes.get('NAME') for i in natural_earth_file]
-        NAME = [s for s in NAMES if Country in s][0]
-        CountrySelect = shape.load_shp(shpfilename, NAME=NAME)
-    elif Continent is not None:
-        CountrySelect = shape.load_shp(shpfilename, Continent=Continent)
-        CountrySelect = CountrySelect.unary_union()
+    #set_trace()
+    # Read shapefile
+    if ascend_loaded:
+        natural_earth_file = shape.load_shp(shpfilename)
+
+        if Country is not None:
+            NAMES = [i.attributes.get('NAME') for i in natural_earth_file]
+            NAME = [s for s in NAMES if Country in s][0]
+            CountrySelect = shape.load_shp(shpfilename, NAME=NAME)
+        elif Continent is not None:
+            CountrySelect = shape.load_shp(shpfilename, Continent=Continent)
+            CountrySelect = CountrySelect.unary_union()
+        if constrain: cube = CountrySelect.constrain_cube(cube)
+        
+        cube = CountrySelect.mask_cube(cube)
+
+    else:
+        reader = shpreader.Reader(shpfilename)
+        countries = list(reader.records())
+
+        # Select country or continent based on the input
+        if Country is not None:
+            # Filter countries by name
+            CountrySelect = next(c for c in countries if Country in c.attributes.get('NAME'))
+            CountryGeom = CountrySelect.geometry
+        elif Continent is not None:
+            # Filter countries by continent and merge geometries
+            ContinentCountries = [c.geometry for c in countries if Continent in c.attributes.get('CONTINENT')]
+            CountryGeom = ops.unary_union(ContinentCountries)  # Merge into one geometry
+        else:
+            raise ValueError("Either Country or Continent must be specified")
+
+        #Optionally constrain the cube
+        if constrain: cube = contrain_coords(cube, CountryGeom.bounds)
     
-    if constrain: cube = CountrySelect.constrain_cube(cube)
+        # Mask the cube using the country or continent shape
+        #set_trace()
+        #cube = mask_data_with_geometry( cube, CountryGeom)
     
-    cube = CountrySelect.mask_cube(cube)
     return cube
+
+def mask_data_with_geometry(cube, geometry):
+    """Masks the cube data based on whether points fall within the given geometry."""
+    # Extract latitude and longitude data from the cube
+    lats = cube.coord('latitude').points
+    lons = cube.coord('longitude').points
+    
+    # Create a 2D meshgrid of latitude and longitude
+    lat_grid, lon_grid = np.meshgrid(lats, lons, indexing='ij')  # Use 'ij' for correct indexing
+
+    # Create a mask for each point
+    mask = np.zeros(lon_grid.shape, dtype=bool)
+
+    # Check each point in the 2D grid
+    for i in range(lon_grid.shape[0]):
+        for j in range(lon_grid.shape[1]):
+            point = sgeom.Point(lon_grid[i, j], lat_grid[i, j])
+            mask[i, j] = not geometry.contains(point)  # Mark as True if outside the geometry
+
+    # Expand the mask to match the shape of the cube's data (broadcasting)
+    # Assuming the first two dimensions are latitude and longitude
+    # Note: Ensure that the mask has the correct dimensions for broadcasting
+    full_mask = np.broadcast_to(mask[:, :, np.newaxis], cube.data.shape[1:])  # Adding new axis for broadcasting
+
+    # Apply the mask to the cube data
+    masked_data = np.ma.masked_array(cube.data, mask=full_mask)
+
+    return masked_data
 
 def constrain_region(cube, ecoregions = None, Country = None, Continent = None, *args, **kw):
     """ checks if any spatial constrains are set and contrains according to comments in functions above
