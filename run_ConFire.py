@@ -44,6 +44,7 @@ def above_percentile_mean(cube, cube_assess = None, percentile = 0.95):
     print("finding " + str(percentile) + " for year" + str(cube.coord('year').points))
     if cube_assess is None: cube_assess = cube
     area_cube = iris.analysis.cartography.area_weights(cube_assess)
+
     # Sort the cube by fractional burnt values in descending order
     sorted_indices = np.argsort(cube_assess.data.ravel())
     sorted_cube_data = cube_assess.data.ravel()[sorted_indices]
@@ -55,11 +56,11 @@ def above_percentile_mean(cube, cube_assess = None, percentile = 0.95):
     # Determine the total area of the grid cells
     total_area = np.sum(sorted_area_data * sorted_cube_data)
 
-    # Find the index where the cumulative sum exceeds the 95% threshold of the total area
+    # Find the index where the cumulative sum exceeds the percentile threshold of the total area
     threshold_index = np.argmax(cumulative_area > (percentile/100.0) * total_area)
 
     # Use this index to obtain the fractional burnt value 
-    # corresponding to the area-weighted 95th percentile threshold
+    # corresponding to the area-weighted percentile threshold
     threshold_value = sorted_cube_data[threshold_index]
     
     # Mask out grid cells below the area-weighted 95th percentile threshold
