@@ -10,7 +10,7 @@ import cartopy.io.shapereader as shpreader
 try:
     from ascend import shape
 except:
-    print("WARNING: can't load shape from ascent. Some constraints calls might fail")
+    print("WARNING: can't load shape from ascend. Some constraints calls might fail")
 import numpy as np
 import cartopy.crs as ccrs
 import geopandas as gp
