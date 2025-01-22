@@ -1,8 +1,19 @@
 import pytensor
 import pytensor.tensor as tt
 
-class MaxEnt(object):
 
+def overlap_pred(Y, qSpread):
+    if qSpread is  None:
+        return Y
+    else: return Y *(1 + qSpread) / (Y * qSpread + 1)
+
+def overlap_inverse(Y, qSpread):
+    if qSpread is  None:
+        return Y
+    else: return Y / (1 - Y * qSpread + qSpread)
+
+
+class MaxEnt(object):
     def obs_given_(Y, fx, qSpread = None, CA = None):
         """calculates the log-transformed continuous logit likelihood for Y given fx when Y
             and fx are probabilities between 0-1 with relative areas, CA
@@ -22,17 +33,21 @@ class MaxEnt(object):
         fx = tt.switch( tt.gt(fx, 0.9999999999), 0.9999999999, fx)
         
         if qSpread is not None:
-            Y = Y *(1 + qSpread) / (Y * qSpread + 1)
+            Y = overlap_pred(Y, qSpread)
       
         if CA is not None: 
             prob =  Y*CA*tt.log(fx) + (1.0-Y)*CA*tt.log((1-fx))
         else:
             prob = Y*tt.log(fx) + (1.0-Y)*tt.log((1-fx))
         return prob
-
-
-    def random_sample_given_(mod):
+    
+    def random_sample_given_central_limit_(mod, qSpread = None, CA = None): #
         return mod
+        return overlap_inverse(mod, qSpread)
+
+    def random_sample_given_(mod, qSpread = None, CA = None):
+        return mod
+        return overlap_inverse(mod, qSpread)
     
     def sample_given_(Y, X, *args, **kw):
         X1 = 1 - X
