@@ -8,12 +8,7 @@ import iris
 from iris.analysis import geometry
 import iris.coord_categorisation as icc
 import cartopy.io.shapereader as shpreader
-try:
-    from ascend import shape
-    ascend_loaded = True
-except:
-    ascend_loaded = False
-    print("WARNING: can't load shape from ascend. Some constraints calls might fail")
+
 import shapely.geometry as sgeom
 import shapely.ops as ops
 from shapely.geometry import Point
@@ -334,86 +329,6 @@ def constrain_natural_earth(cube, Country = None, Continent = None, shpfilename 
     masked_cube = cube.copy(data=masked_data)
     
     return masked_cube
-
-def constrain_natural_earth_old(cube, Country = None, Continent = None, shpfilename = None, 
-                            constrain = True, *args, **kw):
-    
-    """constrains a cube to Natural Earth Country or continent.
-    Assumes that the cube is iris
-    If Country is defined, it wont select Continent.
-
-    Arguments:
-
-    cube -- an iris cube
-    Continent -- name of continent. Options are:
-        'South America'
-        'Oceania'
-        'Europe'
-        'Afria'
-        'North America'
-        'Asia' 
-    shpfilename -- path and filename of natural earth shapefile.
-                   If set to None, it will look for temp. file version and 
-                   download if it does not exist.
-    Returns:
-    Input cube constrained to the extent to that country or continent, 
-    and mask areas outside of it. Uses Natural Earth
-    """
-    if shpfilename is None:
-        shpfilename = shpreader.natural_earth(resolution='110m', category='cultural', name='admin_0_countries')
-    
-    # Read shapefile
-    if False:#ascend_loaded:
-        natural_earth_file = shape.load_shp(shpfilename)
-
-        if Country is not None:
-            NAMES = [i.attributes.get('NAME') for i in natural_earth_file]
-            NAME = [s for s in NAMES if Country in s][0]
-            CountrySelect = shape.load_shp(shpfilename, NAME=NAME)
-        elif Continent is not None:
-            CountrySelect = shape.load_shp(shpfilename, Continent=Continent)
-            CountrySelect = CountrySelect.unary_union()
-        if constrain: cube = CountrySelect.constrain_cube(cube)
-        
-        cube = CountrySelect.mask_cube(cube)
-
-    else:
-        #land = gp.read_file(shpfilename)
-        #continent_geom = land.loc[land['CONTINENT'] == Continent].geometry.unary_union
-       
-        cube = constrain_cube_to_continent(cube, Continent, shpfilename, constrain = constrain)
-        #set_trace()
-        #continent_mask = geometry.geometry_mask(
-        #    [shape(continent_geom)],   # Pass the continent's geometry
-        #    cube.coord('longitude').points, 
-        #    cube.coord('latitude').points, 
-        #    resolution=110  # You can adjust this based on your shapefile resolution
-        #)
-        #set_trace()
-        #reader = shpreader.Reader(shpfilename)
-        #countries = list(reader.records())
-        #
-        # Select country or continent based on the input
-        #if Country is not None:
-            # Filter countries by name
-        #    CountrySelect = next(c for c in countries if Country in c.attributes.get('NAME'))
-        #    CountryGeom = CountrySelect.geometry
-        #elif Continent is not None:
-            # Filter countries by continent and merge geometries
-        #    ContinentCountries = [c.geometry for c in countries if Continent in c.attributes.get('CONTINENT')]
-        #    CountryGeom = ops.unary_union(ContinentCountries)  # Merge into one geometry
-        #else:
-        #    raise ValueError("Either Country or Continent must be specified")
-
-        #Optionally constrain the cube
-        #cube0 = cube.copy()
-        
-    
-        # Mask the cube using the country or continent shape
-        #set_trace()
-        #cube = mask_data_with_geometry( cube, CountryGeom)
-    set_trace()
-    return cube
 
 def mask_data_with_geometry(cube, geometry):
     """Masks the cube data based on whether points fall within the given geometry."""
