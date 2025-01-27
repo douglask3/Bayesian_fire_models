@@ -16,7 +16,6 @@
 - [State of Wildfires report](#State-of-Wildfires-report)
 
 
-
 ## Introduction
 This repository contains a series of Bayesian-based fire models. These models and probablity distribution link functions follow a common inference and sampling workflow to predict fire behaviour based on various driving data. 
 
