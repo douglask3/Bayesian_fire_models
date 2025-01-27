@@ -16,16 +16,11 @@ x_filen_list:: ["logpre_mask.nc",  "logvpd_mask.nc", "chi_mask.nc","logppfd_mask
 
 
 ## Model info
-model_class:: ConFire
-priors:: {'pname': "link-sigma",'np': 1, 'dist': 'HalfNormal', 'sigma': 0.5}
-priors:: {'pname': "link-p0",'np': 1, 'dist': 'Uniform', 'lower': 0.0, 'upper': 1.0}
-priors:: {'pname': "link-p1",'np': 1, 'dist': 'LogNormal', 'mu': -1.0, 'sigma': 1.0}
-
-control_names:: ['Climate', 'Soil']
+model_class:: ConFirecontrol_names:: ['Climate', 'Soil']
 priors:: {'pname': "controlID", 'value': [[0, 1,2,3,4, 5], [6,7,8,9]]}
 priors:: {'pname': "control_Direction", 'value': [1, 1]}
 priors:: {'pname': "driver_Direction", 'value': [[1,-1,1,1,1, 1], [1,1,1,1]]}
-priors:: {'pname': "Fmax",'np': 1, 'dist': 'Uniform', 'lower': 0.00001, 'upper': 0.999999}
+priors:: {'pname': "Fmax",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
 priors:: {'pname': "x0",'np': 2, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
 priors:: {'pname': "betas",'np': 6, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 10.0}
 priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 10.0}
@@ -33,14 +28,15 @@ priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 10.
 
 ### optimization info
 inference_step_type:: "metropolis"
-link_func_class:: zero_inflated_logit
-niterations:: 20
+link_func_class:: MaxEnt
+niterations:: 100
 cores:: 5
-fraction_data_for_sample:: 0.001
+fraction_data_for_sample:: 0.02
 subset_function:: sub_year_range
 subset_function_eval:: [sub_year_range, constrain_natural_earth]
 subset_function_args:: {'year_range': [2002, 2003]}
 subset_function_args_eval:: [{'year_range': [2002, 2003]}, {'Continent': 'South America'}]
+
 
 grab_old_trace:: False # set to True till you get the code running. 
                       # Then set to False when you start adding in new response curves
