@@ -1,6 +1,6 @@
 ## model info
 #regions:: ['Greece', 'Canada', 'NW_Amazon']
-model_title::  'FLAME-test'
+model_title::  'FLAME-test2'
 
 ## input data paths and filenames
 dir_training:: "../ConFIRE_attribute/isimip3a/driving_data/GSWP3-W5E5-20yrs/Brazil/AllConFire_2000_2009/"
@@ -13,16 +13,17 @@ x_filen_list:: ["precip.nc", "tas_max.nc", "csoil.nc", "cveg.nc", "Forest.nc", "
 model_class:: FLAME
 priors:: {'pname': "q",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
 priors:: {'pname': "lin_beta_constant",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 100}
-priors:: {'pname': "lin_betas",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 100}
 priors:: {'pname': "lin_betas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 100}
 priors:: {'pname': "lin_betas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 100}
 priors:: {'pname': "lin_betas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 100}
-priors:: {'pname': "lin_betas",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 100}
 priors:: {'pname': "lin_betas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 100}
 priors:: {'pname': "lin_betas",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 100}
 priors:: {'pname': "lin_betas",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 100}
 priors:: {'pname': "lin_betas",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 100}
 priors:: {'pname': "lin_betas",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 100}
+priors:: {'pname': "lin_betas",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 100}
+priors:: {'pname': "lin_betas",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 100}
+priors:: {'pname': "lin_Direction_betas", 'value': [-1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
 priors:: {'pname': "pow_betas",'np': 'nvars', 'dist': 'Normal', 'mu': 0.0, 'sigma':  1}
 priors:: {'pname': "pow_power",'np': 'nvars', 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1}
 ## priors:: {'pname': "interaction",'np': 'nvars*2', 'dist': 'Normal', 'mu': 0.0, 'sigma': 1}
@@ -33,7 +34,7 @@ cores:: 1
 fraction_data_for_sample:: 0.005
 subset_function:: sub_year_months
 subset_function_args:: {'months_of_year': [7]}
-grab_old_trace:: True # set to True till you get the code running. 
+grab_old_trace:: FALSE # set to True till you get the code running. 
                       # Then set to False when you start adding in new response curves
 
 ### output info

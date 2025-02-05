@@ -47,7 +47,8 @@ class FLAME(object):
             return  select_key_or_default(params, numPCK = self.numPCK, *args, **kw) 
        
         
-        self.lin_betas = select_param_or_default('lin_betas', 0.0)
+        self.lin_betas = select_param_or_default('lin_betas', 0.0) * \
+                         select_param_or_default('lin_Direction_betas', 1.0)
         self.lin_beta_constant = select_param_or_default('lin_beta_constant', 0.0)
         self.pow_betas = select_param_or_default('pow_betas', None)
         self.pow_power = select_param_or_default('pow_power', None)
@@ -72,6 +73,7 @@ class FLAME(object):
 	    no. rows in X of burnt area/fire probabilities.
         """
         self.npoints = X.shape[0]
+        
         y = self.numPCK.dot(X, self.lin_betas)
             
         def add_response_curve(Rbetas, FUN, y):
