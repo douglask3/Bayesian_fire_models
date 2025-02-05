@@ -188,33 +188,41 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
 def run_ConFire(namelist):   
     
     run_info = read_variables_from_namelist(namelist) 
-
-    regions = run_info['regions']
     subset_function_args = run_info['subset_function_args']
-    
 
-    for region in regions:
+    
+        
+    try:
+        control_direction = read_variables_from_namelist(params['other_params_file'])
+        control_direction = control_direction['control_Direction']
+    except:
+        control_direction = None
+
+    try:
+        control_names = read_variables_from_namelist(namelist)['control_names']
+    except:
+        control_names = None  
+    
+    def run_for_regions(region = None):
+
+        if region is None:
+            region = '<<region>>'
+        else:
+            subset_function_args['months_of_year'] = run_info['region_months'][region]
+            
         model_title = run_info['model_title'].replace('<<region>>', region)
         dir_training = run_info['dir_training'].replace('<<region>>', region)
+        dir_projecting = run_info['dir_projecting'].replace('<<region>>', region)
         
-        subset_function_args['months_of_year'] = run_info['region_months'][region]
 
         trace, scalers, training_namelist = \
                         train_MaxEnt_model_from_namelist(namelist, model_title = model_title,
                                                          dir_training = dir_training,
                                                          subset_function_args = subset_function_args)
-        
         params = read_variables_from_namelist(training_namelist)
         output_dir = params['dir_outputs']
         output_file = params['filename_out']
-        
-        control_direction = read_variables_from_namelist(params['other_params_file'])
-        control_direction = control_direction['control_Direction']
-        try:
-            control_names = read_variables_from_namelist(namelist)['control_names']
-        except:
-            control_names = None
-    
+         
         def find_replace_period_model(exp_list):
             exp_list_all = [item.replace('<<region>>', region) for item in exp_list \
                             if "<<experiment>>" not in item and "<<model>>" not in item]
@@ -230,16 +238,8 @@ def run_ConFire(namelist):
              
             return exp_list_all
     
-        dir_projecting = run_info['dir_projecting'].replace('<<region>>', region)
-        experiment_dirs  = run_info['experiment_dir']
-        experiment_names = run_info['experiment_names']
-        experiments = run_info['experiment_experiment']
-        periods = run_info['experiment_period']
-        models = run_info['experiment_model']
-
-        experiment_dirs = find_replace_period_model(experiment_dirs)
-        experiment_names = find_replace_period_model(experiment_names)
         
+
         y_filen = run_info['x_filen_list'][0]
     
         run_experiment(training_namelist, namelist, control_direction, control_names,
@@ -247,12 +247,31 @@ def run_ConFire(namelist):
                                   model_title = model_title, 
                                   subset_function_args = subset_function_args)
         
-        [run_experiment(training_namelist, namelist, control_direction, 
-                                     control_names,
-                                     output_dir, output_file, name, dir = dir, 
-                                     y_filen = y_filen, model_title = model_title,
-                                     subset_function_args = subset_function_args) \
-                          for name, dir in zip(experiment_names, experiment_dirs)]
+        try:
+            experiment_dirs  = run_info['experiment_dir']
+            experiment_names = run_info['experiment_names']
+            experiments = run_info['experiment_experiment']
+            periods = run_info['experiment_period']
+            models = run_info['experiment_model']
+            experiment_dirs = find_replace_period_model(experiment_dirs)
+            experiment_names = find_replace_period_model(experiment_names)
+
+            [run_experiment(training_namelist, namelist, control_direction, 
+                                         control_names,
+                                         output_dir, output_file, name, dir = dir, 
+                                         y_filen = y_filen, model_title = model_title,
+                                         subset_function_args = subset_function_args) \
+                              for name, dir in zip(experiment_names, experiment_dirs)]
+        except:
+            pass
+
+    
+
+    try:
+        regions = run_info['regions']  
+        for region in regions: run_for_regions(region)
+    except:
+        run_for_regions(None)
 
 
 if __name__=="__main__":
@@ -262,6 +281,7 @@ if __name__=="__main__":
     namelist = 'namelists/isimip-fwi2.txt'
     namelist = 'namelists/isimip3.txt'
     namelist = 'namelists/isimip2425.txt'
+    namelist = 'namelists/FLAME_pantanal.txt'
     #namelist = 'namelists/SOW2023.txt'
     
     run_ConFire(namelist)
