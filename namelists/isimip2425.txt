@@ -1,6 +1,6 @@
 ## model info
 regions:: ['Greece']#'NW_Amazon']##, 'Canada','Greece']
-model_title::  'ConFire_<<region>>-2425-MaxEnt-Fmax-test'
+model_title::  'ConFire_<<region>>-2425-MaxEnt-Fmax-test-correct'
 
 ## input data paths and filenames
 dir_training:: "data/data/driving_data/<<region>>/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019/"
@@ -18,6 +18,7 @@ priors:: {'pname': "controlID", 'value': [[1, 2], [0, 2, 3, 4, 5, 7, 8], [9, 10,
 priors:: {'pname': "control_Direction", 'value': [1, -1, 1, -1]}
 priors:: {'pname': "driver_Direction", 'value': [[1, 1], [-1, 1, 1, -1, -1, -1, -1], [1, 1, 1, 1], [1, 1, 1]]}
 priors:: {'pname': "Fmax",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': 'lin_correct', 'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 4.0}
 priors:: {'pname': "x0",'np': 4, 'dist': 'Normal', 'mu': 0.0, 'sigma': 1.0}
 priors:: {'pname': "betas",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
 priors:: {'pname': "betas",'np': 7, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
@@ -35,7 +36,7 @@ region_months:: {'NW_Amazon': [7, 8, 9], 'Canada': [4,5,6], 'Greece': [6,7,8]}
 grab_old_trace:: False # set to True till you get the code running. 
                       # Then set to False when you start adding in new response curves
 ### output info
-dir_outputs:: 'outputs/'
+dir_outputs:: 'outputs/outputs/'
 
 ## evaluation info
 sample_for_plot:: 10
