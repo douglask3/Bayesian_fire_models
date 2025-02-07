@@ -196,9 +196,9 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
                           control_run_name = "control",
                           subset_function = None, subset_function_args = None,
                           sample_for_plot = 1, grab_old_trace = False, 
+                          run_response_curves = False, 
                           response_grouping = None, run_only = False, return_inputs = False,
                           Y = None, X = None, lmask = None, scalers = None, *args, **kw):
-    
     """ Runs prediction and evalutation of the sampled model based on previously run trace.
     Arguments:
         trace - pymc traces nc or nc fileiles, probably from a 'train_MaxEnt_model' run
@@ -301,10 +301,11 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
     compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, *args, **kw)
     Bayes_benchmark(filename_out, fig_dir, Sim, Obs, lmask)
 
-    #for ct in ["initial", "standard", "potential", "sensitivity"]:
-    #    response_curve(curve_type = ct, x_filen_list = x_filen_list,
-    #                   fig_dir = fig_dir, scalers =  scalers, 
-    #                   *args, **kw, **common_args)
+    if run_response_curves: 
+        for ct in ["initial", "standard", "potential", "sensitivity"]:
+            response_curve(curve_type = ct, x_filen_list = x_filen_list,
+                           fig_dir = fig_dir, scalers =  scalers, 
+                           *args, **kw, **common_args)
          
     if return_inputs: 
         return Sim, Y, X, lmask, scalers 

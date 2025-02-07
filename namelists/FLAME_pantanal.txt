@@ -32,13 +32,14 @@ cores:: 1
 fraction_data_for_sample:: 0.005
 subset_function:: [constrain_BR_biomes, sub_year_months]
 subset_function_args:: [{'biome_ID': [6]}, {'months_of_year': [7]}]
-grab_old_trace:: False # set to True till you get the code running. 
+grab_old_trace:: True # set to True till you get the code running. 
                        # Then set to False when you start adding in new response curves
 
 ### output info
 dir_outputs:: 'outputs/outputs/'
 
 ## evaluation info
+run_response_curves:: True
 sample_for_plot:: 20
 levels:: [0, 0.1, 1, 2, 5, 10, 20, 50, 100] 
 dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
