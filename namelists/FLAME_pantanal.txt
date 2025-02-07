@@ -1,12 +1,10 @@
 ## model info
-#regions:: ['Greece', 'Canada', 'NW_Amazon']
-model_title::  'FLAME-test2'
+model_title::  'FLAME-Pantanal-test2'
 
 ## input data paths and filenames
 dir_training:: "../ConFIRE_attribute/isimip3a/driving_data/GSWP3-W5E5-20yrs/Brazil/AllConFire_2000_2009/"
 y_filen:: "GFED4.1s_Burned_Fraction.nc"
 CA_filen:: None
-#x_filen_list:: ["Forest.nc", "consec_dry_mean.nc", "tas_max.nc", "cropland.nc", "pasture.nc", "cveg.nc", "savanna.nc", "np.nc", "lightn.nc"]
 x_filen_list:: ["precip.nc", "tas_max.nc", "csoil.nc", "cveg.nc", "Forest.nc", "savanna.nc", "cropland.nc", "pasture.nc", "Wetland.nc", "grassland.nc"]
 
 ## Model info
@@ -32,10 +30,10 @@ priors:: {'pname': "pow_power",'np': 'nvars', 'dist': 'LogNormal', 'mu': 0.0, 's
 niterations:: 100
 cores:: 1
 fraction_data_for_sample:: 0.005
-subset_function:: sub_year_months
-subset_function_args:: {'months_of_year': [7]}
-grab_old_trace:: FALSE # set to True till you get the code running. 
-                      # Then set to False when you start adding in new response curves
+subset_function:: [constrain_BR_biomes, sub_year_months]
+subset_function_args:: [{'biome_ID': [6]}, {'months_of_year': [7]}]
+grab_old_trace:: False # set to True till you get the code running. 
+                       # Then set to False when you start adding in new response curves
 
 ### output info
 dir_outputs:: 'outputs/outputs/'
@@ -47,9 +45,4 @@ dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
 cmap:: 'OrRd'
 dcmap:: 'RdBu_r'
 dir_projecting:: "../ConFIRE_attribute/isimip3a/driving_data/GSWP3-W5E5-20yrs/Brazil/AllConFire_2000_2009/"
-
-
-
-
-
 
