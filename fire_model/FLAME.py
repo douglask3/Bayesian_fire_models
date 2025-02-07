@@ -50,7 +50,8 @@ class FLAME(object):
         self.lin_betas = select_param_or_default('lin_betas', 0.0) * \
                          select_param_or_default('lin_Direction_betas', 1.0)
         self.lin_beta_constant = select_param_or_default('lin_beta_constant', 0.0)
-        self.pow_betas = select_param_or_default('pow_betas', None)
+        self.pow_betas = select_param_or_default('pow_betas', None) * \
+                         select_param_or_default('pow_Direction_betas', 1.0)
         self.pow_power = select_param_or_default('pow_power', None)
         self.x2s_betas = select_param_or_default('x2s_betas', None)
         self.x2s_X0    = select_param_or_default('x2s_X0'   , 0.0 )
