@@ -40,6 +40,8 @@ dir_outputs:: 'outputs/outputs/'
 
 ## evaluation info
 run_response_curves:: True
+response_grouping:: [["tas_max.nc", "precip.nc"], ["Forest.nc", "savanna.nc"], 
+                     ["grassland.nc", "Wetland.nc"], ['Wetland', "precip.nc"]] 
 sample_for_plot:: 100
 levels:: [0, 0.1, 1, 2, 5, 10, 20, 50, 100] 
 dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
