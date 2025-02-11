@@ -246,7 +246,6 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
             readin_params.update(extra_params)
         extra_params = readin_params
             
-        
     common_args = {
         'y_filename': y_filen,
         'x_filename_list': x_filen_list,
