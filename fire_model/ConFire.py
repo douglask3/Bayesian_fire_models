@@ -31,6 +31,7 @@ class ConFire(object):
         self.control_Direction = self.params['control_Direction']
         self.x0 = select_param_or_default('x0', [0])
         self.betas = select_param_or_default('betas', [[0]], stack = False)
+        self.powers = select_param_or_default('powers', None, stack = False)
         self.driver_Direction = self.params['driver_Direction']
         self.Fmax = select_param_or_default('Fmax', 1.0, stack = False)
 
@@ -39,7 +40,10 @@ class ConFire(object):
         def cal_control(cid = 0):
             ids = self.controlID[cid]
             betas =  self.betas[cid] * self.driver_Direction[cid]
-            
+        
+            X_i = X[:,ids]
+            if self.powers is not None:
+                X_i = self.numPCK.power(X_i, self.powers[cid])
             return self.numPCK.sum(X[:,ids] * betas[None, ...], axis=-1)
             
         
