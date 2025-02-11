@@ -44,6 +44,7 @@ def above_percentile_mean(cube, cube_assess = None, percentile = 0.95):
     print("finding " + str(percentile) + " for year" + str(cube.coord('year').points))
     if cube_assess is None: cube_assess = cube
     area_cube = iris.analysis.cartography.area_weights(cube_assess)
+
     # Sort the cube by fractional burnt values in descending order
     sorted_indices = np.argsort(cube_assess.data.ravel())
     sorted_cube_data = cube_assess.data.ravel()[sorted_indices]
@@ -55,11 +56,11 @@ def above_percentile_mean(cube, cube_assess = None, percentile = 0.95):
     # Determine the total area of the grid cells
     total_area = np.sum(sorted_area_data * sorted_cube_data)
 
-    # Find the index where the cumulative sum exceeds the 95% threshold of the total area
+    # Find the index where the cumulative sum exceeds the percentile threshold of the total area
     threshold_index = np.argmax(cumulative_area > (percentile/100.0) * total_area)
 
     # Use this index to obtain the fractional burnt value 
-    # corresponding to the area-weighted 95th percentile threshold
+    # corresponding to the area-weighted percentile threshold
     threshold_value = sorted_cube_data[threshold_index]
     
     # Mask out grid cells below the area-weighted 95th percentile threshold
@@ -142,7 +143,7 @@ def make_both_time_series(percentiles, *args, **kw):
 
 def run_experiment(training_namelist, namelist, control_direction, control_names, 
                    output_dir, output_file, 
-                   name = '', *args, **kws):
+                   name = '', make_time_series = False, *args, **kws):
     if "baseline" in name: 
         run_only = False
     else:
@@ -172,6 +173,7 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
     
     control_TS = make_both_time_series(percentiles, Control[0], 'Control', figName, 
                                        cube_assess = Control[0])
+
     
     if  control_names is None: return None
 
@@ -237,7 +239,7 @@ def run_ConFire(namelist):
         params = read_variables_from_namelist(training_namelist)
         output_dir = params['dir_outputs']
         output_file = params['filename_out']
-         
+
         def find_replace_period_model(exp_list):
             exp_list_all = [item.replace('<<region>>', region) for item in exp_list \
                             if "<<experiment>>" not in item and "<<model>>" not in item]
@@ -288,6 +290,7 @@ def run_ConFire(namelist):
         for region in regions: run_for_regions(region)
     except:
         run_for_regions(None)
+
 
 
 if __name__=="__main__":

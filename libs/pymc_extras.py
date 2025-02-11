@@ -1,5 +1,6 @@
 import arviz as az
 import numpy as np
+import pymc as pm
 import iris
 
 import os
@@ -144,4 +145,30 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
             out = np.array(list(map(lambda id: sample_model(id, run_name), idx)))
             return iris.cube.CubeList(out).merge_cube()
         
+def get_step_method(step_type):
+    # Dictionary mapping strings to step methods
+    step_methods = {
+        'nuts': pm.NUTS,
+        'hmc': pm.HamiltonianMC,
+        'metropolis': pm.Metropolis,
+        'binary_metropolis': pm.BinaryMetropolis,
+        'binary_gibbs_metropolis': pm.BinaryGibbsMetropolis,
+        'categorical_gibbs_metropolis': pm.CategoricalGibbsMetropolis,
+        'demetropolis': pm.DEMetropolis,
+        'demetropolis_z': pm.DEMetropolisZ,
+        'slice': pm.Slice,
+        'compound_step': pm.CompoundStep,  # Requires list of methods
+        # Proposal distributions (used in conjunction with Metropolis-like samplers)
+        'cauchy_proposal': pm.CauchyProposal,
+        'laplace_proposal': pm.LaplaceProposal,
+        'multivariate_normal_proposal': pm.MultivariateNormalProposal,
+        'normal_proposal': pm.NormalProposal,
+        'poisson_proposal': pm.PoissonProposal,
+        'uniform_proposal': pm.UniformProposal,
+    }
 
+    # Return the appropriate step method function, or raise an error if invalid
+    if step_type.lower() in step_methods:
+        return step_methods[step_type.lower()]
+    else:
+        raise ValueError(f"Unknown step method: {step_type}")

@@ -13,4 +13,5 @@ dependencies:
   - cartopy
   - geopandas
   - pytensor
-  - ascend
+  - scikit-learn
+  - seaborn

@@ -5,21 +5,23 @@
 #https://regionmask.readthedocs.io/en/v0.9.0/defined_scientific.html
 
 import iris
+from iris.analysis import geometry
 import iris.coord_categorisation as icc
 import cartopy.io.shapereader as shpreader
-try:
-    from ascend import shape
-except:
-    print("WARNING: can't load shape from ascent. Some constraints calls might fail")
+
+import shapely.geometry as sgeom
+import shapely.ops as ops
+from shapely.geometry import Point
+from shapely.vectorized import contains
 import numpy as np
 import cartopy.crs as ccrs
 import geopandas as gp
+
 #import regionmask
 from pdb import set_trace
 import iris.quickplot as qplt
 import matplotlib.pyplot as plt
 import datetime
-import geopandas as gpd
 
 def constrain_to_data(cube):
     """constrain cube to the lats and lons that contain data that isn't 'nan'   
@@ -273,46 +275,88 @@ def constrain_olson(cube, ecoregions):
     biomes = iris.load_cube('data/wwf_terr_ecos_0p5.nc')
     return constrain_cube_by_cube_and_numericIDs(cube, biomes, ecoregions)
 
-def constrain_natural_earth(cube, Country, Continent = None, shpfilename = None, 
+def constrain_natural_earth(cube, Country = None, Continent = None, shpfilename = None, 
                             constrain = True, *args, **kw):
-    
-    """constrains a cube to Natural Earth Country or continent.
-    Assumes that the cube is iris
-    If Country is defined, it wont select Continent.
+    """
+    Constrains an Iris cube to a given continent using Natural Earth shapefiles.
 
-    Arguments:
+    Parameters:
+        cube (iris.cube.Cube): The Iris cube to constrain.
+        Country (str or None):  The name of the contry to constrain to (e.g., "Brazil").
+            Either Country or Contient need to be defined
+        Continent (str or None): The name of the continent to constrain to. Options are:
+            'South America'
+            'Oceania'
+            'Europe'
+            'Afria'
+            'North America'
+            'Asia' 
+        shapefile_path (str): Path to the Natural Earth shapefile.
+        contrain (boolean): True if you want to constrain to the geographic bound of the continent or 
+            country
 
-    cube -- an iris cube
-    Continent -- name of continent. Options are:
-        'South America'
-        'Oceania'
-        'Europe'
-        'Afria'
-        'North America'
-        'Asia' 
-    shpfilename -- path and filename of natural earth shapefile.
-                   If set to None, it will look for temp. file version and 
-                   download if it does not exist.
     Returns:
-    Input cube constrained to the extent to that country or continent, 
-    and mask areas outside of it. Uses Natural Earth
+        iris.cube.Cube: A new cube with data masked outside the specified continent or country.
     """
     if shpfilename is None:
-        shpfilename = shpreader.natural_earth(resolution='110m', 
-                                              category='cultural', name='admin_0_countries')
-    natural_earth_file = shape.load_shp(shpfilename)
-    if Country is not None:
-        NAMES = [i.attributes.get('NAME') for i in natural_earth_file]
-        NAME = [s for s in NAMES if Country in s][0]
-        CountrySelect = shape.load_shp(shpfilename, NAME=NAME)
-    elif Continent is not None:
-        CountrySelect = shape.load_shp(shpfilename, Continent='South America')
-        CountrySelect = Country.unary_union()
+        shpfilename = shpreader.natural_earth(resolution='110m', category='cultural', name='admin_0_countries')
+    # Load the shapefile
+    countries = gp.read_file(shpfilename)
     
-    if constrain: cube = CountrySelect[0].constrain_cube(cube)
+    # Filter the shapefile to get the geometry for the specified continent
+    if Country is None:
+        if not isinstance(Continent, list): Continent = [Continent]
+        continent_geom = countries[countries['CONTINENT'].isin(Continent)].geometry.unary_union  
+    else:
+        if not isinstance(Country, list): Country = [Country]
+        continent_geom = countries[countries['NAME'].isin(Country)].geometry.unary_union
+
+    if constrain: 
+        minx, miny, maxx, maxy = continent_geom.bounds
+        cube = contrain_coords(cube, (minx, maxx, miny, maxy))
     
-    cube = CountrySelect[0].mask_cube(cube)
-    return cube
+    # Get cube latitude and longitude coordinates
+    lons, lats = np.meshgrid(cube.coord('longitude').points, cube.coord('latitude').points)
+    
+    # Create a mask: True for points outside the continent
+    mask = ~contains(continent_geom, lons, lats)
+
+    # Handle multi-dimensional cubes
+    expanded_mask = np.broadcast_to(mask, cube.shape)
+
+    # Apply the mask to the cube data
+    masked_data = np.ma.masked_array(cube.data, mask=expanded_mask)
+    masked_cube = cube.copy(data=masked_data)
+    
+    return masked_cube
+
+def mask_data_with_geometry(cube, geometry):
+    """Masks the cube data based on whether points fall within the given geometry."""
+    # Extract latitude and longitude data from the cube
+    lats = cube.coord('latitude').points
+    lons = cube.coord('longitude').points
+    
+    # Create a 2D meshgrid of latitude and longitude
+    lat_grid, lon_grid = np.meshgrid(lats, lons, indexing='ij')  # Use 'ij' for correct indexing
+
+    # Create a mask for each point
+    mask = np.zeros(lon_grid.shape, dtype=bool)
+
+    # Check each point in the 2D grid
+    for i in range(lon_grid.shape[0]):
+        for j in range(lon_grid.shape[1]):
+            point = sgeom.Point(lon_grid[i, j], lat_grid[i, j])
+            mask[i, j] = not geometry.contains(point)  # Mark as True if outside the geometry
+
+    # Expand the mask to match the shape of the cube's data (broadcasting)
+    # Assuming the first two dimensions are latitude and longitude
+    # Note: Ensure that the mask has the correct dimensions for broadcasting
+    full_mask = np.broadcast_to(mask[:, :, np.newaxis], cube.data.shape[1:])  # Adding new axis for broadcasting
+
+    # Apply the mask to the cube data
+    masked_data = np.ma.masked_array(cube.data, mask=full_mask)
+
+    return masked_data
 
 def constrain_region(cube, ecoregions = None, Country = None, Continent = None, *args, **kw):
     """ checks if any spatial constrains are set and contrains according to comments in functions above

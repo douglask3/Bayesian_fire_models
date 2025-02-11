@@ -23,6 +23,8 @@ import math
 import numbers
 
 import pymc  as pm
+import pytensor
+import pytensor.tensor as tt
 import arviz as az
 
 def set_priors(priors, X):
@@ -69,7 +71,8 @@ def set_priors(priors, X):
 
 def fit_MaxEnt_probs_to_data(Y, X, CA = None, 
                              model_class = FLAME, link_func_class = MaxEnt,
-                             niterations = 100, priors = None, *arg, **kw):
+                             niterations = 100, priors = None, inference_step_type = None, 
+                             *arg, **kw):
     """ Bayesian inerence routine that fits independant variables, X, to dependant, Y.
         Based on the MaxEnt solution of probabilities. 
     Arguments:
@@ -106,6 +109,9 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None,
         model = model_class(priors, inference = True)
         prediction = model.burnt_area(X)  
         
+        #np.random.seed(42)
+        #tt.config.gpuarray.random.set_rng_seed(42)
+        #tt.config.floatX = 'float32'
         ## define error measurement
         if CA is None:
             error = pm.DensityDist("error", prediction, *link_priors.values(), 
@@ -118,7 +124,12 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None,
                                    observed = Y)
               
         ## sample model
-        trace = pm.sample(niterations, return_inferencedata = True, 
+        if inference_step_type is None:
+            step_method = get_step_method('nuts')
+        else:
+            step_method = get_step_method(inference_step_type) 
+        
+        trace = pm.sample(niterations, step = step_method(), return_inferencedata = True, 
                           callback = trace_callback, *arg, **kw)
 
     def filter_dict_elements_by_type(my_dict, included_types):
@@ -157,7 +168,7 @@ def train_MaxEnt_model(y_filen, x_filen_list, CA_filen = None, model_class = FLA
                        subset_function = None, subset_function_args = None,
                        niterations = 100, cores = 4, model_title = 'no_name',
                        subfolder = '', 
-                       grab_old_trace = False, **kws):
+                       grab_old_trace = False, inference_step_type = None, **kws):
                        
     ''' Opens up training data and trains and saves Bayesian Inference optimization of model. 
         see 'fit_MaxEnt_probs_to_data' for details how.
@@ -258,7 +269,8 @@ def train_MaxEnt_model(y_filen, x_filen_list, CA_filen = None, model_class = FLA
                                          model_class = model_class,
                                          link_func_class = link_func_class, 
                                          niterations = niterations, 
-                                         cores = cores, priors = priors)
+                                         cores = cores, priors = priors, 
+                                         inference_step_type = inference_step_type)
         
         ## save trace file
         write_variables_to_namelist(none_trace_params, other_params_file)

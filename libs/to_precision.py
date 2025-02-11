@@ -1,12 +1,13 @@
 def to_precision(x,p):
     import math
+    from pdb import set_trace
     """
     returns a string representation of x formatted with a precision of p
 
     Based on the webkit javascript implementation taken from here:
     https://code.google.com/p/webkit-mirror/source/browse/JavaScriptCore/kjs/number_object.cpp
     """
-
+    print(x)
     x = float(x)
 
     if x == 0.:
@@ -20,12 +21,23 @@ def to_precision(x,p):
 
     e = int(math.log10(x))
     tens = math.pow(10, e - p + 1)
-    n = math.floor(x/tens)
-
+    try:
+        n = math.floor(x/tens)
+    except:
+        if x < 1e-100:
+            return 0.0
+        else:
+            set_trace()
     if n < math.pow(10, p - 1):
         e = e -1
         tens = math.pow(10, e - p+1)
-        n = math.floor(x / tens)
+        try:
+            n = math.floor(x / tens)
+        except:
+            if x < 1e-100:
+                return 0.0
+            else:
+                set_trace()
     if abs((n + 1.) * tens - x) <= abs(n * tens -x):
         n = n + 1
 
