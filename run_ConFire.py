@@ -96,7 +96,7 @@ def make_time_series(cube, name, figName, percentile = None, cube_assess = None,
     cube.data = np.ma.masked_invalid(cube.data)
     grid_areas = iris.analysis.cartography.area_weights(cube)
      
-    if percentile is None:
+    if percentile is None or percentile == 0.0:
         area_weighted_mean =  [cube[i].collapsed(['latitude', 'longitude'],
                                                  iris.analysis.MEAN, weights = grid_areas[i]) \
                                    for i in range(cube.shape[0])]
@@ -133,10 +133,12 @@ def make_time_series(cube, name, figName, percentile = None, cube_assess = None,
     np.savetxt(out_file, TS, delimiter=',', header = "year,p25%,p75%")
     return TS
 
-def make_both_time_series(*args, **kw):
+def make_both_time_series(percentiles, *args, **kw):
+    for percentile in percentiles:
+        make_time_series(*args, **kw, percentile = percentile) 
     #make_time_series(*args, **kw)
-    make_time_series(*args, **kw, percentile = 90)
-    make_time_series(*args, **kw, percentile = 95) 
+    #make_time_series(*args, **kw, percentile = 90)
+    #make_time_series(*args, **kw, percentile = 95) 
 
 def run_experiment(training_namelist, namelist, control_direction, control_names, 
                    output_dir, output_file, 
@@ -164,11 +166,12 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
                         sample_error = False,
                         *args, **kws)
     
-    
-    evaluate_TS = make_both_time_series(Evaluate[0], 'Evaluate', figName, 
+    set_trace()
+    evaluate_TS = make_both_time_series(percentiles, Evaluate[0], 'Evaluate', figName, 
                                         cube_assess = Control[0])
     
-    control_TS = make_both_time_series(Control[0], 'Control', figName, cube_assess = Control[0])
+    control_TS = make_both_time_series(percentiles, Control[0], 'Control', figName, 
+                                       cube_assess = Control[0])
     
     if  control_names is None: return None
 
@@ -189,8 +192,6 @@ def run_ConFire(namelist):
     
     run_info = read_variables_from_namelist(namelist) 
     subset_function_args = run_info['subset_function_args']
-
-    
         
     try:
         control_direction = read_variables_from_namelist(params['other_params_file'])
@@ -202,19 +203,33 @@ def run_ConFire(namelist):
         control_names = read_variables_from_namelist(namelist)['control_names']
     except:
         control_names = None  
+   
+    subset_function_eval = read_variables_from_namelist(namelist)['subset_function_eval']
+    subset_function_args_eval = read_variables_from_namelist(namelist)['subset_function_args_eval']
     
     def run_for_regions(region = None):
-
+        
         if region is None:
             region = '<<region>>'
         else:
-            subset_function_args['months_of_year'] = run_info['region_months'][region]
+            def set_region_months(ssa):
+                if isinstance(ssa, list):
+                    for i in range(len(ssa)):
+                        try:
+                            ssa['months_of_year'] = run_info['region_months'][region]
+                        except:
+                            pass
+                else:
+                    ssa['months_of_year'] = run_info['region_months'][region]
+                return ssa
             
+            set_region_months(subset_function_args)
+            set_region_months(subset_function_args_eval)
         model_title = run_info['model_title'].replace('<<region>>', region)
         dir_training = run_info['dir_training'].replace('<<region>>', region)
         dir_projecting = run_info['dir_projecting'].replace('<<region>>', region)
         
-
+        set_trace()
         trace, scalers, training_namelist = \
                         train_MaxEnt_model_from_namelist(namelist, model_title = model_title,
                                                          dir_training = dir_training,
@@ -245,7 +260,8 @@ def run_ConFire(namelist):
         run_experiment(training_namelist, namelist, control_direction, control_names,
                                   output_dir, output_file, 'baseline', 
                                   model_title = model_title, 
-                                  subset_function_args = subset_function_args)
+                                  subset_function = subset_function_eval,
+                                  subset_function_args = subset_function_args_eval)
         
         try:
             experiment_dirs  = run_info['experiment_dir']
@@ -281,7 +297,7 @@ if __name__=="__main__":
     namelist = 'namelists/isimip-fwi2.txt'
     namelist = 'namelists/isimip3.txt'
     namelist = 'namelists/isimip2425.txt'
-    namelist = 'namelists/FLAME_pantanal.txt'
+    namelist = 'namelists/ar7_ref.txt'
     #namelist = 'namelists/SOW2023.txt'
     
     run_ConFire(namelist)
