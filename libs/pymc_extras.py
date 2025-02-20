@@ -48,6 +48,11 @@ def select_post_param(trace):
     params = [select_post_param_name(var) for var in params_names]
     return params, [var for var in params_names]
 
+def contruct_param_comb(i, params, params_names, extra_params):
+    param_in = [param[i] if param.ndim == 1 else param[i,:] for param in params]
+    param_in = dict(zip(params_names, param_in))
+    param_in.update(extra_params)
+    return param_in
 
 def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name, 
                       dir_samples, grab_old_trace, extra_params = None,
@@ -82,10 +87,10 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
             iris.save(dat, filename)
             return dat
 
+        
         print("Generating Sample:" + file_sample)
-        param_in = [param[i] if param.ndim == 1 else param[i,:] for param in params]
-        param_in = dict(zip(params_names, param_in))
-        param_in.update(extra_params)
+
+        param_in = contruct_param_comb(i, params, params_names, extra_params)
         link_param_in = {key: value for key, value in param_in.items() \
                        if key.startswith('link-')}
 
@@ -115,7 +120,7 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
         else:
             return out
         
-
+    
     params, params_names = select_post_param(trace) 
     
     nits = len(trace.posterior.chain)*len(trace.posterior.draw)
