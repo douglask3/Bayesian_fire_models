@@ -134,6 +134,6 @@ if __name__=="__main__":
         save_ncdf(cube, '/masked/' + file[0:-3])
         Pcube = constrain_natural_earth(cube, Country = 'Brazil')
         Pcube = constrain_BR_biomes(Pcube, [6])
-        save_ncdf(cube, file[0:-3], 'data/Pantanal_example/')
+        save_ncdf(Pcube, file[0:-3], 'data/Pantanal_example/')
         
     
