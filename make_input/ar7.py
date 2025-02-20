@@ -58,8 +58,8 @@ if __name__=="__main__":
     
     
     
-    def save_ncdf(cube, varname): 
-        iris.save(cube, out_dir + '/' + varname +  '.nc')
+    def save_ncdf(cube, varname, dir = out_dir): 
+        iris.save(cube, dir + '/' + varname +  '.nc')
 
     save_ncdf(tree, 'tree_cover_cci')
     save_ncdf(totalVeg, 'total_veg_cover_cci')
@@ -95,9 +95,9 @@ if __name__=="__main__":
                  "consec_dry_mean.nc",   "pr_mean.nc", "Tree_cover_vcf.nc", 
                  "cveg.nc", "tas_max.nc", "vpd_max.nc", "dry_days.nc", 
                   "tas_mean.nc", "vpd_mean.nc"]
-    file_list = [out_dir + file for file in file_list0]
-    cubes = iris.load(file_list)
-
+    cubes = [iris.load_cube(out_dir + file) for file in file_list0]
+    #cubes = iris.load(file_list)
+    #set_trace()
     # Start with a fully "valid" mask (all True)
     common_mask = None
 
@@ -127,6 +127,13 @@ if __name__=="__main__":
             data = np.ma.array(cube.data, mask=expanded_mask)
         cube.data = data
 
+    
+    makeDir(out_dir + '/masked/')
+    makeDir('data/Pantanal_example/')
     for cube, file in zip(cubes, file_list0):
-        save_ncdf(cube, 'masked_' + file[0:-3])
+        save_ncdf(cube, '/masked/' + file[0:-3])
+        Pcube = constrain_natural_earth(cube, Country = 'Brazil')
+        Pcube = constrain_BR_biomes(Pcube, [6])
+        save_ncdf(cube, file[0:-3], 'data/Pantanal_example/')
+        
     
