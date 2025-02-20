@@ -1,0 +1,13 @@
+y_filen:: 'burnt_area.nc'
+x_filen_list:: ['pr_mean.nc', 'tas_max.nc', 'Tree_cover_vcf.nc', 'Total_cover_vcf.nc', 'vpd_mean.nc', 'cveg.nc']
+CA_filen:: None
+dir:: 'data/Pantanal_example/'
+filename_out:: '_6-frac_points_0.8'
+dir_outputs:: 'outputs//ConFire_Pantanal_example///'
+subset_function:: sub_year_months
+subset_function_args:: {'months_of_year': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]}
+out_file:: '_6-frac_points_0.8-nvariables_-frac_random_sample0.8-nvars_6-niterations_4000'
+data_file:: 'outputs//ConFire_Pantanal_example////data-_6-frac_points_0.8-nvariables_-frac_random_sample0.8-nvars_6-niterations_4000.nc'
+trace_file:: 'outputs//ConFire_Pantanal_example////trace-_6-frac_points_0.8-nvariables_-frac_random_sample0.8-nvars_6-niterations_4000.nc'
+other_params_file:: 'outputs//ConFire_Pantanal_example////none_trace-params-_6-frac_points_0.8-nvariables_-frac_random_sample0.8-nvars_6-niterations_4000.txt'
+scale_file:: 'outputs//ConFire_Pantanal_example////scalers-_6-frac_points_0.8-nvariables_-frac_random_sample0.8-nvars_6-niterations_4000.csv'
