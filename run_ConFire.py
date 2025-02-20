@@ -135,6 +135,7 @@ def make_time_series(cube, name, figName, percentile = None, cube_assess = None,
     return TS
 
 def make_both_time_series(percentiles, *args, **kw):
+    if percentiles is None: return None
     for percentile in percentiles:
         make_time_series(*args, **kw, percentile = percentile) 
     #make_time_series(*args, **kw)
@@ -143,7 +144,7 @@ def make_both_time_series(percentiles, *args, **kw):
 
 def run_experiment(training_namelist, namelist, control_direction, control_names, 
                    output_dir, output_file, 
-                   name = '', make_time_series = False, *args, **kws):
+                   name = '', time_series_percentiles = None, *args, **kws):
     if "baseline" in name: 
         run_only = False
     else:
@@ -167,12 +168,12 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
                         sample_error = False,
                         *args, **kws)
     
-    set_trace()
-    evaluate_TS = make_both_time_series(percentiles, Evaluate[0], 'Evaluate', figName, 
-                                        cube_assess = Control[0])
     
-    control_TS = make_both_time_series(percentiles, Control[0], 'Control', figName, 
-                                       cube_assess = Control[0])
+    evaluate_TS = make_both_time_series(time_series_percentiles, Evaluate[0], 'Evaluate', 
+                                        figName, cube_assess = Control[0])
+    
+    control_TS = make_both_time_series(time_series_percentiles, Control[0], 'Control', 
+                                       figName, cube_assess = Control[0])
 
     
     if  control_names is None: return None
@@ -180,12 +181,13 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
     for ltype, FUN in zip(['standard', 'potential'],
                           [Standard_limitation, Potential_limitation]):
         
-        limitation = [Standard_limitation(training_namelist, namelist, i, 
+        limitation = [FUN(training_namelist, namelist, i, 
                       name, control_direction, *args, 
                       Y = Y, X = X, lmask = lmask, scalers = scalers, 
                       cube_assess = Control[0], **kws) \
                         for i in range(len(control_direction))]
-        limitation_TS = np.array([make_both_time_series(cube[0], ltype + '-' + name, figName) \
+        limitation_TS = np.array([make_both_time_series(time_series_percentiles, \
+                                                        cube[0], ltype + '-' + name, figName) \
                            for cube, name in zip(limitation, control_names)])
         
     open(temp_file, 'a').close() 
@@ -193,22 +195,26 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
 def run_ConFire(namelist):   
     
     run_info = read_variables_from_namelist(namelist) 
-    subset_function_args = run_info['subset_function_args']
-        
-    try:
-        control_direction = read_variables_from_namelist(params['other_params_file'])
-        control_direction = control_direction['control_Direction']
-    except:
-        control_direction = None
 
-    try:
-        control_names = read_variables_from_namelist(namelist)['control_names']
-    except:
-        control_names = None  
-   
-    subset_function_eval = read_variables_from_namelist(namelist)['subset_function_eval']
-    subset_function_args_eval = read_variables_from_namelist(namelist)['subset_function_args_eval']
+    def select_from_info(item):
+        try:
+            out = run_info[item]
+        except:
+            out = None
+        return out
+
+    control_direction = select_from_info('control_Direction')
+    if control_direction is None:
+        control_direction = [param['value'] for param in run_info['priors'] \
+                             if param['pname'] == 'control_Direction'][-1]
     
+    control_names = select_from_info('control_names')
+    subset_function_args = select_from_info('subset_function_args')
+    subset_function_eval = select_from_info('subset_function_eval')
+    subset_function_args_eval = select_from_info('subset_function_args_eval')
+    regions = select_from_info('regions')
+    time_series_percentiles = select_from_info('time_series_percentiles')
+
     def run_for_regions(region = None):
         
         if region is None:
@@ -231,7 +237,6 @@ def run_ConFire(namelist):
         dir_training = run_info['dir_training'].replace('<<region>>', region)
         dir_projecting = run_info['dir_projecting'].replace('<<region>>', region)
         
-        set_trace()
         trace, scalers, training_namelist = \
                         train_MaxEnt_model_from_namelist(namelist, model_title = model_title,
                                                          dir_training = dir_training,
@@ -283,13 +288,11 @@ def run_ConFire(namelist):
         except:
             pass
 
-    
 
-    try:
-        regions = run_info['regions']  
-        for region in regions: run_for_regions(region)
-    except:
+    if regions is None:
         run_for_regions(None)
+    else:
+        for region in regions: run_for_regions(region)
 
 
 
