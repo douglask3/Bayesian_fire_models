@@ -32,8 +32,7 @@ class MaxEnt(object):
         fx = tt.switch( tt.lt(fx, 0.0000000001), 0.0000000001, fx)
         fx = tt.switch( tt.gt(fx, 0.9999999999), 0.9999999999, fx)
         
-        if qSpread is not None:
-            Y = overlap_pred(Y, qSpread)
+        Y = overlap_pred(Y, qSpread)
       
         if CA is not None: 
             prob =  Y*CA*tt.log(fx) + (1.0-Y)*CA*tt.log((1-fx))
@@ -42,11 +41,11 @@ class MaxEnt(object):
         return prob
     
     def random_sample_given_central_limit_(mod, qSpread = None, CA = None): #
-        return mod
+        #return mod
         return overlap_inverse(mod, qSpread)
 
     def random_sample_given_(mod, qSpread = None, CA = None):
-        return mod
+        #return mod
         return overlap_inverse(mod, qSpread)
     
     def sample_given_(Y, X, *args, **kw):
