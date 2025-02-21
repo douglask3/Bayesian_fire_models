@@ -131,3 +131,45 @@ class ConFire(object):
         full_df.index = index_labels
 
         return full_df
+
+
+if __name__=="__main__":
+    ## Pantanl example
+
+    param_file = "outputs/ConFire_Pantanal_example/trace_table.csv"
+
+    params = pd.read_csv(param_file)
+    
+    files =  params.iloc[1].to_list()[1:]
+    # Get unique values while maintaining order
+    seen = set([files[0], 'beta0'])
+    files = [file for file in files if not (file in seen or seen.add(file))]
+    
+
+    # Step 1: Extract first row (categorization)
+    categories = params.iloc[0, 1:].astype(int).values  # Convert to int (excluding 'Parameter')
+    
+    # Step 2: Process each row (skip the first row)
+    
+    list_of_dicts = []
+    for _, row in params.iloc[1:].iterrows():
+        row_dict = {'Fmax': row['Fmax']}
+        
+        # Initialize grouped lists
+        beta_groups = {c: [] for c in set(categories)}
+        power_groups = {c: [] for c in set(categories)}
+
+        # Step 3: Iterate through beta/power columns and group based on first row
+        for i, col in enumerate(params.columns[1:]):  # Skip 'Parameter'
+            if 'beta' in col:
+                beta_groups[categories[i]].append(row[col])
+            elif 'power' in col:
+                power_groups[categories[i]].append(row[col])
+
+        # Convert dicts to ordered lists
+        row_dict['beta'] = [beta_groups[c] for c in sorted(beta_groups.keys())]
+        row_dict['powers'] = [power_groups[c] for c in sorted(power_groups.keys())]
+
+        list_of_dicts.append(row_dict)
+    
+    set_trace()
