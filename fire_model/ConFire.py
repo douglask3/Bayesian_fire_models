@@ -204,7 +204,8 @@ if __name__=="__main__":
     for id, i in zip(idx, range(len(idx))):
         coord = iris.coords.DimCoord(i, "realization")
         param_in = contruct_param_comb(id, params, params_names, extra_params)
-        Fmax = param_in['Fmax'].copy()
+        
+        Fmax = param_in['Fmax0'].copy()
         # **Run Full Model**
         out_cubes[0].append(run_model_into_cube(param_in, coord))
 
@@ -213,12 +214,12 @@ if __name__=="__main__":
             param_in['control_Direction'][:] = [0] * Nexp
             param_in['control_Direction'][cn] = control_direction[cn]
             param_in = contruct_param_comb(cn, params, params_names, extra_params)
-            param_in['Fmax'] = 1.0
+            param_in['Fmax0'] = np.array([1.0])
             out_cubes[cn+1].append(run_model_into_cube(param_in, coord))
 
         # **Run Model with All Controls Off (Stochastic Control)**
         param_in['control_Direction'][:] = [0] * Nexp
-        param_in['Fmax'] = Fmax
+        param_in['Fmax0'] = Fmax
         out_cubes[cn+2].append(run_model_into_cube(param_in, coord))
 
 
@@ -258,7 +259,10 @@ if __name__=="__main__":
             print(f"Skipping {filename} due to error: {e}")
 
     plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, output_dir +  "Confire_Results.png"), dpi=300)
+    try:
+        plt.savefig(os.path.join(output_dir, "Confire_Results.png"), dpi=300)
+    except:
+        pass
     plt.show()
     
 
