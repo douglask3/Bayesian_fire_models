@@ -9,8 +9,8 @@ from pdb import set_trace
 
 import sys
 sys.path.append('libs/')
+sys.path.append('../libs/')
 from select_key_or_default import *
-
 
 class ConFire(object):
     def __init__(self, params, inference = False):
@@ -134,42 +134,81 @@ class ConFire(object):
 
 
 if __name__=="__main__":
+
+    from pymc_extras import *
+    from namelist_functions import *
+    from read_variable_from_netcdf import *
+    from iris_plus import insert_data_into_cube
+
     ## Pantanl example
 
-    param_file = "outputs/ConFire_Pantanal_example/trace_table.csv"
+    ## parameter files
+    info_dir = "outputs/outputs/ConFire_Pantanal_example/"
+    output_dir = "outputs/outputs/ConFire_Pantanal_example/simple_output_example"
+    param_file_trace = info_dir + \
+        "trace-_6-frac_points_0.8-nvariables_-frac_random_sample0.8-nvars_6-niterations_4000.nc"
+    param_file_none_trace = info_dir + \
+        "none_trace-params-_6-frac_points_0.8-nvariables_-frac_random_sample0.8-nvars_6-niterations_4000.txt"
+    scale_file = info_dir + \
+       "scalers-_6-frac_points_0.8-nvariables_-frac_random_sample0.8-nvars_6-niterations_4000.csv"
 
-    params = pd.read_csv(param_file)
+    ## replace these two lines with own files, but make sure variables are in the same order
+    variable_file = info_dir + \
+        "variables_info-_6-frac_points_0.1-nvariables_-frac_random_sample0.1-nvars_6-niterations_4000.txt"
+    nc_files = read_variables_from_namelist(variable_file)['x_filen_list']
+    nc_dir = read_variables_from_namelist(variable_file)['dir']
     
-    files =  params.iloc[1].to_list()[1:]
-    # Get unique values while maintaining order
-    seen = set([files[0], 'beta0'])
-    files = [file for file in files if not (file in seen or seen.add(file))]
-    
+    ## Open driving data
+    scalers = pd.read_csv(scale_file).values
+    #def open_data(i):
+    #    cube = iris.load_cube(nc_dir + nc_files[i])  
+    #    
+    #    cube.data = (cube.data - scale.iloc[0][i]) / (scale.iloc[1][i]- scale.iloc[0][i])
+    #    return cube
+    #driving_dat = [open_data(i) for i in range(len(nc_files))]
 
-    # Step 1: Extract first row (categorization)
-    categories = params.iloc[0, 1:].astype(int).values  # Convert to int (excluding 'Parameter')
+    obs_data, driving_data, lmask, scalers = read_all_data_from_netcdf(nc_files[0], nc_files, scalers = scalers, dir = nc_dir)
     
-    # Step 2: Process each row (skip the first row)
+    eg_cube = read_variable_from_netcdf(nc_files[0], dir = nc_dir)
+    #lmask = np.reshape(lmask, eg_cube.shape)
+
+    nsample_for_plot = 10
+
+    params, params_names = select_post_param(param_file_trace) 
+    extra_params = read_variables_from_namelist(param_file_none_trace)
+    control_direction = extra_params['control_Direction'].copy()
+    Nexp = len(control_direction)
     
-    list_of_dicts = []
-    for _, row in params.iloc[1:].iterrows():
-        row_dict = {'Fmax': row['Fmax']}
+    nits = len(params[0])
+    idx = range(0, nits, int(np.floor(nits/nsample_for_plot)))
+    
+    out_cubes = [[] for _ in range(Nexp+2)]
+
+    def run_model_into_cube(param_in, coord):
+        out = ConFire(param_in).burnt_area(driving_data)
+        cube = insert_data_into_cube(out, eg_cube, lmask)       
+        cube.add_aux_coord(coord)
+        return cube
+
+    for id, i in zip(idx, range(len(idx))):
+        coord = iris.coords.DimCoord(i, "realization")
+        param_in = contruct_param_comb(id, params, params_names, extra_params)
         
-        # Initialize grouped lists
-        beta_groups = {c: [] for c in set(categories)}
-        power_groups = {c: [] for c in set(categories)}
+        out_cubes[0].append(run_model_into_cube(param_in, coord))
 
-        # Step 3: Iterate through beta/power columns and group based on first row
-        for i, col in enumerate(params.columns[1:]):  # Skip 'Parameter'
-            if 'beta' in col:
-                beta_groups[categories[i]].append(row[col])
-            elif 'power' in col:
-                power_groups[categories[i]].append(row[col])
+        for cn in range(Nexp):
+            param_in['control_Direction'][:] = [0]*Nexp
+            param_in['control_Direction'][cn] = control_direction[cn]
+            param_in = contruct_param_comb(cn, params, params_names, extra_params)
+            out_cubes[cn+1].append(run_model_into_cube(param_in, coord))
 
-        # Convert dicts to ordered lists
-        row_dict['beta'] = [beta_groups[c] for c in sorted(beta_groups.keys())]
-        row_dict['powers'] = [power_groups[c] for c in sorted(power_groups.keys())]
-
-        list_of_dicts.append(row_dict)
+        param_in['control_Direction'][:] = [0]*Nexp
+        out_cubes[cn+2].append(run_model_into_cube(param_in, coord))
+        
+    filenames_out = ['model'] +  ['control_' + str(i) for i in range(Nexp)] + \
+                    ['control_stocastic']
+    makeDir(output_dir)
+    for i in range(len(out_cubes)):
+        cubes = iris.cube.CubeList(out_cubes[i]).merge_cube()
+        iris.save(cubes, output_dir + filenames_out[i] + '.nc')
     
-    set_trace()

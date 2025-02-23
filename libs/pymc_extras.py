@@ -31,7 +31,7 @@ import matplotlib.pyplot as plt
 def select_post_param(trace):
     """Selects paramaeters from a pymc nc trace file.   
     Arguments:
-        trace -- pymc netcdf trace file
+        trace -- pymc netcdf trace file as filename or already opened
     Returns:
         dict of paramater values with each item names after the parameter        
     """
@@ -42,7 +42,10 @@ def select_post_param(trace):
         B = out.shape[1]
         new_shape = ((A * B), *out.shape[2:])
         return np.reshape(out, new_shape)
-
+    try:        
+        trace = az.from_netcdf(trace)
+    except:
+        pass
     params = trace.to_dict()['posterior']
     params_names = params.keys()
     params = [select_post_param_name(var) for var in params_names]
