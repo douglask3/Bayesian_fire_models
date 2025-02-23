@@ -306,7 +306,6 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
     if other_params_file is not None:
         readin_params = read_variables_from_namelist(other_params_file)
         if extra_params is not None:
-            
             readin_params.update(extra_params)
         extra_params = readin_params
             
