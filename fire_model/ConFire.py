@@ -135,76 +135,134 @@ class ConFire(object):
 
 if __name__=="__main__":
 
+
     from pymc_extras import *
     from namelist_functions import *
     from read_variable_from_netcdf import *
     from iris_plus import insert_data_into_cube
+    import iris
+    import matplotlib.pyplot as plt
+    import cartopy.crs as ccrs
+    import pandas as pd
+    import numpy as np
+    import os
 
-    ## Pantanl example
+    # --------------------------------------------------------
+    # **Pantanal Example: Running ConFire Model**
+    # This script runs the ConFire model using pre-generated parameter files.
+    # It calculates burnt area under different control conditions and saves results.
+    # --------------------------------------------------------
 
-    ## parameter files
+    # **Define Paths for Parameter Files  and for outputs**
     info_dir = "outputs/outputs/ConFire_Pantanal_example/"
     output_dir = "outputs/outputs/ConFire_Pantanal_example/simple_output_example"
-    param_file_trace = info_dir + \
-        "trace-_6-frac_points_0.8-nvariables_-frac_random_sample0.8-nvars_6-niterations_4000.nc"
-    param_file_none_trace = info_dir + \
-        "none_trace-params-_6-frac_points_0.8-nvariables_-frac_random_sample0.8-nvars_6-niterations_4000.txt"
-    scale_file = info_dir + \
-       "scalers-_6-frac_points_0.8-nvariables_-frac_random_sample0.8-nvars_6-niterations_4000.csv"
 
-    nsample_for_running = 10
+    # Parameter files (traces, scalers, and other model parameters)
+    param_file_trace = info_dir + "trace-_6-frac_points_0.8-nvariables_-frac_random_sample0.8-nvars_6-niterations_4000.nc"
+    param_file_none_trace = info_dir + "none_trace-params-_6-frac_points_0.8-nvariables_-frac_random_sample0.8-nvars_6-niterations_4000.txt"
+    scale_file = info_dir + "scalers-_6-frac_points_0.8-nvariables_-frac_random_sample0.8-nvars_6-niterations_4000.csv"
 
-    ## replace these two lines with own files, but make sure variables are in the same order
-    variable_file = info_dir + \
-        "variables_info-_6-frac_points_0.1-nvariables_-frac_random_sample0.1-nvars_6-niterations_4000.txt"
+    # Number of samples to run from the trace file
+    nsample_for_running = 100
+
+    # **Load Variable Information and NetCDF Files**
+    # Replace these lines with user-specified NetCDF files, ensuring variable order is the same.
+    variable_file = info_dir + "variables_info-_6-frac_points_0.1-nvariables_-frac_random_sample0.1-nvars_6-niterations_4000.txt"
     nc_files = read_variables_from_namelist(variable_file)['x_filen_list']
     nc_dir = read_variables_from_namelist(variable_file)['dir']
-    
-    ## Open driving data
+
+    # **Load Driving Data and Land Mask**
     scalers = pd.read_csv(scale_file).values
+    obs_data, driving_data, lmask, scalers = read_all_data_from_netcdf(nc_files[0], nc_files, scalers=scalers, dir=nc_dir)
 
-    obs_data, driving_data, lmask, scalers = read_all_data_from_netcdf(nc_files[0], nc_files, scalers = scalers, dir = nc_dir)
-    
-    eg_cube = read_variable_from_netcdf(nc_files[0], dir = nc_dir)
-    #lmask = np.reshape(lmask, eg_cube.shape)
+    # Load a sample cube (used for inserting data)
+    eg_cube = read_variable_from_netcdf(nc_files[0], dir=nc_dir)
 
-    nsample_for_running = 10
-
-    params, params_names = select_post_param(param_file_trace) 
+    # **Extract Model Parameters**
+    params, params_names = select_post_param(param_file_trace)
     extra_params = read_variables_from_namelist(param_file_none_trace)
     control_direction = extra_params['control_Direction'].copy()
     Nexp = len(control_direction)
-    
+
+    # **Sample Iterations from Trace**
     nits = len(params[0])
     idx = range(0, nits, int(np.floor(nits/nsample_for_running)))
-    
-    out_cubes = [[] for _ in range(Nexp+2)]
+
+    # **Storage for Model Outputs (Including full model, physical & stochastic controls)**
+    out_cubes = [[] for _ in range(Nexp + 2)]
 
     def run_model_into_cube(param_in, coord):
+        """
+        Runs the ConFire model with given parameters and inserts results into an Iris cube.
+        """
         out = ConFire(param_in).burnt_area(driving_data)
-        cube = insert_data_into_cube(out, eg_cube, lmask)       
+        cube = insert_data_into_cube(out, eg_cube, lmask)
         cube.add_aux_coord(coord)
         return cube
 
+    # **Run ConFire Model with Different Control Scenarios**
     for id, i in zip(idx, range(len(idx))):
         coord = iris.coords.DimCoord(i, "realization")
         param_in = contruct_param_comb(id, params, params_names, extra_params)
-        
+        Fmax = param_in['Fmax'].copy()
+        # **Run Full Model**
         out_cubes[0].append(run_model_into_cube(param_in, coord))
 
+        # **Run Model with Individual Controls Turned On**
         for cn in range(Nexp):
-            param_in['control_Direction'][:] = [0]*Nexp
+            param_in['control_Direction'][:] = [0] * Nexp
             param_in['control_Direction'][cn] = control_direction[cn]
             param_in = contruct_param_comb(cn, params, params_names, extra_params)
+            param_in['Fmax'] = 1.0
             out_cubes[cn+1].append(run_model_into_cube(param_in, coord))
 
-        param_in['control_Direction'][:] = [0]*Nexp
+        # **Run Model with All Controls Off (Stochastic Control)**
+        param_in['control_Direction'][:] = [0] * Nexp
+        param_in['Fmax'] = Fmax
         out_cubes[cn+2].append(run_model_into_cube(param_in, coord))
-        
-    filenames_out = ['model'] +  ['control_' + str(i) for i in range(Nexp)] + \
-                    ['control_stocastic']
-    makeDir(output_dir)
+
+
+    # **Save Output Cubes**
+    filenames_out = ['model'] + ['control_' + str(i) for i in range(Nexp)] + \
+                    ['control_stochastic']
+    os.makedirs(output_dir, exist_ok=True)
+
     for i in range(len(out_cubes)):
         cubes = iris.cube.CubeList(out_cubes[i]).merge_cube()
-        iris.save(cubes, output_dir + filenames_out[i] + '.nc')
+        iris.save(cubes, os.path.join(output_dir, filenames_out[i] + '.nc'))
+
+    # --------------------------------------------------------
+    # **Visualization: Plot Resultant Maps**
+    # --------------------------------------------------------
+    # **Load and Plot Output Data**
+    fig, axes = plt.subplots(3, 3, figsize=(15, 10), subplot_kw={'projection': ccrs.PlateCarree()})
+    axes = axes.flatten()   # Flatten to handle looping easily
+    plotN = 0
+    for i, filename in enumerate(filenames_out):
+        filepath = os.path.join(output_dir, filename + ".nc")
+        
+        try:
+            cube = iris.load_cube(filepath)   # Load saved NetCDF file
+            annual_avg = cube.collapsed('time', iris.analysis.MEAN)
+            for pc in [5, 95]:
+                pc_cube = cube.collapsed('realization', iris.analysis.PERCENTILE, percent=pc)[0]
+                plotN = plotN + 1
+                ax = axes[plotN]
+                img = iris.quickplot.pcolormesh(pc_cube, axes=ax)
+                ax.set_title(filename.replace("_", " ").capitalize() +'-' + str(pc) + '%')
+                ax.coastlines()
+                # Add colorbar
+                fig.colorbar(img, ax=ax, orientation='vertical', fraction=0.046, pad=0.04)
+        
+        except Exception as e:
+            print(f"Skipping {filename} due to error: {e}")
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, output_dir +  "Confire_Results.png"), dpi=300)
+    plt.show()
     
+
+
+
+
+
