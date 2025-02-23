@@ -261,6 +261,7 @@ if __name__=="__main__":
     namelist = 'namelists/tuning.txt'
     namelist = 'namelists/isimip-fwi2.txt'
     namelist = 'namelists/isimip3.txt'
+    namelist = 'namelists/isimip2425.txt'
     #namelist = 'namelists/SOW2023.txt'
     
     run_ConFire(namelist)

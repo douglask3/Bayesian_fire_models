@@ -1,0 +1,16 @@
+name: bayesian-fire-models
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - numpy
+  - pandas
+  - scipy
+  - matplotlib
+  - pymc
+  - arviz
+  - iris
+  - cartopy
+  - geopandas
+  - pytensor
+  - ascend
