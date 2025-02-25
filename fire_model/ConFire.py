@@ -49,7 +49,7 @@ class ConFire(object):
             if self.powers is not None:
                 X_i = self.numPCK.power(X_i, self.powers[cid])
             
-            out = self.numPCK.sum(X[:,ids] * betas[None, ...], axis=-1)
+            out = self.numPCK.sum(X_i * betas[None, ...], axis=-1)
             if self.log_control[cid]: out = self.numPCK.log(out)
             out = out + self.x0[cid]
             return(out)
