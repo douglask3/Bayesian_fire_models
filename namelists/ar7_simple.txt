@@ -1,5 +1,5 @@
 ## model info
-model_title::  'ConFire_AR7-simple-pr-totalCover'
+model_title::  'ConFire_AR7-simple-pr-totalCover-Fmax'
 
 ## input data paths and filenames
 dir_training:: "data/data/driving_data/Global/isimp3a/obsclim/GSWP3-W5E5/period_2010_2012/masked/"
@@ -16,7 +16,7 @@ priors:: {'pname': "controlID", 'value': [[0], [3]]}
 priors:: {'pname': "control_Direction", 'value': [-1, 1]}
 #priors:: {'pname': "driver_Direction", 'value': [[1, -1, 1, -1], [1, 1, 1]]}
 priors:: {'pname': "driver_Direction", 'value': [[1], [1]]}
-#priors:: {'pname': "Fmax",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
+priors:: {'pname': "Fmax",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
 priors:: {'pname': "x0",'np': 2, 'dist': 'Normal', 'mu': 0.0, 'sigma': 1.0}
 #priros:: {'pname': "log_control", "value": [False, True])
 priors:: {'pname': "betas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
