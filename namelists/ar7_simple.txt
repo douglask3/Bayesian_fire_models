@@ -16,12 +16,12 @@ model_class:: ConFire
 priors:: {'pname': "controlID", 'value': [[0, 1, 2, 4], [3, 5]]}
 priors:: {'pname': "control_Direction", 'value': [-1, 1]}
 #priors:: {'pname': "driver_Direction", 'value': [[1, -1, 1, -1], [1, 1, 1]]}
-priors:: {'pname': "driver_Direction", 'value': [[1], [1]]}
+priors:: {'pname': "driver_Direction", 'value': [[1, -1, 1, -1], [1, 1]]}
 #priors:: {'pname': "Fmax",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
 priors:: {'pname': "x0",'np': 2, 'dist': 'Normal', 'mu': 0.0, 'sigma': 1.0}
 #priros:: {'pname': "log_control", "value": [False, True])
-priors:: {'pname': "betas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
-priors:: {'pname': "betas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "betas",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
 #priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
 #priors:: {'pname': "powers",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
 
