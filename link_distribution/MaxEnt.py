@@ -1,6 +1,6 @@
 import pytensor
 import pytensor.tensor as tt
-
+from pdb import set_trace
 
 def overlap_pred(Y, qSpread):
     if qSpread is  None:
@@ -14,7 +14,7 @@ def overlap_inverse(Y, qSpread):
 
 
 class MaxEnt(object):
-    def obs_given_(Y, fx, qSpread = None, CA = None):
+    def obs_given_(Y, fx, qSpread = None, stochastic = None, CA = None):
         """calculates the log-transformed continuous logit likelihood for Y given fx when Y
             and fx are probabilities between 0-1 with relative areas, CA
             Works with tensor variables.   
@@ -28,7 +28,10 @@ class MaxEnt(object):
         Returns:
             1-d tensor array of liklihoods.
         """
-    
+        
+        #if stochastic is not None:
+            
+            
         fx = tt.switch( tt.lt(fx, 0.0000000001), 0.0000000001, fx)
         fx = tt.switch( tt.gt(fx, 0.9999999999), 0.9999999999, fx)
         
