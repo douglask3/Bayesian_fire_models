@@ -1,5 +1,5 @@
 ## model info
-model_title::  'ConFire_AR7-simple-pr-totalCover-tas-cveg-treeMoistFuel-vpd-widerPriors-mh-FmaxNone-qSpreas-logFuel'
+model_title::  'ConFire_AR7-simple-pr-totalCover-tas-cveg-treeMoist-vpd-widerPriors-mh-FmaxNone-qSpread'
 
 
 ## input data paths and filenames
@@ -12,15 +12,16 @@ x_filen_list:: ["pr_mean.nc", "tas_max.nc", "Tree_cover_vcf.nc", "Total_cover_vc
 ## Model info
 model_class:: ConFire
 priors:: {'pname': "link-qSpread",'np': 1, 'dist': 'LogNormal', 'mu': 2.0, 'sigma': 1.0}
-#priors:: {'pname': "link-stochastic",'np': 1, 'dist': 'HalfNormal', 'sigma': 5.0}
-priors:: {'pname': "controlID", 'value': [[0, 1, 2, 4], [2, 3, 5]]}
+#priors:: {'pname': "controlID", 'value': [[0, 1, 2, 4], [2, 3, 5]]}
+priors:: {'pname': "controlID", 'value': [[0, 1, 2, 4], [3, 5]]}
 priors:: {'pname': "control_Direction", 'value': [-1, 1]}
-priors:: {'pname': "driver_Direction", 'value': [[1, -1, 1, -1], [1, 1, 1]]}
+#priors:: {'pname': "driver_Direction", 'value': [[1, -1, 1, -1], [1, 1, 1]]}
+priors:: {'pname': "driver_Direction", 'value': [[1, -1, 1, -1], [1, 1]]}
 #priors:: {'pname': "Fmax",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
 priors:: {'pname': "x0",'np': 2, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
-priros:: {'pname': "log_control", "value": [False, True])
+#priros:: {'pname': "log_control", "value": [False, True])
 priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 5.0}
-priors:: {'pname': "betas",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 5.0}
+priors:: {'pname': "betas",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 5.0}
 #priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 5.0}
 #priors:: {'pname': "powers",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 5.0}
 
