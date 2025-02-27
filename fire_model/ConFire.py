@@ -37,7 +37,7 @@ class ConFire(object):
         self.betas = select_param_or_default('betas', [[0]], stack = False)
         self.powers = select_param_or_default('powers', None, stack = False)
         self.driver_Direction = self.params['driver_Direction']
-        self.Fmax = select_param_or_default('Fmax', 1.0, stack = False)
+        self.Fmax = select_param_or_default('Fmax', None, stack = False)
 
     def burnt_area(self, X, return_controls = False, return_limitations = False):
         ## finds controls        
@@ -70,7 +70,9 @@ class ConFire(object):
 
         limitations = [lim for lim in limitations if lim is not None]
         
-        BA = sigmoid(self.Fmax, 1.0) * self.numPCK.prod(limitations, axis = 0)
+        
+        BA =  self.numPCK.prod(limitations, axis = 0)
+        if self.Fmax is not None: sigmoid(self.Fmax, 1.0) * BA
         return BA
     
     
