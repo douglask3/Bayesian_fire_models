@@ -1,5 +1,5 @@
 ## model info
-model_title::  'ConFire_AR7-simple-pr-totalCover-tas-cveg-treeMoist-vpd-widerPriors-mh'
+model_title::  'ConFire_AR7-simple-pr-totalCover-tas-cveg-treeMoist-vpd-widerPriors-mh-FmaxNone'
 
 
 ## input data paths and filenames
