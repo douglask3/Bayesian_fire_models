@@ -44,11 +44,11 @@ class MaxEnt(object):
         return prob
     
     def random_sample_given_central_limit_(mod, qSpread = None, CA = None): #
-        #return mod
+        return mod
         return overlap_inverse(mod, qSpread)
 
     def random_sample_given_(mod, qSpread = None, CA = None):
-        #return mod
+        return mod
         return overlap_inverse(mod, qSpread)
     
     def sample_given_(Y, X, *args, **kw):
