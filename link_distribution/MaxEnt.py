@@ -27,10 +27,7 @@ class MaxEnt(object):
             Default of None means everything is considered equal area.
         Returns:
             1-d tensor array of liklihoods.
-        """
-        
-        #if stochastic is not None:
-            
+        """   
             
         fx = tt.switch( tt.lt(fx, 0.0000000001), 0.0000000001, fx)
         fx = tt.switch( tt.gt(fx, 0.9999999999), 0.9999999999, fx)
