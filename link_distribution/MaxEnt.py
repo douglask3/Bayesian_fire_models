@@ -47,7 +47,7 @@ class MaxEnt(object):
                                         sigma = stochastic) 
             fx = pm.math.sigmoid(fx)
         
-        error = pm.DensityDist("error", fx, *link_priors.values(), 
+        error = pm.DensityDist("error", fx, CA, qSpread,
                                logp = DensityDistFun, 
                                observed = Y)
     def random_sample_given_central_limit_(mod, qSpread = None, CA = None): #
