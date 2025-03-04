@@ -1,5 +1,6 @@
 import pytensor
 import pytensor.tensor as tt
+import pymc as pm
 from pdb import set_trace
 
 def overlap_pred(Y, qSpread):
@@ -14,7 +15,7 @@ def overlap_inverse(Y, qSpread):
 
 
 class MaxEnt(object):
-    def obs_given_(Y, fx, qSpread = None, stochastic = None, CA = None):
+    def DensityDistFun(Y, fx, CA = None, qSpread = None):
         """calculates the log-transformed continuous logit likelihood for Y given fx when Y
             and fx are probabilities between 0-1 with relative areas, CA
             Works with tensor variables.   
@@ -40,6 +41,15 @@ class MaxEnt(object):
             prob = Y*tt.log(fx) + (1.0-Y)*tt.log((1-fx))
         return prob
     
+    def obs_given_(fx, Y, CA = None, stochastic = None, qSpread = None):
+        if stochastic is not None:
+            fx = pm.Normal("prediction-stochastic", mu=pm.math.logit(fx), 
+                                        sigma = stochastic) 
+            fx = pm.math.sigmoid(fx)
+        
+        error = pm.DensityDist("error", fx, *link_priors.values(), 
+                               logp = DensityDistFun, 
+                               observed = Y)
     def random_sample_given_central_limit_(mod, qSpread = None, CA = None): #
         #return mod
         return overlap_inverse(mod, qSpread)
