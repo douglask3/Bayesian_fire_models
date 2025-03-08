@@ -116,7 +116,8 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None,
 
         ## define error measurement
         if CA is not None: CA = CA.data
-        error = link_func_class.obs_given_(prediction, Y, CA, *link_priors.values())
+
+        error = link_func_class().obs_given_(prediction, Y, CA, *link_priors.values())
         #    error = pm.DensityDist("error", prediction, *link_priors.values(), 
         #                           logp = link_func_class.obs_given_, 
         #                           observed = Y)

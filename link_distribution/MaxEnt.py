@@ -15,7 +15,10 @@ def overlap_inverse(Y, qSpread):
 
 
 class MaxEnt(object):
-    def DensityDistFun(Y, fx, CA = None, qSpread = None):
+    def __init__(self):
+        pass
+        
+    def DensityDistFun(self, Y, fx, CA = None):
         """calculates the log-transformed continuous logit likelihood for Y given fx when Y
             and fx are probabilities between 0-1 with relative areas, CA
             Works with tensor variables.   
@@ -28,12 +31,10 @@ class MaxEnt(object):
             Default of None means everything is considered equal area.
         Returns:
             1-d tensor array of liklihoods.
-        """   
-            
+        """    
         fx = tt.switch( tt.lt(fx, 0.0000000001), 0.0000000001, fx)
         fx = tt.switch( tt.gt(fx, 0.9999999999), 0.9999999999, fx)
         
-        Y = overlap_pred(Y, qSpread)
       
         if CA is not None: 
             prob =  Y*CA*tt.log(fx) + (1.0-Y)*CA*tt.log((1-fx))
@@ -41,24 +42,34 @@ class MaxEnt(object):
             prob = Y*tt.log(fx) + (1.0-Y)*tt.log((1-fx))
         return prob
     
-    def obs_given_(fx, Y, CA = None, stochastic = None, qSpread = None):
+    def obs_given_(self, fx, Y, CA = None, stochastic = None, qSpread = None):
         if stochastic is not None:
             fx = pm.Normal("prediction-stochastic", mu=pm.math.logit(fx), 
                                         sigma = stochastic) 
             fx = pm.math.sigmoid(fx)
+        #set_trace()
         
-        error = pm.DensityDist("error", fx, CA, qSpread,
-                               logp = DensityDistFun, 
-                               observed = Y)
-    def random_sample_given_central_limit_(mod, qSpread = None, CA = None): #
+        Y = overlap_pred(Y, qSpread)
+    
+        if CA is None:
+            error = pm.DensityDist("error", fx,
+                                   logp = self.DensityDistFun, 
+                                   observed = Y)
+        else:  
+            error = pm.DensityDist("error", fx, CA,
+                                   logp = self.DensityDistFun, 
+                                   observed = Y)
+        return error
+            
+    def random_sample_given_central_limit_(self, mod, qSpread = None, CA = None): #
         #return mod
         return overlap_inverse(mod, qSpread)
 
-    def random_sample_given_(mod, qSpread = None, CA = None):
+    def random_sample_given_(self, mod, qSpread = None, CA = None):
         #return mod
         return overlap_inverse(mod, qSpread)
     
-    def sample_given_(Y, X, *args, **kw):
+    def sample_given_(self, Y, X, *args, **kw):
         X1 = 1 - X
         def prob_fun(y):
             return (y**X) * ((1-y)**X1)
