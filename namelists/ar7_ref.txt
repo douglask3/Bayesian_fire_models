@@ -1,5 +1,5 @@
 ## model info
-model_title::  'ConFire_AR7-power-masked6-clog2'
+model_title::  'ConFire_AR7-correctedpower-masked6-clog3-Modreturn-10Cores-'
 
 ## input data paths and filenames
 dir_training:: "data/data/driving_data/Global/isimp3a/obsclim/GSWP3-W5E5/period_2010_2012/masked/"
@@ -28,7 +28,7 @@ priors:: {'pname': "powers",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.
 inference_step_type:: "metropolis"
 link_func_class:: MaxEnt
 niterations:: 1000
-cores:: 4
+cores:: 10
 fraction_data_for_sample:: 0.2
 subset_function:: sub_year_months
 subset_function_args:: {'months_of_year': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]}
@@ -38,7 +38,7 @@ grab_old_trace:: True # set to True till you get the code running.
 dir_outputs:: 'outputs/outputs/'
 
 ## evaluation info
-sample_for_plot:: 20
+sample_for_plot:: 100
 control_names:: ['Moisture', 'Fuel']
 levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
 dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
