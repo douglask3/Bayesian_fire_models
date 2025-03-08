@@ -23,6 +23,8 @@ import math
 import numbers
 
 import pymc  as pm
+import pytensor
+import pytensor.tensor as tt
 import arviz as az
 
 def set_priors(priors, X):
@@ -107,6 +109,9 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None,
         model = model_class(priors, inference = True)
         prediction = model.burnt_area(X)  
         
+        #np.random.seed(42)
+        #tt.config.gpuarray.random.set_rng_seed(42)
+        #tt.config.floatX = 'float32'
         ## define error measurement
         if CA is None:
             error = pm.DensityDist("error", prediction, *link_priors.values(), 
