@@ -42,6 +42,7 @@ class MaxEnt(object):
             prob = Y*tt.log(fx) + (1.0-Y)*tt.log((1-fx))
         return prob
     
+
     def obs_given_(self, fx, Y, CA = None, stochastic = None, qSpread = None):
         if stochastic is not None:
             fx = pm.Normal("prediction-stochastic", mu=pm.math.logit(fx), 

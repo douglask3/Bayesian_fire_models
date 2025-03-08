@@ -1,6 +1,5 @@
 ## model info
 model_title::  'ConFire_AR7-simple-pr-totalCover-tas-cveg-treeMoist-vpd-widerPriors-mh-FmaxNone-stocastic2'
-
 ## input data paths and filenames
 dir_training:: "data/data/driving_data/Global/isimp3a/obsclim/GSWP3-W5E5/period_2010_2012/masked/"
 y_filen:: "burnt_area.nc"
