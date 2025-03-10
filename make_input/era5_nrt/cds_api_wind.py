@@ -63,9 +63,7 @@ def download_era5(years = [1940], months = range(13), area = [90, -180, -90, 180
     region_geom = unary_union(region_shape.geometry)
 
     def download_var(variable, statistics, year): 
-        temp_file =  temp_dir + '/download_era5_' + variable + statistics + \
-                    '_months' + '-'.join(months) + '_year' +  str(year) + '.nc'
-        
+        temp_file =  temp_dir + '/download_era5_' + variable + statistics + '_extent_' +  '_'.join([str(ar) for ar in area]) + '_months' + '-'.join(months) + '_year' +  str(year) + '.nc'
         
         if os.path.isfile(temp_file): return(temp_file)
         
@@ -100,7 +98,7 @@ def download_era5(years = [1940], months = range(13), area = [90, -180, -90, 180
         }
 
         client = cdsapi.Client()
-        client.retrieve(dataset, request,temp_file)
+        client.retrieve(dataset, request, temp_file)
         return(temp_file)
 
     def crop_cube(file):
