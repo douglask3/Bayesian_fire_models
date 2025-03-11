@@ -48,7 +48,9 @@ def common_time_coord(cubes, time_coord = 'valid_time'):
 
 def download_era5(years = [1940], months = range(13), area = [90, -180, -90, 180],
                   region_name = " ",
-                  dataset = "derived-era5-single-levels-daily-statistics", temp_dir = 'temp/',
+                  dataset = "derived-era5-single-levels-daily-statistics", 
+                  out_dir = 'data/',
+                  temp_dir = 'temp/',
                   shapefile_path = None):
 
     months = ['0' + str(i) if i < 10 else str(i) for i in months]
@@ -63,19 +65,16 @@ def download_era5(years = [1940], months = range(13), area = [90, -180, -90, 180
     region_geom = unary_union(region_shape.geometry)
 
     def download_var(variable, statistics, year): 
-        temp_file =  temp_dir + '/download_era5_' + variable + statistics + '_extent_' +  '_'.join([str(ar) for ar in area]) + '_months' + '-'.join(months) + '_year' +  str(year) + '.nc'
+        temp_file =  temp_dir + '/download_era5_' + variable + statistics + \
+                    '_extent_' +  '_'.join([str(ar) for ar in area]) + \
+                    '_months' + '-'.join(months) + '_year' +  str(year) + '.nc'
         
         if os.path.isfile(temp_file): return(temp_file)
         
         request = {
             "product_type": "reanalysis",
             "variable": [variable
-                #"2m_temperature",
-            #"10m_wind_gust_since_previous_post_processing",
-            #"instantaneous_10m_wind_gust"
             ],
-            # Load the shapefile
-
             "year": str(year),
             "month": months,
             "day": [
@@ -103,7 +102,6 @@ def download_era5(years = [1940], months = range(13), area = [90, -180, -90, 180
 
     def crop_cube(file):
         cube = iris.load_cube(file)
-        #lons, lats = cube.coord('longitude').points, cube.coord('latitude').points
         lons, lats = np.meshgrid(cube.coord('longitude').points, cube.coord('latitude').points)
     
         # Create a mask where True means outside and False means inside the shape
@@ -127,33 +125,48 @@ def download_era5(years = [1940], months = range(13), area = [90, -180, -90, 180
         return cropped_cube   
          
     def process_var(variable, statistics):
+        out_file = out_dir + '/' + region_name.replace(' ', '_')
+        try:
+            os.mkdir(out_file)
+        except:
+            pass
+        
+        out_file =  out_file + '/era5_' + variable + '_' + statistics + \
+                    '_years' +  str(years[0]) + '-' + str(years[-1]) + '.nc'
+        
+        if os.path.isfile(out_file): return(out_file)
+
         def for_year(year):
             file = download_var(variable, statistics, year)
             return crop_cube(file)
+
         cubes = [for_year(year) for year in years]
         cubes = common_time_coord(cubes)
         iris.util.equalise_attributes(cubes)
         cubes = iris.cube.CubeList(cubes).concatenate_cube()
-        set_trace()
+        iris.save(cubes, out_file)
+        return out_file
+        
         
     process_var("2m_temperature", "daily_maximum")
-    set_trace()
+    #set_trace()
     process_var("10m_wind_gust_since_previous_post_processing", "daily_maximum")
     process_var("instantaneous_10m_wind_gust", "daily_maximum")
-    process_var("2m_temperature", "daily_maximum")
     process_var("2m_dewpoint_temperature", "daily_minimum")
     process_var("volumetric_soil_water_layer_1", "daily_minimum")
 
 
 if __name__=="__main__":
     now = DT.now().year
-    years = range(1940, now)
-    years = range(2021, now)
+    years = range(1940, now + 1)
+    #years = range(2021, now + 1)
 
     area = [36, -121, 32, -114]
     temp_dir = "/scratch/dkelley/Bayesian_fire_models/temp/era5_nrt/"
+    out_dir = "data/data/driving_data2425/era5_nrt/"
     shapefile_path = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
     region_name = "Los Angeles"
-    download_era5(years, months = range(13), area = area, region_name = region_name, 
+    download_era5(years, months = range(13), area = area, region_name = region_name,
+                  out_dir = out_dir, 
                   temp_dir = temp_dir,
                   shapefile_path = shapefile_path)
