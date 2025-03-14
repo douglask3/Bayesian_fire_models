@@ -53,7 +53,6 @@ def download_era5(years = [1940], months = range(13), area = [90, -180, -90, 180
                   temp_dir = 'temp/',
                   shapefile_path = None):
 
-    months = ['0' + str(i) if i < 10 else str(i) for i in months]
    
     if shapefile_path is not None: 
         shapes = gpd.read_file(shapefile_path)
@@ -63,11 +62,12 @@ def download_era5(years = [1940], months = range(13), area = [90, -180, -90, 180
 
     # Convert to a single geometry (union of multiple polygons if needed)
     region_geom = unary_union(region_shape.geometry)
-
-    def download_var(variable, statistics, year): 
+    
+    def download_var(variable, statistics, year, mnths): 
+        mnths = ['0' + str(i) if i < 10 else str(i) for i in mnths]
         temp_file =  temp_dir + '/download_era5_' + variable + statistics + \
                     '_extent_' +  '_'.join([str(ar) for ar in area]) + \
-                    '_months' + '-'.join(months) + '_year' +  str(year) + '.nc'
+                    '_months' + '-'.join(mnths) + '_year' +  str(year) + '.nc'
         
         if os.path.isfile(temp_file): return(temp_file)
         
@@ -76,7 +76,7 @@ def download_era5(years = [1940], months = range(13), area = [90, -180, -90, 180
             "variable": [variable
             ],
             "year": str(year),
-            "month": months,
+            "month": mnths,
             "day": [
                 "01", "02", "03",
                 "04", "05", "06",
@@ -135,19 +135,27 @@ def download_era5(years = [1940], months = range(13), area = [90, -180, -90, 180
                     '_years' +  str(years[0]) + '-' + str(years[-1]) + '.nc'
         
         if os.path.isfile(out_file): return(out_file)
-
-        def for_year(year):
-            file = download_var(variable, statistics, year)
+        
+        def for_month(variable, statistics, year, month):
+            file = download_var(variable, statistics, year, [month + 1])
             return crop_cube(file)
+            
+        
+        def for_year(year):
+            cubes = [for_month(variable, statistics, year, month) for month in months]
+            return cubes
 
         cubes = [for_year(year) for year in years]
+        cubes = [x for xs in cubes for x in xs]
+        
         cubes = common_time_coord(cubes)
         iris.util.equalise_attributes(cubes)
         cubes = iris.cube.CubeList(cubes).concatenate_cube()
         iris.save(cubes, out_file)
         return out_file
         
-        
+    
+    process_var("total_precipitation", "daily_mean")
     process_var("2m_temperature", "daily_maximum")
     #set_trace()
     process_var("10m_wind_gust_since_previous_post_processing", "daily_maximum")
@@ -159,14 +167,14 @@ def download_era5(years = [1940], months = range(13), area = [90, -180, -90, 180
 if __name__=="__main__":
     now = DT.now().year
     years = range(1940, now + 1)
-    #years = range(2021, now + 1)
-
-    area = [36, -121, 32, -114]
+    #years = range(2023, now + 1)
+    #years = range(2000, 2026)
+    area = [90, -180, -60, 180]
     temp_dir = "/scratch/dkelley/Bayesian_fire_models/temp/era5_nrt/"
     out_dir = "data/data/driving_data2425/era5_nrt/"
     shapefile_path = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
     region_name = "Los Angeles"
-    download_era5(years, months = range(13), area = area, region_name = region_name,
+    download_era5(years, months = range(12), area = area, region_name = region_name,
                   out_dir = out_dir, 
                   temp_dir = temp_dir,
                   shapefile_path = shapefile_path)
