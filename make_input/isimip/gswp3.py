@@ -1,5 +1,5 @@
 import sys
-sys.path.append('../libs/')
+sys.path.append('../../libs/')
 sys.path.append('libs/')
 
 from read_variable_from_netcdf import *
@@ -34,7 +34,7 @@ if __name__=="__main__":
     dir = "/hpc//data/d00/hadea/isimip3a/InputData/climate/atmosphere/obsclim/GSWP3-W5E5/gswp3-w5e5_obsclimfill_"
     
     file_years = ["1901_1910", "1911_1920", "1991_2000", "2001_2010", "2011_2019"]
-    filenames = {"tas": "tas_global_daily_",
+    x`filenames = {"tas": "tas_global_daily_",
                  "tas_range": "tas_range_global_daily_",
                  "pr": "pr_global_daily_",
                  "prsn": "ps_global_daily_",
@@ -159,5 +159,5 @@ if __name__=="__main__":
             save_ncdf(consec_dry_mean, 'consec_dry_mean')
         
     [make_variables_for_year_range(year, output_year) for year, output_year in \
-            zip(years, output_years)]
+            x`x`zip(years, output_years)]
 
