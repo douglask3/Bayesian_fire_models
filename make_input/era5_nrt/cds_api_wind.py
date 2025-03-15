@@ -68,7 +68,13 @@ def download_era5(years = [1940], months = range(13), area = [90, -180, -90, 180
         temp_file =  temp_dir + '/download_era5_' + variable + statistics + \
                     '_extent_' +  '_'.join([str(ar) for ar in area]) + \
                     '_months' + '-'.join(mnths) + '_year' +  str(year) + '.nc'
-        
+    
+        print("=======")
+        print("downloading")  
+        print("year:" + str(year))
+        print("months:" + str(months))
+        print("variable:" +    variable)
+        print("statistic:" + statistics)
         if os.path.isfile(temp_file): return(temp_file)
         
         request = {
@@ -167,7 +173,7 @@ def download_era5(years = [1940], months = range(13), area = [90, -180, -90, 180
 if __name__=="__main__":
     now = DT.now().year
     years = range(1940, now + 1)
-    #years = range(2023, now + 1)
+    #years = range(1985, now + 1)
     #years = range(2000, 2026)
     area = [90, -180, -60, 180]
     temp_dir = "/scratch/dkelley/Bayesian_fire_models/temp/era5_nrt/"
