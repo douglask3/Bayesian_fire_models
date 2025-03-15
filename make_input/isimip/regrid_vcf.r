@@ -13,13 +13,22 @@ example_file = 'data/wwf_terr_ecos_0p5.nc'
 
 # for global set to NULL
 shape_file = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
-shape_names = list("Los Angeles",
-                 "Congo basin",
-                 "Amazon and Rio Negro rivers",
-                  "Pantanal basin")
+shape_names = list("northeast India",
+                   "Alberta",
+                   "Los Angeles",
+                   "Congo basin",
+                   "Amazon and Rio Negro rivers",
+                   "Pantanal basin")
 
 # for global set to NULL
-hvs = list(cbind(c(8, 4), c(8, 5)),
+hvs = list(cbind(c(22, 5), c(23, 5), c(24, 5),
+                 c(22, 6), c(23, 6), c(24, 6), c(25, 6), c(26, 6),
+                 c(22, 7), c(23, 7), c(24, 7), c(25, 7), c(26, 7)),
+           cbind(c(10, 2), c(11, 2),
+                 c(9, 3), c(10, 3), c(11, 3), c(12, 3),
+                 c(8, 4), c(9, 4), c(10, 4), c(11, 4)),          
+
+           cbind(c(8, 4), c(8, 5)),
            cbind(c(18, 8), c(19, 8), c(20, 8), c(21, 8),
                  c(18, 9), c(19, 9), c(20, 9), c(21, 9)),
            cbind(c(10, 8), c(11, 8), c(12, 8), c(13, 8),
@@ -28,14 +37,13 @@ hvs = list(cbind(c(8, 4), c(8, 5)),
                  c(10,10), c(11,10), c(12,10),
                  c(10,11), c(11,11), c(12,11)))
 
-area_names = c('LA', 'Congo', 'Amazon')
+area_names = c('NWIndia', 'Alberta', 'LA', 'Congo', 'Amazon', 'Pananal')
 
 variables = c("tree" = 1, "nontree" = 2, "nonveg" = 3)
 correct_tov6 = FALSE
 
 ### open up global files
-if (is.null(shape_file)) shp = NULL
-else shp = vect(shape_file)
+if (is.null(shape_file)) shp = NULL  else shp = vect(shape_file)
 eg_raster = rast(example_file)
 eg_raster[!is.na(eg_raster)] = 1
 
@@ -235,4 +243,4 @@ forRegion <- function(area_name, shape_name, hv) {
     }
 }
 
-mapply(forRegion, area_names, shape_names, hvs)
+mapply(forRegion, area_names[3:6], shape_names[3:6], hvs[3:6])
