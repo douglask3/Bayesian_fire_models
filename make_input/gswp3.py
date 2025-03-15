@@ -31,7 +31,7 @@ def read_variable_from_netcdf_stack(filenames, example_cube = None,
 
 
 if __name__=="__main__":
-    dir = "/hpc//data/d00/hadea/isimip3a/InputData/climate/atmosphere/obsclim/GSWP3-W5E5/gswp3-w5e5_obsclimfill_"
+    dir = "/hpc/data/d00/hadea/isimip3a.for_delete/InputData/climate/atmosphere/obsclim/GSWP3-W5E5/gswp3-w5e5_obsclimfill_"
     
     file_years = ["1901_1910", "1911_1920", "1991_2000", "2001_2010", "2011_2019"]
     filenames = {"tas": "tas_global_daily_",
@@ -44,12 +44,13 @@ if __name__=="__main__":
                  "ps": "ps_global_daily_"}
 
     years = [[1900, 1919], [2000, 2019]]
+    years = [[2010, 2015]]
 
-    subset_functions = [constrain_natural_earth]
-    subset_function_argss = [{'Country': 'Brazil'}]
+    subset_functions = None#[constrain_natural_earth]
+    subset_function_argss = None#[{'Country': 'Brazil'}]
 
     output_dir = "../ConFIRE_attribute/isimip3a/driving_data/GSWP3-W5E5-new/Brazil/BayesModels_"
-    output_years = ['1900_1919', '2010_2019']
+    output_years = ['2010_2015']
 
     example_cube = '../ConFIRE_attribute/isimip3a/driving_data/GSWP3-W5E5-20yrs/Brazil/AllConFire_2000_2009/GFED4.1s_Burned_Fraction.nc'
     #example_cube = "D:/Doutorado/Sanduiche/research/maxent-variables/2002-2011/GFED4.1s_Burned_Fraction.nc"
