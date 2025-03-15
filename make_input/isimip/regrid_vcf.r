@@ -4,37 +4,46 @@ library(gdalUtils)
 source("libs/add_date_time.r")
 
 
-#path = '../temp/MODIS/'
-temp_path = '../temp/regrid_vcf/'
-output_path = '../data/data/driving_data/'
-
+path = '/scratch/dkelley/VCF_MOD44B_250m/'
+temp_path = 'temp2/regrid_vcf/'
+output_path = 'data/data/driving_data2425/'
+example_file = 'data/wwf_terr_ecos_0p5.nc'
 newproj = "+proj=longlat +datum=WGS84"
-example_file = rast('../data/wwf_terr_ecos_0p5.nc')
-extents = list(#c(-180.0, 180.0, -90.0, 90.0)
-               c(-77.5, -56.0, -10.0, 2.0),
-               c(-12.0, 49.0, 3.0, 63.0),
-               c(-20.0, 50.0, -55.0, 55.0),
-               #c(-85.0, -60.0, -30.0, 15.0),
-               c(17.50, 33.0, 30.0, 43.0),
-               c(-82.0, -55.0, -55.0, -5.0))
-#extent = c(-170.0, -30.0, 30, 85)
-area_names = c(#'Global',
-              'SouthAmerica-box',
-              'United_Kingdon',
-              'MED',
-              #'SouthAmerica',
-              'Greece',
-              'BoliviaChile')
-paths = c('../temp/SouthAmerica-MODIS/', '../temp/UK-MODIS/', '../temp/MED-MODIS/', 
-#'../temp/SouthAmerica-MODIS/', 
-'../temp/Greece-MODIS/', '../temp/BoliviaChile-MODIS/')
+example_file = 'data/wwf_terr_ecos_0p5.nc'
+shape_file = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
+shape_names = list("Los Angeles",
+                 "Congo basin",
+                 "Amazon and Rio Negro rivers",
+                  "Pantanal basin")
+
+hvs = list(cbind(c(8, 4), c(8, 5)),
+           cbind(c(18, 8), c(19, 8), c(20, 8), c(21, 8),
+                 c(18, 9), c(19, 9), c(20, 9), c(21, 9)),
+           cbind(c(10, 8), c(11, 8), c(12, 8), c(13, 8),
+                 c(10, 9), c(11, 9), c(12, 9), c(13, 9)),
+           cbind(c(10, 9), c(11, 9), c(12, 9),
+                 c(10,10), c(11,10), c(12,10),
+                 c(10,11), c(11,11), c(12,11)))
+10-12
+9-11
+area_names = c('LA', 'Congo', 'Amazon')
 
 #area_name = 'Canada'
 variables = c("tree" = 1, "nontree" = 2, "nonveg" = 3)
+correct_tov6 = FALSE
 
-forRegion <- function(area_name, extent, path) {
-    eg_raster = rast(example_file)
+### open up global files
+shp = vect(shape_file)
+eg_raster = rast(example_file)
+eg_raster[!is.na(eg_raster)] = 1
+
+forRegion <- function(area_name, shape_name, hv) {
+
+    shp_rgn <- shp[grep(shape_name, shp$name, ignore.case = TRUE), ]  # Adjust field name if needed
+    extent = ext(shp_rgn)
     eg_raster = crop(eg_raster, extent)
+    eg_raster = mask(eg_raster, shp_rgn)
+    extent = as.vector(extent)
     
     test_if_overlap <- function(r1, r2) {
         ext1 = ext(r1)
@@ -42,19 +51,34 @@ forRegion <- function(area_name, extent, path) {
         extc = intersect(ext1, ext2)
         return((extc[2] > extc[1]) & (extc[4] > extc[3]))
     }
-
-    temp_path = paste0(temp_path, '/', area_name, '/') 
+      
+    temp_path = paste0(temp_path, '/', area_name, '-VCF/') 
     dir.create(temp_path, recursive = TRUE) 
-    files = list.files(path, full.name = TRUE)
+    files = list.files(path, full.name = TRUE, recursive = TRUE)
+    files = files[substr(files, nchar(files) - 3, nchar(files)) == '.hdf']
+
+    files_hv = sapply(files, function(file) tail(strsplit(file, '.h')[[1]], 2)[1])
+    files_h = sapply(files_hv, function(file) strsplit(file, 'v')[[1]][1])
+    files_v = sapply(files_hv, function(file) strsplit(file, 'v')[[1]][2])
+    files_v = sapply(files_v, function(file) strsplit(file, '.', fixed = TRUE)[[1]][1])
+    files_test = sapply(as.numeric(files_h), function(h) any(h == hv[1,])) & 
+                 sapply(as.numeric(files_v), function(v) any(v == hv[2,]))
+
+    files = files[files_test]
+    
+    years = sapply(files, function(file) substr(strsplit(file, 'MOD44B.A')[[1]][2], 1, 4))
+    mn = 3
+    day = 6
     
     regrid_file <- function(file, band = 1, name = 'tree') {
         print(file)
-    
+        
         out_info0 = gsub('/', '', strsplit(file, path)[[1]][2], fixed = TRUE)
         temp_path = paste0(temp_path, '/', name, '/')
         dir.create(temp_path, recursive = TRUE) 
     
-        out_info = paste0(temp_path, '-', band, '-', gsub('.hdf', '.txt', out_info0, fixed = TRUE))
+        out_info = paste0(temp_path, '-', band, '-', 
+                          gsub('.hdf', '.txt', out_info0, fixed = TRUE))
         if (file.exists(out_info)) {
             info = read.table(out_info)[1,1]
             if (info == 'NoOverlap') return(NULL)
@@ -62,7 +86,7 @@ forRegion <- function(area_name, extent, path) {
         }
     
         dat = rast(file, band)
-    
+        
         if (!all(extent == c(-180, 180, -90, 90))) {
             test = project(aggregate(dat, 100), newproj)
             overlap = test_if_overlap(test, eg_raster)
@@ -75,7 +99,7 @@ forRegion <- function(area_name, extent, path) {
     
         dat = terra::project(dat, newproj)
     
-        out_raster = crop(eg_raster, ext(dat) + c(-0.5, 0.5, -0.5, 0.5))
+        out_raster = crop(eg_raster, ext(dat) + 0.5)#+ c(-0.5, 0.5, -0.5, 0.5))
     
         find_area <- function(dat, ...) {
             #dat = aggregate(dat, 4)
@@ -102,14 +126,12 @@ forRegion <- function(area_name, extent, path) {
         return(out)
     }
     
-    years = sapply(files, function(file) substr(strsplit(file, 'MOD44B.A')[[1]][2], 1, 4))
-    mn = 3
-    day = 6
     forVegType <- function(band, name) {
         print(band)
         print(name)
         print(area_name)
-        output_path = paste0(output_path, area_name, '_extended/isimp3a')
+        output_path = paste0(output_path, area_name, 
+                             '/isimp3a/obsclim/GSWP3-W5E5/period_2002_2019/')
         dir.create(output_path, recursive = TRUE) 
         output_fname = paste0(output_path, '/', name, '_raw.nc')
         temp_fname = paste0(temp_path, '/', name, '/')
@@ -123,7 +145,7 @@ forRegion <- function(area_name, extent, path) {
         
         dats = lapply(files, regrid_file, band, name)
         years = as.numeric(years)
-     
+        
         test = !sapply(dats, is.null)
         dats = dats[test]
         years = years[test]
@@ -162,46 +184,47 @@ forRegion <- function(area_name, extent, path) {
         out = out[[nlyr(out)]]
         return(resample(out, eg_raster))
     }
-
-    correct_files = paste0("../../fireMIPbenchmarking/data/benchmarkData/", 
-                           c("treecover2000-2014.nc", "nontree2000-2014.nc", 
-                            "bareground2000-2014.nc"))
-    target = lapply(correct_files, load_correct)
-    
-    find_2014 = which(substr(time(outs[[1]]), 1, 4) == "2014")
-
-    logit <- function(r, scale = 0.000000001) {
-        mv = 1 - 2 *  scale
-        r = r*mv + scale
-        log(r/(-r + 1))
-    }
-
-    logistic <- function(r) 
-        1/(1+exp(-r))
-
-    correct_out <- function(r1, r2) {
-        r1[r1>100] = 100
-        r1 = r1 / 100
-        r2 = r2 / 100
-        r1t = logit(r1); r2t = logit(r2)
-        out = r1t - r1t[[find_2014]] + r2t
-        out = logistic(out)
-        return(out)
-    }
-
-    corrected = mapply(correct_out, outs, target)
-    corrected = lapply(corrected, '/', corrected[[1]] + corrected[[2]] + corrected[[3]])
-
-    write_corrected <- function(rc, r0) {
-        filename = sources(r0)[1]
-        filename = gsub('_raw.nc', '_cover.nc', filename)
+    if (correct_tov6) {
+        correct_files = paste0("../../fireMIPbenchmarking/data/benchmarkData/", 
+                               c("treecover2000-2014.nc", "nontree2000-2014.nc", 
+                                "bareground2000-2014.nc"))
+        target = lapply(correct_files, load_correct)
         
-        varnames(rc) = gsub('_raw', '_cover', varnames(r0))
-        units(rc) = units(r0)
-        writeCDF(rc, filename, overwrite = TRUE)
-    }
+        find_2014 = which(substr(time(outs[[1]]), 1, 4) == "2014")
     
-    mapply(write_corrected, corrected, outs)
+        logit <- function(r, scale = 0.000000001) {
+            mv = 1 - 2 *  scale
+            r = r*mv + scale
+            log(r/(-r + 1))
+        }
+        
+        logistic <- function(r) 
+            1/(1+exp(-r))
+        
+        correct_out <- function(r1, r2) {
+            r1[r1>100] = 100
+            r1 = r1 / 100
+            r2 = r2 / 100
+            r1t = logit(r1); r2t = logit(r2)
+            out = r1t - r1t[[find_2014]] + r2t
+            out = logistic(out)
+            return(out)
+        }
+        
+        corrected = mapply(correct_out, outs, target)
+        corrected = lapply(corrected, '/', corrected[[1]] + corrected[[2]] + corrected[[3]])
+        
+        write_corrected <- function(rc, r0) {
+            filename = sources(r0)[1]
+            filename = gsub('_raw.nc', '_cover.nc', filename)
+            
+            varnames(rc) = gsub('_raw', '_cover', varnames(r0))
+            units(rc) = units(r0)
+            writeCDF(rc, filename, overwrite = TRUE)
+        }
+    
+        mapply(write_corrected, corrected, outs)
+    }
 }
 
-mapply(forRegion, area_names, extents, paths)
+mapply(forRegion, area_names, shape_names, hvs)
