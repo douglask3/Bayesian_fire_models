@@ -10,12 +10,15 @@ output_path = 'data/data/driving_data2425/'
 example_file = 'data/wwf_terr_ecos_0p5.nc'
 newproj = "+proj=longlat +datum=WGS84"
 example_file = 'data/wwf_terr_ecos_0p5.nc'
+
+# for global set to NULL
 shape_file = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
 shape_names = list("Los Angeles",
                  "Congo basin",
                  "Amazon and Rio Negro rivers",
                   "Pantanal basin")
 
+# for global set to NULL
 hvs = list(cbind(c(8, 4), c(8, 5)),
            cbind(c(18, 8), c(19, 8), c(20, 8), c(21, 8),
                  c(18, 9), c(19, 9), c(20, 9), c(21, 9)),
@@ -24,25 +27,30 @@ hvs = list(cbind(c(8, 4), c(8, 5)),
            cbind(c(10, 9), c(11, 9), c(12, 9),
                  c(10,10), c(11,10), c(12,10),
                  c(10,11), c(11,11), c(12,11)))
-10-12
-9-11
+
 area_names = c('LA', 'Congo', 'Amazon')
 
-#area_name = 'Canada'
 variables = c("tree" = 1, "nontree" = 2, "nonveg" = 3)
 correct_tov6 = FALSE
 
 ### open up global files
-shp = vect(shape_file)
+if (is.null(shape_file)) shp = NULL
+else shp = vect(shape_file)
 eg_raster = rast(example_file)
 eg_raster[!is.na(eg_raster)] = 1
 
 forRegion <- function(area_name, shape_name, hv) {
 
-    shp_rgn <- shp[grep(shape_name, shp$name, ignore.case = TRUE), ]  # Adjust field name if needed
-    extent = ext(shp_rgn)
-    eg_raster = crop(eg_raster, extent)
-    eg_raster = mask(eg_raster, shp_rgn)
+    if (is.null(shp)) {
+        shp_rgn = NULL
+        extend = c(-180, 180, -90, 90)
+    } else {
+        shp_rgn = shp[grep(shape_name, shp$name, ignore.case = TRUE), ]  # Adjust field name if needed
+        extent = ext(shp_rgn)
+        eg_raster = crop(eg_raster, extent)
+        eg_raster = mask(eg_raster, shp_rgn)
+    }
+    
     extent = as.vector(extent)
     
     test_if_overlap <- function(r1, r2) {
