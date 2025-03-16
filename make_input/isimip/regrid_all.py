@@ -1,5 +1,5 @@
 import sys
-sys.path.append('../libs/')
+sys.path.append('../../libs/')
 sys.path.append('libs/')
 
 from read_variable_from_netcdf import *
@@ -16,6 +16,8 @@ import hashlib
 
 import matplotlib.pyplot as plt
 from pdb import set_trace
+
+temp_path = 'temp2/isimip_dat_gen-'
 
 def read_variable_from_netcdf_stack(filenames, example_cube = None, 
                                     *args, **kw):
@@ -39,10 +41,11 @@ def read_variable_from_netcdf_stack(filenames, example_cube = None,
 
 def generate_temp_fname(string1, string2):
     string = string1 + string2
-    return '../temp/isimip_dat_gen-' + hashlib.sha256(string.encode()).hexdigest() + '.txt'
+    return temp_path + hashlib.sha256(string.encode()).hexdigest() + '.txt'
 
 def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
-                                  subset_functions, subset_function_argss, region_name):
+                                  subset_functions, subset_function_argss, region_name, 
+                                  output_dir):
     def test_if_process(var, temp_file = None): 
         if temp_file is not None and os.path.isfile(temp_file) and grab_old_data:
             print("file found:" + temp_file)
@@ -56,6 +59,7 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
     print(temp_out)
     def open_variable(varname, MinusYr = False):
         filename = filenames[varname]
+        
         file_years = set([file[-12:-3] for file in glob.glob(dir + '*')]) 
         file_years = list(file_years)
         try:
@@ -78,11 +82,12 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
         
         sbs_funs = [sub_year_range] + subset_functions 
         sbs_args = [{'year_range': yeari}] + subset_function_argss
-         
+        
         out = None
         out =  read_variable_from_netcdf_stack(filename, example_cube, dir,
                                                subset_function = sbs_funs, 
                                                subset_function_args = sbs_args)
+        
         return out
 
     def monthly_mean(cube, fun = iris.analysis.MEAN):
@@ -96,7 +101,7 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
         if not os.path.exists(out_dir): Path(out_dir).mkdir(parents=True)
         
         iris.save(cube, out_dir + '/' + varname +  '.nc')
-
+        
     def standard_Monthly_mean(var, fun):
         temp_file = generate_temp_fname(temp_out, var)
         if test_if_process(var, temp_file):
@@ -260,7 +265,7 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
 
 
 
-lightn_file = "/hpc//data/d00/hadea/isimip2b/ancils/lightning/LISOTD_HRMC_V2.3.2015.0p5ancil.nc"
+lightn_file = "/data/dynamic/dkelley/LISOTD_HRMC_V2.3.2015.0p5ancil.nc"
 process_standard = ['prsn', "hurs", "hurs", "huss", "huss", "sfcwind"]
 process_function = [iris.analysis.MEAN, 
                     iris.analysis.MEAN, iris.analysis.MAX,
@@ -271,9 +276,9 @@ process_clim = ['vpd', 'tas', 'tas_range', 'pr', 'lightn']
 process_jules =['cover', 'crop', 'pasture', "urban"]
 
 example_cube = None
-grab_old_data = False
+grab_old_data = True
 
-output_dir = "../data/data/driving_data/"
+
 
 def process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, years,
                            *args, **kw):
@@ -283,7 +288,7 @@ def process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, yea
     process(process_clim, dir_clim)
     
     
-def for_region(subset_functions, subset_function_argss, vcf_region_name, region_name = None):   
+def for_region(subset_functions, subset_function_argss, vcf_region_name, region_name = None, *args, **kw):   
     years = [[2010, 2012], [1901, 1920], [2000, 2019], [2002, 2019]]
     dataset_name = 'isimp3a/obsclim/GSWP3-W5E5'
     dataset_name_control = dataset_name
@@ -316,44 +321,45 @@ def for_region(subset_functions, subset_function_argss, vcf_region_name, region_
              "total":  "total_global_annual_"}
     
     dir_clim = "/hpc//data/d00/hadea/isimip3a/InputData/climate/atmosphere/obsclim/GSWP3-W5E5/gswp3-w5e5_obsclimfill_"
-    dir_jules = "/scratch/hadea/isimip3a/u-cc669_isimip3a_es/GSWP3-W5E5_obsclim/jules-es-vn6p3_gswp3-w5e5_obsclim_histsoc_default_pft-"  
+    dir_jules0 = "/scratch/dkelley/Bayesian_fire_models/temp/isimip/"
+    dir_jules = dir_jules0 + "jules-es-vn6p3_gswp3-w5e5_obsclim_histsoc_default_pft-"  
     process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, years,
                            dataset_name, filenames, subset_functions, subset_function_argss, 
-                           region_name)  
+                           region_name, *args, **kw)  
     
     dir_clim = "/hpc//data/d00/hadea/isimip3a/InputData/climate/atmosphere/counterclim/GSWP3-W5E5/gswp3-w5e5_counterclim_"
-    dir_jules = "/scratch/hadea/isimip3a/u-cc669_isimip3a_es/GSWP3-W5E5_counterclim/jules-es-vn6p3_gswp3-w5e5_counterclim_histsoc_default_pft-"  
+    dir_jules = dir_jules0 + "jules-es-vn6p3_gswp3-w5e5_counterclim_histsoc_default_pft-"  
     dataset_name = 'isimp3a/counterclim/GSWP3-W5E5'
     process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, years,
                            dataset_name, filenames, subset_functions, subset_function_argss,
-                           region_name)  
+                           region_name, *args, **kw)  
     
     filenames = {"tas": "tasAdjust_global_daily_",
-             "tas_range": "tas_rangeAdjust_global_daily_",
-             "pr": "prAdjust_global_daily_",
-             "prsn": "psAdjust_global_daily_",
-             "hurs": "hursAdjust_global_daily_",
-             "huss": "hussAdjust_global_daily_",
-             "sfcwind": "sfcwindAdjust_global_daily_",
-             "ps": "psAdjust_global_daily_",
-             "bdldcd": "bdldcd_global_annual_",
-             "bdlevgtemp": "bdlevgtemp_global_annual_",
-             "bdlevgtrop": "bdlevgtrop_global_annual_",
-             "c3crop": "c3crop_global_annual_",
-             "c3grass": "c3grass_global_annual_",
-             "c3pasture": "c4pasture_global_annual_",
-             "c4crop": "c4crop_global_annual_",
-             "c4grass": "c4grass_global_annual_",
-             "c4pasture": "c4pasture_global_annual_",
-             "ice": "ice_global_annual_",
-             "lake": "lake_global_annual_",
-             "urban": "urban_global_annual_",
-             "ndldcd": "ndldcd_global_annual_",
-             "ndlevg": "ndlevg_global_annual_",
-             "shrubdcd": "shrubdcd_global_annual_",
-             "shrubevg": "shrubevg_global_annual_",
-             "soil": "soil_global_annual_",
-             "total":  "total_global_annual_"}
+                 "tas_range": "tas_rangeAdjust_global_daily_",
+                 "pr": "prAdjust_global_daily_",
+                 "prsn": "psAdjust_global_daily_",
+                 "hurs": "hursAdjust_global_daily_",
+                 "huss": "hussAdjust_global_daily_",
+                 "sfcwind": "sfcwindAdjust_global_daily_",
+                 "ps": "psAdjust_global_daily_",
+                 "bdldcd": "bdldcd_global_annual_",
+                 "bdlevgtemp": "bdlevgtemp_global_annual_",
+                 "bdlevgtrop": "bdlevgtrop_global_annual_",
+                 "c3crop": "c3crop_global_annual_",
+                 "c3grass": "c3grass_global_annual_",
+                 "c3pasture": "c4pasture_global_annual_",
+                 "c4crop": "c4crop_global_annual_",
+                 "c4grass": "c4grass_global_annual_",
+                 "c4pasture": "c4pasture_global_annual_",
+                 "ice": "ice_global_annual_",
+                 "lake": "lake_global_annual_",
+                 "urban": "urban_global_annual_",
+                 "ndldcd": "ndldcd_global_annual_",
+                 "ndlevg": "ndlevg_global_annual_",
+                 "shrubdcd": "shrubdcd_global_annual_",
+                 "shrubevg": "shrubevg_global_annual_",
+                 "soil": "soil_global_annual_",
+                 "total":  "total_global_annual_"}
     
     futr_years = [[2015, 2099]]
     yearss = [[[1994, 2014]],futr_years, futr_years, futr_years]
@@ -368,15 +374,13 @@ def for_region(subset_functions, subset_function_argss, vcf_region_name, region_
                             experiment + '/'+  model + '/' + model.lower() + '_' + \
                             code + '_w5e5_' + \
                             experiment + '_'  
-            dir_jules =  '/scratch/hadea/isimip3b/u-cc669_isimip3b_es/' + model + '_' + \
-                            experiment + '/' + \
-                    'jules-es-vn6p3_' + model.lower() + \
+            dir_jules = dir_jules0 + 'jules-es-vn6p3_' + model.lower() + \
                     '_w5e5_' + experiment +'_' + soc + '_default_pft-' 
             dataset_name = 'isimp3b/' +  experiment + '/' + model + '/'
     
             process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, years,
                            dataset_name, filenames, subset_functions, subset_function_argss,
-                           region_name)
+                           region_name, *args, **kw)
     
     if region_name is None:
         region_name = subset_function_argss[0][next(iter(subset_function_argss[0]))]
@@ -426,8 +430,8 @@ def for_region(subset_functions, subset_function_argss, vcf_region_name, region_
     regrid_Burnt_area([2000, 2019])
     regrid_Burnt_area([2000, 2023])
 
-
 if __name__=="__main__":
+    output_dir = "data/data/driving_data/"
     subset_functions_main = [constrain_natural_earth]
     subset_function_argss_main = [{'Country': 'England', 'shapefile_name': 'admin_0_map_units'}]
     for_region(subset_functions_main, subset_function_argss_main, None, region_name = 'England')
