@@ -37,7 +37,7 @@ hvs = list(cbind(c(22, 5), c(23, 5), c(24, 5),
                  c(10,10), c(11,10), c(12,10),
                  c(10,11), c(11,11), c(12,11)))
 
-area_names = c('NWIndia', 'Alberta', 'LA', 'Congo', 'Amazon', 'Pananal')
+area_names = c('NWIndia', 'Alberta', 'LA', 'Congo', 'Amazon', 'Pantanal')
 
 variables = c("tree" = 1, "nontree" = 2, "nonveg" = 3)
 correct_tov6 = FALSE
@@ -243,4 +243,4 @@ forRegion <- function(area_name, shape_name, hv) {
     }
 }
 
-mapply(forRegion, area_names[3:6], shape_names[3:6], hvs[3:6])
+mapply(forRegion, area_names, shape_names, hvs)
