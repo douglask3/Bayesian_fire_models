@@ -59,7 +59,6 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
     print(temp_out)
     def open_variable(varname, MinusYr = False):
         filename = filenames[varname]
-        
         file_years = set([file[-12:-3] for file in glob.glob(dir + '*')]) 
         file_years = list(file_years)
         try:
@@ -131,7 +130,7 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
                      "shrubdcd", "shrubevg"]
         herb_vars = ["c3crop", "c3grass", "c3pasture", "c4crop", "c4grass", "c4pasture"]
         soil_vars = ["soil", "urban", "ice"] # water
-        
+        cal_cover(tree_vars, 'tree_cover')
         try:
             cal_cover(tree_vars, 'tree_cover')
             cal_cover(herb_vars, 'nonetree_cover')
@@ -288,7 +287,7 @@ def process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, yea
     process(process_clim, dir_clim)
     
     
-def for_region(subset_functions, subset_function_argss, vcf_region_name, region_name = None, *args, **kw):   
+def for_region(subset_functions, subset_function_argss, vcf_region_name, region_name = None, output_dir = '', *args, **kw):   
     years = [[2010, 2012], [1901, 1920], [2000, 2019], [2002, 2019]]
     dataset_name = 'isimp3a/obsclim/GSWP3-W5E5'
     dataset_name_control = dataset_name
@@ -325,14 +324,14 @@ def for_region(subset_functions, subset_function_argss, vcf_region_name, region_
     dir_jules = dir_jules0 + "jules-es-vn6p3_gswp3-w5e5_obsclim_histsoc_default_pft-"  
     process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, years,
                            dataset_name, filenames, subset_functions, subset_function_argss, 
-                           region_name, *args, **kw)  
+                           region_name, output_dir, *args, **kw)  
     
     dir_clim = "/hpc//data/d00/hadea/isimip3a/InputData/climate/atmosphere/counterclim/GSWP3-W5E5/gswp3-w5e5_counterclim_"
     dir_jules = dir_jules0 + "jules-es-vn6p3_gswp3-w5e5_counterclim_histsoc_default_pft-"  
     dataset_name = 'isimp3a/counterclim/GSWP3-W5E5'
     process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, years,
                            dataset_name, filenames, subset_functions, subset_function_argss,
-                           region_name, *args, **kw)  
+                           region_name, output_dir,*args, **kw)  
     
     filenames = {"tas": "tasAdjust_global_daily_",
                  "tas_range": "tas_rangeAdjust_global_daily_",
@@ -366,7 +365,7 @@ def for_region(subset_functions, subset_function_argss, vcf_region_name, region_
     ismip3b_models = ['GFDL-ESM4', 'IPSL-CM6A-LR', 'MPI-ESM1-2-HR', 'MRI-ESM2-0', 'UKESM1-0-LL']
     codes = ['r1i1p1f1', 'r1i1p1f1', 'r1i1p1f1', 'r1i1p1f1', 'r1i1p1f2']
     experiments = ['historical', 'ssp126', 'ssp370', 'ssp585']
-    socs = ['histsoc', '2015soc', '2015soc', '2015soc']
+    socs = ['histsoc', '2015soc-from-histsoc', '2015soc-from-histsoc', '2015soc-from-histsoc']
     
     for experiment, soc, years in zip(experiments, socs, yearss):
         for model, code in zip(ismip3b_models, codes):
@@ -380,15 +379,17 @@ def for_region(subset_functions, subset_function_argss, vcf_region_name, region_
     
             process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, years,
                            dataset_name, filenames, subset_functions, subset_function_argss,
-                           region_name, *args, **kw)
+                           region_name, output_dir, *args, **kw)
     
     if region_name is None:
         region_name = subset_function_argss[0][next(iter(subset_function_argss[0]))]
-    obs_cover_dir = '/home/h02/dkelley/state_of_fires_report_20YY/data/data/driving_data/' + \
-                    vcf_region_name + '/'
+    if vcf_region_name == 'same': vcf_region_name = region_name + '/isimp3a/obsclim/GSWP3-W5E5/period_2002_2019/'
+    
+    obs_cover_dir = output_dir + vcf_region_name + '/'
     
     output_years = '2002_2019'
     years = [2002, 2019]
+    
     files = os.listdir(obs_cover_dir)
     
     def open_regrid_output_file(filename):
@@ -412,8 +413,8 @@ def for_region(subset_functions, subset_function_argss, vcf_region_name, region_
     
     output_years = '2000_2019'
     
-    burnt_area_file = '../data/data/driving_data/burnt_area.nc'
-    mask_file = iris.load_cube("../data/data/driving_data/" + region_name + "/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019/tree_cover_jules-es.nc")
+    burnt_area_file = "data/data/driving_data/burnt_area.nc"
+    mask_file = iris.load_cube(output_dir + region_name + "/isimp3a/obsclim/GSWP3-W5E5/period_2002_2019/tree_cover_jules-es.nc")
 
     def regrid_Burnt_area(years):
         burnt_area = read_variable_from_netcdf(burnt_area_file, 
