@@ -298,9 +298,13 @@ def contrain_to_shape(cube, geom, constrain = True):
 
 def contrain_to_sow_shapefile(cube, shp_filename, name, *args, **kw):
     shp = gp.read_file(shp_filename)
-    geom = shp[shp['name'].str.contains(name, case=False, na=False)].geometry.unary_union
+    try:
+        geom = shp[shp['name'].str.contains(name, case=False, na=False)].geometry.unary_union
+    except:
+        shp["geometry"] = shp["geometry"].buffer(0)
+        geom = shp[shp['name'].str.contains(name, case=False, na=False)].geometry.unary_union
     return contrain_to_shape(cube, geom, *args, **kw)
-    set_trace()
+    
 
 def constrain_natural_earth(cube, Country = None, Continent = None, shpfilename = None, 
                             constrain = True, *args, **kw):
