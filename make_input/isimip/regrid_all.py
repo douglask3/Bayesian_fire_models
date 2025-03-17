@@ -397,9 +397,9 @@ def for_region(subset_functions, subset_function_argss, vcf_region_name, region_
         cube = iris.load_cube(obs_cover_dir + filename)
         cube0 = cube.copy()
         cube = sub_year_range(cube, years)
-        for fun, args in zip(subset_functions, subset_function_argss):
+        for fun, args2 in zip(subset_functions, subset_function_argss):
             try:
-                cube = fun(cube, **args)
+                cube = fun(cube, **args2)
             except:
                 set_trace()
         out_fname = output_dir + '/' + \
