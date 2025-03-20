@@ -307,7 +307,7 @@ def contrain_to_sow_shapefile(cube, shp_filename, name, *args, **kw):
     
 
 def constrain_natural_earth(cube, Country = None, Continent = None, shpfilename = None, 
-                            constrain = True, *args, **kw):
+                            shape_cat = 'admin_0_countries', constrain = True, *args, **kw):
     """
     Constrains an Iris cube to a given continent using Natural Earth shapefiles.
 
@@ -330,7 +330,8 @@ def constrain_natural_earth(cube, Country = None, Continent = None, shpfilename 
         iris.cube.Cube: A new cube with data masked outside the specified continent or country.
     """
     if shpfilename is None:
-        shpfilename = shpreader.natural_earth(resolution='110m', category='cultural', name='admin_0_countries')
+        shpfilename = shpreader.natural_earth(resolution='110m', category='cultural', 
+                                              name = shape_cat)
     # Load the shapefile
     countries = gp.read_file(shpfilename)
     
