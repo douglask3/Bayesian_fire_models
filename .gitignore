@@ -5,4 +5,4 @@ temp/
 data/
 *.png
 *__pycache__*
-
+*.pdf
