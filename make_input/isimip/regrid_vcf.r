@@ -53,7 +53,7 @@ forRegion <- function(area_name, shape_name, hv) {
         shp_rgn = NULL
         extend = c(-180, 180, -90, 90)
     } else {
-        shp_rgn = shp[grep(shape_name, shp$name, ignore.case = TRUE), ]  # Adjust field name if needed
+        shp_rgn = shp[grep(shape_name, shp$name, ignore.case = TRUE), ]  
         extent = ext(shp_rgn)
         eg_raster = crop(eg_raster, extent)
         eg_raster = mask(eg_raster, shp_rgn)
