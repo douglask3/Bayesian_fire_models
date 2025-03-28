@@ -46,7 +46,7 @@ def common_time_coord(cubes, time_coord = 'valid_time'):
     
     return(cubes)
 
-def download_era5(years = [1940], months = range(13), area = [90, -180, -90, 180],
+def download_era5(variables, years = [1940], months = range(13), area = [90, -180, -90, 180],
                   region_name = " ",
                   dataset = "derived-era5-single-levels-daily-statistics", 
                   out_dir = 'data/',
@@ -160,14 +160,8 @@ def download_era5(years = [1940], months = range(13), area = [90, -180, -90, 180
         iris.save(cubes, out_file)
         return out_file
         
-    
-    process_var("total_precipitation", "daily_mean")
-    process_var("2m_temperature", "daily_maximum")
-    #set_trace()
-    process_var("10m_wind_gust_since_previous_post_processing", "daily_maximum")
-    process_var("instantaneous_10m_wind_gust", "daily_maximum")
-    process_var("2m_dewpoint_temperature", "daily_minimum")
-    process_var("volumetric_soil_water_layer_1", "daily_minimum")
+    for var in variables:
+        process_var(var[0], var[1])
 
 
 if __name__=="__main__":
@@ -180,7 +174,16 @@ if __name__=="__main__":
     out_dir = "data/data/driving_data2425/era5_nrt/"
     shapefile_path = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
     region_name = "Los Angeles"
-    download_era5(years, months = range(12), area = area, region_name = region_name,
+    variables = [["volumetric_soil_water_layer_1", "daily_minimum"],
+                 ["total_precipitation", "daily_mean"], ["2m_temperature", "daily_maximum"],
+                 ["10m_wind_gust_since_previous_post_processing", "daily_maximum"],
+                 ["instantaneous_10m_wind_gust", "daily_maximum"],
+                 ["2m_dewpoint_temperature", "daily_minimum"],
+                 ["evaporation", "daily_mean"],
+                 ["potential_evaporation", "daily_mean"],
+                 ["runoff", "daily_mean"]]
+
+    download_era5(variables, years, months = range(12), area = area, region_name = region_name,
                   out_dir = out_dir, 
                   temp_dir = temp_dir,
                   shapefile_path = shapefile_path)
