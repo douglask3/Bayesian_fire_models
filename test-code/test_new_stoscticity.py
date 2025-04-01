@@ -4,6 +4,8 @@ import arviz as az
 import pytensor.tensor as pt
 from scipy.stats import expon, logistic
 
+from pdb import set_trace
+
 # Simulate some data
 np.random.seed(42)
 n_locations = 10
@@ -23,16 +25,17 @@ true_base_fire_prob = pm.math.sigmoid(true_beta_temp * temp + true_beta_humidity
 # Generate fire counts with exponential tail above base
 true_fire_counts = np.zeros(n_observations, dtype=int)
 for i in range(n_observations):
-    if np.random.rand() < true_base_fire_prob[i]:
+    if np.random.rand() < true_base_fire_prob.eval()[i]:
         true_fire_counts[i] = 0  # Likely no fire
     else:
         true_fire_counts[i] = int(np.random.exponential(1) + 1) # Exponential tail
 
 # Custom distribution for fire counts
 class ExponentialTail(pm.Continuous):
-    def __init__(self, base_prob, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, name, base_prob, observed=None, *args, **kwargs):
+        super().__init__(name, *args, **kwargs)
         self.base_prob = base_prob
+        self.observed = observed
 
     def logp(self, value):
         logp = pt.switch(
@@ -41,6 +44,10 @@ class ExponentialTail(pm.Continuous):
             pt.log(self.base_prob) - pt.log(1 - self.base_prob) - pt.log(expon.sf(value - self.base_prob)),
         )
         return logp
+
+    @classmethod
+    def dist(cls, name, base_prob, observed=None, *args, **kwargs):
+        return cls(name, base_prob, observed, *args, **kwargs)
 
 # Custom logistic max entropy distribution
 class LogisticMaxEnt(pm.Continuous):
@@ -54,6 +61,8 @@ class LogisticMaxEnt(pm.Continuous):
 
 # PyMC5 model
 with pm.Model() as model:
+    # Define the "location" dimension
+    model.add_coord("location", np.arange(n_locations))
     # Priors
     beta_temp = pm.Normal("beta_temp", mu=0, sigma=1)
     beta_humidity = pm.Normal("beta_humidity", mu=0, sigma=1)
@@ -65,10 +74,10 @@ with pm.Model() as model:
     )
 
     # Custom distribution for fire counts
-    fire_counts = ExponentialTail(
-        "fire_counts", base_prob=base_fire_prob, observed=true_fire_counts
-    )
-
+    fire_counts = ExponentialTail("fire_counts", base_prob=base_fire_prob, observed=true_fire_counts)
+    
+    
+    
     #Custom logistic distribution for testing.
     logistic_test = LogisticMaxEnt("logistic_test", mu = base_fire_prob, observed = true_fire_counts)
 
