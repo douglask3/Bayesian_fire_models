@@ -61,7 +61,10 @@ class ConFire(object):
 
         def sigmoid(y, k = 1.0):
             if k == 0: return None
-            return 1.0/(1.0 + self.numPCK.exp(-y * k))
+            if self.inference:
+                return self.numPCK.math.sigmoid(-y * k)
+            else:
+                return 1.0/(1.0 + self.numPCK.exp(-y * k))
         
         def logit(x):
             return self.numPCK.log(x/(1.0-x))
