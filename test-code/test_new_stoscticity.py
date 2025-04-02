@@ -30,6 +30,52 @@ for i in range(n_observations):
     else:
         true_fire_counts[i] = int(np.random.exponential(1) + 1) # Exponential tail
 
+
+# PyMC5 model
+with pm.Model() as model:
+    # Define the "location" dimension
+    model.add_coord("location", np.arange(n_locations))
+
+    # Priors
+    beta_temp = pm.Normal("beta_temp", mu=0, sigma=1)
+    beta_humidity = pm.Normal("beta_humidity", mu=0, sigma=1)
+    location_effect = pm.Normal("location_effect", mu=0, sigma=0.5, dims="location")
+
+    # Linear model and sigmoid transformation
+    base_fire_prob = pm.Deterministic(
+        "base_fire_prob", pm.math.sigmoid(beta_temp * temp + beta_humidity * humidity + location_effect[location_idx])
+    )
+
+    # Custom distribution for fire counts
+    def exponential_tail_logp(value, base_prob):
+        logp = pt.switch(
+            value < base_prob,
+            -np.inf,
+            pt.log(base_prob) - pt.log(1 - base_prob) - pt.log(expon.sf(value - base_prob)),
+        )
+        return logp
+
+    fire_counts = pm.CustomDist(
+        "fire_counts", base_prob=base_fire_prob, logp=exponential_tail_logp, observed=true_fire_counts
+    )
+
+    # Custom logistic distribution for testing.
+    def logistic_maxent_logp(value, mu):
+        logp = pt.log(logistic.pdf(value, loc=mu, scale=1))
+        return logp
+
+    logistic_test = pm.CustomDist(
+        "logistic_test", mu=base_fire_prob, logp=logistic_maxent_logp, observed=true_fire_counts
+    )
+
+    # Inference
+    idata = pm.sample(2000, tune=1000, chains=4, cores=4, target_accept=0.95)
+
+# Summarize results
+az.summary(idata, var_names=["beta_temp", "beta_humidity", "location_effect"])
+
+set_trace()
+
 # Custom distribution for fire counts
 class ExponentialTail(pm.Continuous):
     def __init__(self, name, base_prob, observed=None, *args, **kwargs):
