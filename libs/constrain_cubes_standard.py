@@ -303,6 +303,7 @@ def contrain_to_sow_shapefile(cube, shp_filename, name, *args, **kw):
     except:
         shp["geometry"] = shp["geometry"].buffer(0)
         geom = shp[shp['name'].str.contains(name, case=False, na=False)].geometry.unary_union
+    
     return contrain_to_shape(cube, geom, *args, **kw)
     
 
@@ -398,7 +399,7 @@ def constrain_region(cube, ecoregions = None, Country = None, Continent = None, 
 def contrain_coords(cube, extent):
     longitude_constraint = iris.Constraint(longitude=lambda cell: extent[0] <= cell.point <= extent[1])
     latitude_constraint = iris.Constraint(latitude=lambda cell: extent[2] <= cell.point <= extent[3])
-    
+     
     return cube.extract(longitude_constraint & latitude_constraint)
 
     
