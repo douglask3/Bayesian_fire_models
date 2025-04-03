@@ -26,13 +26,19 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
     var_dir = dir  + '/' + experiment[0] + '/' + variable + '/' + sub_dir + '/'
     
     files = os.listdir(var_dir)
-    ensembles = [file[-18:-10] for file in files if file[-18] == 'r']
+    
+    files = [file for file in files if file[-3:] == '.nc']
+    try:
+        ensembles = [file[-18:-10] for file in files if file[-18] == 'r']
+    except:
+        set_trace()
     #shapes = gpd.read_file(shapefile_path)
     ensembles = list(set(ensembles))
+    
     def process_memember(member):
         print(member)
-        completed_file = temp_dir + experiment[1] + member + str(start_year) + shapefile_path.replace('/', '-') + '.txt'
-
+        completed_file = temp_dir + experiment[1] + variable + member + str(start_year) + shapefile_path.replace('/', '-') + '.txt'
+        #set_trace()
         if os.path.isfile(completed_file):
             return
         mfiles = [file for file in files if member in file]
@@ -67,7 +73,7 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
         os.makedirs(os.path.dirname(completed_file), exist_ok=True)
         Path(completed_file).touch()
     [process_memember(member) for member in ensembles]
-    set_trace()
+    
 
 
 def process_variables(experiments, variables, *args, **kw):
@@ -87,7 +93,7 @@ if __name__=="__main__":
     shapefile_path = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
     region_names = ["Los Angeles"]
 
-    variables = ['tasmax', 'tas', 'pr', 'hursmin', 'sfcWind', 'uas', 'vas']
+    variables = ['tas', 'pr', 'hursmin', 'sfcWind', 'uas', 'vas', 'tasmax']
     experiments = [['historicalExt', 'ALL'], ['historicalNatExt', 'NAT']]
     process_variables(experiments, variables, start_year, dir, sub_dir,
                      out_dir, 
