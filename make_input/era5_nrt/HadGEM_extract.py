@@ -20,8 +20,8 @@ import iris.analysis
 import cftime
 import cf_units
 
-def process_variable(variable, start_year, dir, sub_dir, out_dir, temp_dir, 
-                     experiment, region_names = None, shapefile_path = None):
+def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, temp_dir, 
+                     region_names = None, shapefile_path = None):
     
     var_dir = dir  + '/' + experiment[0] + '/' + variable + '/' + sub_dir + '/'
     
@@ -70,7 +70,11 @@ def process_variable(variable, start_year, dir, sub_dir, out_dir, temp_dir,
     set_trace()
 
 
-
+def process_variables(experiments, variables, *args, **kw):
+    for experiment in experiments:
+        for variable in variables:
+            process_variable(experiment, variable, *args, **kw)
+    
 if __name__=="__main__":
     dir = "/data/users/opatt/HadGEM3-A-N216/"
     sub_dir = '/day/'
@@ -83,12 +87,11 @@ if __name__=="__main__":
     shapefile_path = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
     region_names = ["Los Angeles"]
 
-    variables = ['tasmax']
+    variables = ['tasmax', 'tas', 'pr', 'hursmin', 'sfcWind', 'uas', 'vas']
     experiments = [['historicalExt', 'ALL'], ['historicalNatExt', 'NAT']]
-    process_variable(variables[0], start_year, dir, sub_dir,
-                     out_dir = out_dir, 
-                     temp_dir = temp_dir,
-                     experiment = experiments[0],
+    process_variables(experiments, variables, start_year, dir, sub_dir,
+                     out_dir, 
+                     temp_dir,
                      region_names = region_names,
                      shapefile_path = shapefile_path)
 
