@@ -17,7 +17,6 @@ from constrain_cubes_standard import *
 from shapely.ops import unary_union
 import shapely.vectorized
 
-
 import iris
 import iris.analysis
 import cftime
@@ -46,13 +45,13 @@ def common_time_coord(cubes, time_coord = 'valid_time'):
     
     return(cubes)
 
-def download_era5(variables, years = [1940], months = range(13), area = [90, -180, -90, 180],
+def download_era5(variables, years = [1940], months = range(13), 
+                  yr_now = None, mnth_now = None, area = [90, -180, -90, 180],
                   region_name = " ",
                   dataset = "derived-era5-single-levels-daily-statistics", 
                   out_dir = 'data/',
                   temp_dir = 'temp/',
                   shapefile_path = None):
-
    
     if shapefile_path is not None: 
         shapes = gpd.read_file(shapefile_path)
@@ -67,12 +66,16 @@ def download_era5(variables, years = [1940], months = range(13), area = [90, -18
         mnths = ['0' + str(i) if i < 10 else str(i) for i in mnths]
         temp_file =  temp_dir + '/download_era5_' + variable + statistics + \
                     '_extent_' +  '_'.join([str(ar) for ar in area]) + \
-                    '_months' + '-'.join(mnths) + '_year' +  str(year) + '.nc'
+                    '_months' + '-'.join(mnths) + '_year' +  str(year) #
+        if dataset != "derived-era5-single-levels-daily-statistics":
+            temp_file = temp_file + dataset
+
+        temp_file = temp_file + '.nc'
     
         print("=======")
         print("downloading")  
         print("year:" + str(year))
-        print("months:" + str(months))
+        print("months:" + str(mnths))
         print("variable:" +    variable)
         print("statistic:" + statistics)
         if os.path.isfile(temp_file): return(temp_file)
@@ -137,12 +140,18 @@ def download_era5(variables, years = [1940], months = range(13), area = [90, -18
         except:
             pass
         
-        out_file =  out_file + '/era5_' + variable + '_' + statistics + \
-                    '_years' +  str(years[0]) + '-' + str(years[-1]) + '.nc'
+        out_file =  out_file + '/era5_' + dataset + variable + '_' + statistics + \
+                    '_years' +  str(years[0]) + '-' + str(years[-1]) 
+        if (yr_now is not None and years[-1] == yr_now):
+            out_file = out_file + str(mnth_now)
+         
+        out_file = out_file + '.nc'
         
         if os.path.isfile(out_file): return(out_file)
         
         def for_month(variable, statistics, year, month):
+            if year == yr_now and month > mnth_now:
+                return 
             file = download_var(variable, statistics, year, [month + 1])
             return crop_cube(file)
             
@@ -152,12 +161,13 @@ def download_era5(variables, years = [1940], months = range(13), area = [90, -18
             return cubes
 
         cubes = [for_year(year) for year in years]
-        cubes = [x for xs in cubes for x in xs]
+        cubes = [x for xs in cubes for x in xs if x is not None]
         
         cubes = common_time_coord(cubes)
         iris.util.equalise_attributes(cubes)
         cubes = iris.cube.CubeList(cubes).concatenate_cube()
         iris.save(cubes, out_file)
+        
         return out_file
         
     for var in variables:
@@ -165,25 +175,39 @@ def download_era5(variables, years = [1940], months = range(13), area = [90, -18
 
 
 if __name__=="__main__":
-    now = DT.now().year
-    years = range(1940, now + 1)
+    yr_now = DT.now().year
+    years = range(yr_now-2, yr_now + 1)
+    mnth_now = DT.now().month - 2
+    #day_now = DT.now().day-5
+    #if day_now < 1:
+    #    mnth_now = mnth_now - 1
+    #    day_now = day_now + 28
+    
     #years = range(1985, now + 1)
     #years = range(2000, 2026)
+    dataset = "derived-era5-single-levels-daily-statistics"
+    
     area = [90, -180, -60, 180]
-    temp_dir = "/scratch/dkelley/Bayesian_fire_models/temp/era5_nrt/"
+    temp_dir = "/data/scratch/douglas.kelley/Bayesian_fire_models/temp/era5_nrt/"
     out_dir = "data/data/driving_data2425/era5_nrt/"
     shapefile_path = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
     region_name = "Los Angeles"
-    variables = [["volumetric_soil_water_layer_1", "daily_minimum"],
-                 ["total_precipitation", "daily_mean"], ["2m_temperature", "daily_maximum"],
+    variables = [#["volumetric_soil_water_layer_1", "daily_minimum"],
+                 #["total_precipitation", "daily_mean"], 
+                 #["2m_temperature", "daily_maximum"],
+                 #["2m_temperature", "daily_mean"],
+                 #["2m_dewpoint_temperature", "daily_minimum"],
+                 #["2m_temperature", "daily_minimum"],
                  ["10m_wind_gust_since_previous_post_processing", "daily_maximum"],
                  ["instantaneous_10m_wind_gust", "daily_maximum"],
-                 ["2m_dewpoint_temperature", "daily_minimum"],
-                 ["evaporation", "daily_mean"],
-                 ["potential_evaporation", "daily_mean"],
-                 ["runoff", "daily_mean"]]
+                 #["evaporation", "daily_mean"],
+                 #["potential_evaporation", "daily_mean"],
+                 #["runoff", "daily_mean"]
+                 ]
 
-    download_era5(variables, years, months = range(12), area = area, region_name = region_name,
+    download_era5(variables, years, months = range(12), yr_now = yr_now, mnth_now = mnth_now,
+                  area = area, region_name = region_name,
+                  dataset = dataset, 
                   out_dir = out_dir, 
                   temp_dir = temp_dir,
                   shapefile_path = shapefile_path)
