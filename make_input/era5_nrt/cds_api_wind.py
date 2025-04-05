@@ -58,7 +58,7 @@ def download_era5(variables, years = [1940], months = range(13),
 
     ## Extract the shape containing region_name in the name
     region_shape = shapes[shapes['name'].str.contains(region_name, case=False, na=False)]
-
+    region_shape["geometry"] = region_shape["geometry"].buffer(0)
     # Convert to a single geometry (union of multiple polygons if needed)
     region_geom = unary_union(region_shape.geometry)
     
@@ -178,7 +178,7 @@ def download_era5(variables, years = [1940], months = range(13),
 
 if __name__=="__main__":
     yr_now = DT.now().year
-    years = range(yr_now-2, yr_now + 1)
+    yearss = [range(yr_now-2, yr_now + 1), range(2010, 2026), range(2000, 2026)]
     mnth_now = DT.now().month - 2
     #day_now = DT.now().day-5
     #if day_now < 1:
@@ -193,23 +193,33 @@ if __name__=="__main__":
     temp_dir = "/data/scratch/douglas.kelley/Bayesian_fire_models/temp/era5_nrt/"
     out_dir = "data/data/driving_data2425/era5_nrt/"
     shapefile_path = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
-    region_name = "Los Angeles"
-    variables = [#["volumetric_soil_water_layer_1", "daily_minimum", "smc"],
+    region_names = ["northeast India",
+                   "Alberta",
+                   "Los Angeles",
+                   "Congo basin",
+                   "Amazon and Rio Negro rivers",
+                   "Pantanal basin"]
+    variables = [["volumetric_soil_water_layer_1", "daily_minimum", "smc"],
                  ["total_precipitation", "daily_mean", "pr"], 
                  ["2m_temperature", "daily_maximum", "tasmax"],
                  ["2m_temperature", "daily_mean", "tasmin"],
                  ["2m_dewpoint_temperature", "daily_minimum", "tasdew"],
-                 #["2m_temperature", "daily_minimum", "tasmin"],
-                 #["10m_wind_gust_since_previous_post_processing", "daily_maximum", "WindGust1"],
-                 #["instantaneous_10m_wind_gust", "daily_maximum", "WindGust2"],
-                 #["evaporation", "daily_mean", "evap"],
-                 #["potential_evaporation", "daily_mean", "pevap"],
-                 #["runoff", "daily_mean", "runoff"]
+                 ["2m_temperature", "daily_minimum", "tasmin"],
+                 ["10m_wind_gust_since_previous_post_processing", "daily_maximum", "WindGust1"],
+                 ["instantaneous_10m_wind_gust", "daily_maximum", "WindGust2"],
+                 ["evaporation", "daily_mean", "evap"],
+                 ["potential_evaporation", "daily_mean", "pevap"],
+                 ["runoff", "daily_mean", "runoff"]
                  ]
+    
+    for region_name in region_names:
+        for years in yearss:
+            download_era5(variables, years, months = range(12), 
+                          yr_now = yr_now, mnth_now = mnth_now,
+                          area = area, region_name = region_name,
+                          dataset = dataset, 
+                          out_dir = out_dir, 
+                          temp_dir = temp_dir,
+                          shapefile_path = shapefile_path)
 
-    download_era5(variables, years, months = range(12), yr_now = yr_now, mnth_now = mnth_now,
-                  area = area, region_name = region_name,
-                  dataset = dataset, 
-                  out_dir = out_dir, 
-                  temp_dir = temp_dir,
-                  shapefile_path = shapefile_path)
+
