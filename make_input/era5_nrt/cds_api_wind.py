@@ -133,15 +133,17 @@ def download_era5(variables, years = [1940], months = range(13),
 
         return cropped_cube   
          
-    def process_var(variable, statistics):
+    def process_var(variable, statistics, variable_out):
         out_file = out_dir + '/' + region_name.replace(' ', '_')
         try:
             os.mkdir(out_file)
         except:
             pass
         
-        out_file =  out_file + '/era5_' + dataset + variable + '_' + statistics + \
+        out_file =  out_file + '/' + dataset + '/' + variable_out + '/' + statistics + \
                     '_years' +  str(years[0]) + '-' + str(years[-1]) 
+        
+        os.makedirs(os.path.dirname(out_file), exist_ok=True)
         if (yr_now is not None and years[-1] == yr_now):
             out_file = out_file + str(mnth_now)
          
@@ -171,7 +173,7 @@ def download_era5(variables, years = [1940], months = range(13),
         return out_file
         
     for var in variables:
-        process_var(var[0], var[1])
+        process_var(var[0], var[1], var[2])
 
 
 if __name__=="__main__":
@@ -192,17 +194,17 @@ if __name__=="__main__":
     out_dir = "data/data/driving_data2425/era5_nrt/"
     shapefile_path = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
     region_name = "Los Angeles"
-    variables = [#["volumetric_soil_water_layer_1", "daily_minimum"],
-                 #["total_precipitation", "daily_mean"], 
-                 #["2m_temperature", "daily_maximum"],
-                 #["2m_temperature", "daily_mean"],
-                 #["2m_dewpoint_temperature", "daily_minimum"],
-                 #["2m_temperature", "daily_minimum"],
-                 ["10m_wind_gust_since_previous_post_processing", "daily_maximum"],
-                 ["instantaneous_10m_wind_gust", "daily_maximum"],
-                 #["evaporation", "daily_mean"],
-                 #["potential_evaporation", "daily_mean"],
-                 #["runoff", "daily_mean"]
+    variables = [#["volumetric_soil_water_layer_1", "daily_minimum", "smc"],
+                 ["total_precipitation", "daily_mean", "pr"], 
+                 ["2m_temperature", "daily_maximum", "tasmax"],
+                 ["2m_temperature", "daily_mean", "tasmin"],
+                 ["2m_dewpoint_temperature", "daily_minimum", "tasdew"],
+                 #["2m_temperature", "daily_minimum", "tasmin"],
+                 #["10m_wind_gust_since_previous_post_processing", "daily_maximum", "WindGust1"],
+                 #["instantaneous_10m_wind_gust", "daily_maximum", "WindGust2"],
+                 #["evaporation", "daily_mean", "evap"],
+                 #["potential_evaporation", "daily_mean", "pevap"],
+                 #["runoff", "daily_mean", "runoff"]
                  ]
 
     download_era5(variables, years, months = range(12), yr_now = yr_now, mnth_now = mnth_now,
