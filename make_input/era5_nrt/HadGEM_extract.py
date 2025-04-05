@@ -55,7 +55,7 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
             cube = cube[0]
         
         def process_region(region_name, cube):
-            out_file = out_dir + '/' + region_name + '/' + experiment[1] + \
+            out_file = out_dir + '/' + region_name.replace(' ', '_') + '/' + experiment[1] + \
                        '/' + variable + '/' + member + '-' + str(start_year) + '.nc'
             if os.path.isfile(out_file):
                 return
@@ -93,7 +93,7 @@ if __name__=="__main__":
     shapefile_path = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
     region_names = ["Los Angeles"]
 
-    variables = ['tas', 'pr', 'hursmin', 'sfcWind', 'uas', 'vas', 'tasmax']
+    variables = ['tasmax', 'tas', 'pr', 'hursmin', 'sfcWind']#, 'uas', 'vas', 
     experiments = [['historicalExt', 'ALL'], ['historicalNatExt', 'NAT']]
     process_variables(experiments, variables, start_year, dir, sub_dir,
                      out_dir, 
