@@ -28,10 +28,12 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
     files = os.listdir(var_dir)
     
     files = [file for file in files if file[-3:] == '.nc']
+    
     try:
         ensembles = [file[-18:-10] for file in files if file[-18] == 'r']
     except:
         set_trace()
+    
     #shapes = gpd.read_file(shapefile_path)
     ensembles = list(set(ensembles))
     
@@ -39,7 +41,7 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
         print(member)
         completed_file = temp_dir + experiment[1] + variable + member + str(start_year) + shapefile_path.replace('/', '-') + '.txt'
         #set_trace()
-        if os.path.isfile(completed_file):
+        if os.path.isfile(completed_file) and False:
             return
         mfiles = [file for file in files if member in file]
         mfiles = [file for file in mfiles if int(file[-9:-5]) >= start_year]
@@ -50,12 +52,13 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
 
         cube = iris.load(mfiles).concatenate()
         if len(cube) > 1:
-            set_trace()
+            return
         else:
             cube = cube[0]
         
         def process_region(region_name, cube):
-            out_file = out_dir + '/' + region_name.replace(' ', '_') + '/' + experiment[1] + \
+            out_file = out_dir + '/' + region_name.replace(' ', '_') + \
+                       '/HadGEM_' + experiment[1] + \
                        '/' + variable + '/' + member + '-' + str(start_year) + '.nc'
             if os.path.isfile(out_file):
                 return
@@ -78,6 +81,7 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
 
 def process_variables(experiments, variables, *args, **kw):
     for experiment in experiments:
+        print(experiment)
         for variable in variables:
             process_variable(experiment, variable, *args, **kw)
     
@@ -86,12 +90,17 @@ if __name__=="__main__":
     sub_dir = '/day/'
 
     temp_dir = "/data/scratch/douglas.kelley/Bayesian_fire_models/temp/hadgem_nrt/"
-    out_dir = "data/data/driving_data2425/hadgem_nrt/"
+    out_dir = "data/data/driving_data2425/nrt_attribution/"
 
     start_year = 2023
 
     shapefile_path = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
-    region_names = ["Los Angeles"]
+    region_names = ["northeast India",
+                   "Alberta",
+                   "Los Angeles",
+                   "Congo basin",
+                   "Amazon and Rio Negro rivers",
+                   "Pantanal basin"]
 
     variables = ['tasmax', 'tas', 'pr', 'hursmin', 'sfcWind']#, 'uas', 'vas', 
     experiments = [['historicalExt', 'ALL'], ['historicalNatExt', 'NAT']]
