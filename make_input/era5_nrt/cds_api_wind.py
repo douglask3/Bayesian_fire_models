@@ -140,9 +140,11 @@ def download_era5(variables, years = [1940], months = range(13),
         except:
             pass
         
-        out_file =  out_file + '/' + dataset + '/' + variable_out + '/' + statistics + \
-                    '_years' +  str(years[0]) + '-' + str(years[-1]) 
-        
+        #out_file =  out_file + '/' + dataset + '/' + variable_out + '/' + statistics + \
+        #           '_years' +  str(years[0]) + '-' + str(years[-1]) 
+        out_file = out_dir + '/' + region_name.replace(' ', '_') + \
+                       '/Era5_' + dataset + \
+                       '/' + variable + '/_years' +  str(years[0]) + '-' + str(years[-1]) 
         os.makedirs(os.path.dirname(out_file), exist_ok=True)
         if (yr_now is not None and years[-1] == yr_now):
             out_file = out_file + str(mnth_now)
@@ -191,7 +193,7 @@ if __name__=="__main__":
     
     area = [90, -180, -60, 180]
     temp_dir = "/data/scratch/douglas.kelley/Bayesian_fire_models/temp/era5_nrt/"
-    out_dir = "data/data/driving_data2425/era5_nrt/"
+    out_dir = "data/data/driving_data2425/nrt_attribution//"
     shapefile_path = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
     region_names = ["northeast India",
                    "Alberta",
