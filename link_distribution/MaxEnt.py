@@ -2,6 +2,7 @@ import pytensor
 import pytensor.tensor as tt
 from pytensor.tensor import TensorVariable
 import pymc as pm
+from typing import Optional, Tuple
 import numpy as np
 from pdb import set_trace
 import matplotlib.pyplot as plt
@@ -40,7 +41,11 @@ class MaxEnt(object):
         #                 tt.log((A + 1.0) * tt.pow(1.0 - value, A)/tt.pow(1.0 - value, 1.0 + A)))
         return dist
 
-    def fire_spread_random(self, mu, sigma, size=None):
+    def fire_spread_random(self, #mu, sigma, size=None):
+                           mu: np.ndarray | float,
+                           sigma: np.ndarray | float,
+                           size : Optional[Tuple[int]]=None,
+                          ) -> np.ndarray | float :
         """Generate random samples matching the distribution in logp_fn"""
     
         # Compute A based on sigma and mu
@@ -54,7 +59,7 @@ class MaxEnt(object):
         
         # Ensure values are within the correct range
         #samples = np.clip(samples, mu, 1)
-        set_trace()
+        
         return samples
         
     def DensityDistFun(self, Y, fx, CA = None):
@@ -103,8 +108,10 @@ class MaxEnt(object):
             fx = pm.CustomDist("fxST",
                                fx, stochastic,
                                logp = self.fire_spread_logp, 
-                               random=self.fire_spread_random)
-                                       
+                               random=self.fire_spread_random,
+                               size=Y.shape[0])
+            set_trace()
+            #fx = pm.Deterministic("fxST", self.fire_spread(fx, n_samples=20))                           
             #fx = pm.CustomDist( "fxST", fx, stochastic, 
             #                     logp=self.fire_spread)
             #fxST = pm.CustomDist("fxST", fx, stochastic, self.fire_spread, dist = fire_spread)
