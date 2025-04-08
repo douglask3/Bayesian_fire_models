@@ -38,7 +38,7 @@ grab_old_trace:: True # set to True till you get the code running.
 dir_outputs:: 'outputs/outputs/'
 
 ## evaluation info
-sample_for_plot:: 100
+sample_for_plot:: 25
 control_names:: ['Moisture', 'Fuel']
 levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
 dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
