@@ -102,7 +102,7 @@ if __name__=="__main__":
                    "Amazon and Rio Negro rivers",
                    "Pantanal basin"]
 
-    variables = ['tasmax', 'tas', 'pr', 'hursmin', 'sfcWind']#, 'uas', 'vas', 
+    variables = ['tasmax', 'tas', 'pr', 'hursmin', 'sfcWind', 'mrsos', 'mrros']#, 'uas', 'vas', 
     experiments = [['historicalExt', 'ALL'], ['historicalNatExt', 'NAT']]
     process_variables(experiments, variables, start_year, dir, sub_dir,
                      out_dir, 
