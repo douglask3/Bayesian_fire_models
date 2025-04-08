@@ -144,7 +144,7 @@ def download_era5(variables, years = [1940], months = range(13),
         #           '_years' +  str(years[0]) + '-' + str(years[-1]) 
         out_file = out_dir + '/' + region_name.replace(' ', '_') + \
                        '/Era5_' + dataset + \
-                       '/' + variable + '/_years' +  str(years[0]) + '-' + str(years[-1]) 
+                       '/' + variable_out + '/_years' +  str(years[0]) + '-' + str(years[-1]) 
         os.makedirs(os.path.dirname(out_file), exist_ok=True)
         if (yr_now is not None and years[-1] == yr_now):
             out_file = out_file + str(mnth_now)
@@ -201,7 +201,7 @@ if __name__=="__main__":
                    "Congo basin",
                    "Amazon and Rio Negro rivers",
                    "Pantanal basin"]
-    variables = [["volumetric_soil_water_layer_1", "daily_minimum", "smc"],
+    variables = [["volumetric_soil_water_layer_1", "daily_minimum", "mrsos"],
                  ["total_precipitation", "daily_mean", "pr"], 
                  ["2m_temperature", "daily_maximum", "tasmax"],
                  ["2m_temperature", "daily_mean", "tasmin"],
@@ -211,7 +211,7 @@ if __name__=="__main__":
                  ["instantaneous_10m_wind_gust", "daily_maximum", "WindGust2"],
                  ["evaporation", "daily_mean", "evap"],
                  ["potential_evaporation", "daily_mean", "pevap"],
-                 ["runoff", "daily_mean", "runoff"]
+                 ["runoff", "daily_mean", "mrros"]
                  ]
     
     for region_name in region_names:
