@@ -180,7 +180,7 @@ def download_era5(variables, years = [1940], months = range(13),
 
 if __name__=="__main__":
     yr_now = DT.now().year
-    yearss = [range(yr_now-2, yr_now + 1), range(2010, 2026), range(2000, 2026)]
+    yearss = [range(2002, 2026), range(yr_now-2, yr_now + 1), range(2010, 2026)]
     mnth_now = DT.now().month - 2
     #day_now = DT.now().day-5
     #if day_now < 1:
@@ -201,10 +201,10 @@ if __name__=="__main__":
                    "Congo basin",
                    "Amazon and Rio Negro rivers",
                    "Pantanal basin"]
-    variables = [["volumetric_soil_water_layer_1", "daily_minimum", "mrsos"],
+    variables = [#["volumetric_soil_water_layer_1", "daily_minimum", "mrsos"],
                  ["total_precipitation", "daily_mean", "pr"], 
                  ["2m_temperature", "daily_maximum", "tasmax"],
-                 ["2m_temperature", "daily_mean", "tasmin"],
+                 ["2m_temperature", "daily_mean", "tas"],
                  ["2m_dewpoint_temperature", "daily_minimum", "tasdew"],
                  ["2m_temperature", "daily_minimum", "tasmin"],
                  ["10m_wind_gust_since_previous_post_processing", "daily_maximum", "WindGust1"],
