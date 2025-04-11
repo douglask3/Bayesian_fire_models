@@ -32,12 +32,17 @@ def constrain_to_data(cube):
         cube of same or smaller extent restircited to range of lats and lons where data.
         cube has useable data.
     """
+    
     lats = cube.coord('latitude').points
     lons = cube.coord('longitude').points
 
-    lat_valid = lats[~np.isnan(cube.data).all(axis=(0,2))]
-    lon_valid = lons[~np.isnan(cube.data).all(axis=(0,1))]
-
+    if len(cube.data.shape) == 3:
+        lat_valid = lats[~np.isnan(cube.data).all(axis=(0,2))]
+        lon_valid = lons[~np.isnan(cube.data).all(axis=(0,1))]
+    else:
+        lat_valid = lats[~np.isnan(cube.data).all(axis=(1))]
+        lon_valid = lons[~np.isnan(cube.data).all(axis=(0))]
+        
     lat_min, lat_max = np.min(lat_valid), np.max(lat_valid)
     lon_min, lon_max = np.min(lon_valid), np.max(lon_valid)
 
@@ -207,11 +212,13 @@ def constrain_cube_by_cube_and_numericIDs(cube, regions, region):
 
     if not cube.data.mask.shape == cube.data.shape:
          cube.data.mask = np.isnan(cube.data)
-    for layer in cube.data:
-        
-        layer.mask[mask] = False
-        layer[mask] = np.nan
-    
+ 
+    if len(cube.shape) == 3:
+        for layer in cube.data:
+            layer.mask[mask] = False
+            layer[mask] = np.nan
+    else:
+        cube.data[mask] = np.nan
     cube_out = constrain_to_data(cube)
     return cube_out
 
@@ -404,6 +411,7 @@ def contrain_coords(cube, extent):
 
     
 def constrain_BR_biomes(cube, biome_ID):
+    
     if len(biome_ID) == 1 and biome_ID[0] == 0: return cube
     mask = iris.load_cube('data/BR_Biomes.nc') 
     #mask = iris.load_cube('data/Pantanal_basin.nc') 

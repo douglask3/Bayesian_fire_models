@@ -51,11 +51,11 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
     Xf = X.flatten()
     pvf = pv.flatten()
     
-    none0 =  (Xf != 0) & (pvf > 0.01)
+    none0 =  (Xf != 0) #& (pvf > 0.01)
     Xf0 = np.log10(Xf[none0])
     pvf0 = pvf[none0]#10**pvf[none0]
     pvf0[pvf0 > 0.999] = 0.999
-    
+    #sset_trace()
     #pvf0 = 10**pvf0
     plot_id = ax.hist2d(Xf0, pvf0, bins=100, cmap='afmhot_r', norm=mpl.colors.LogNorm())
     y_min, y_max = plt.ylim()
@@ -66,8 +66,72 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
     #  Set new y-axis limits with the padding
     plt.ylim(y_min - padding, y_max + padding)
 
-    plt.gcf().colorbar(plot_id[3], ax=ax)
+    #plt.gcf().colorbar(plot_id[3], ax=ax)
+    #try:
+    #    plt.gcf().colorbar(plot_id[3], ax=ax)
+    #except ValueError as e:
+    #    print("Error creating colorbar:")
+    #    print("plot_id[3] min:", np.nanmin(plot_id[3].get_array()))
+    #    print("plot_id[3] max:", np.nanmax(plot_id[3].get_array()))
+    #    print(np.min(Xf0))
+    #    print(np.max(Xf0))
+    #    raise e
+    print("Starting colorbar creation...")
+    try:
+        data = plot_id[3].get_array()
+        print(f"Original data shape: {data.shape}")
+        print(f"Original data type: {type(data)}")
+        
+        if isinstance(data, np.ma.MaskedArray):
+            print(f"Data is a MaskedArray with {data.mask.sum()} masked values")
+            data = data.filled(np.nan)  # Replace masked values with NaN
+        
+        print(f"Data after mask handling - min: {np.nanmin(data)}, max: {np.nanmax(data)}")
+        print(f"Unique values in data: {np.unique(data)}")
+        
+        vmin = np.nanmin(data)
+        vmax = np.nanmax(data)
+        
+        if np.isnan(vmin) or np.isnan(vmax):
+            raise ValueError(f"Data contains only NaN values")
+        
+        if vmin == vmax:
+            print(f"Constant data detected: all values are {vmin}")
+            if vmin == 0:
+                vmin, vmax = -1, 1  # Symmetrical range around 0
+            else:
+                vmin, vmax = vmin * 0.99, vmax * 1.01  # Small range around the constant value
+            print(f"Adjusted range for colorbar: vmin = {vmin}, vmax = {vmax}")
+        
+        print(f"Final vmin: {vmin}, vmax: {vmax}")
+        norm = colors.Normalize(vmin=vmin, vmax=vmax)
+        
+        print("Updating colormap of the plot...")
+        plot_id[3].set_norm(norm)
+        
+        print("Creating colorbar...")
+        plt.gcf().colorbar(plot_id[3], ax=ax)
+        print("Colorbar created successfully!")
+    except Exception as e:
+        print("Error creating colorbar:")
+        print(f"Error type: {type(e).__name__}")
+        print(f"Error message: {str(e)}")
+        print(f"plot_id[3] shape: {plot_id[3].get_array().shape}")
+        print(f"plot_id[3] size: {plot_id[3].get_array().size}")
+        if plot_id[3].get_array().size > 0:
+            print(f"plot_id[3] min: {np.nanmin(plot_id[3].get_array())}")
+            print(f"plot_id[3] max: {np.nanmax(plot_id[3].get_array())}")
+            print(f"plot_id[3] contains inf: {np.isinf(plot_id[3].get_array()).any()}")
+            print(f"plot_id[3] contains NaN: {np.isnan(plot_id[3].get_array()).any()}")
+            if isinstance(plot_id[3].get_array(), np.ma.MaskedArray):
+                print(f"plot_id[3] is a MaskedArray with {plot_id[3].get_array().mask.sum()} masked values")
+        
+        print("Skipping colorbar due to error")
+        
+    print("Continuing with the rest of the function...")
+
     at = np.unique(np.round(np.arange(np.min(Xf0), np.max(Xf0))))
+    if len(at) == 0: at = np.array(np.min(Xf0), np.min(Xf0) + 1)
     plt.xticks(at, 10**at)
     #labels = np.array([0, 0.3, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99])
     #plt.yticks(10**labels, labels)
@@ -196,9 +260,9 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
                           control_run_name = "control",
                           subset_function = None, subset_function_args = None,
                           sample_for_plot = 1, grab_old_trace = False, 
+                          run_response_curves = False, 
                           response_grouping = None, run_only = False, return_inputs = False,
                           Y = None, X = None, lmask = None, scalers = None, *args, **kw):
-    
     """ Runs prediction and evalutation of the sampled model based on previously run trace.
     Arguments:
         trace - pymc traces nc or nc fileiles, probably from a 'train_MaxEnt_model' run
@@ -242,11 +306,9 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
     if other_params_file is not None:
         readin_params = read_variables_from_namelist(other_params_file)
         if extra_params is not None:
-            
             readin_params.update(extra_params)
         extra_params = readin_params
             
-        
     common_args = {
         'y_filename': y_filen,
         'x_filename_list': x_filen_list,
@@ -301,10 +363,11 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
     compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, *args, **kw)
     Bayes_benchmark(filename_out, fig_dir, Sim, Obs, lmask)
 
-    #for ct in ["initial", "standard", "potential", "sensitivity"]:
-    #    response_curve(curve_type = ct, x_filen_list = x_filen_list,
-    #                   fig_dir = fig_dir, scalers =  scalers, 
-    #                   *args, **kw, **common_args)
+    if run_response_curves: 
+        for ct in ["initial", "standard", "potential", "sensitivity"]:
+            response_curve(curve_type = ct, x_filen_list = x_filen_list,
+                           fig_dir = fig_dir, scalers =  scalers, 
+                           *args, **kw, **common_args)
          
     if return_inputs: 
         return Sim, Y, X, lmask, scalers 

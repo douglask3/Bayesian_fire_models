@@ -165,11 +165,13 @@ def response_curve(Sim, curve_type, trace, sample_for_plot, X, eg_cube, lmask,
             plotNi = 2
             diff = Sim2.copy()
             if type(g_index) == type(1) or len(g_index) == 1:
-                diff = diff.data - Sim1.data if Sim1 is not None else Sim2
+                diff.data = diff.data - Sim1.data if Sim1 is not None else Sim2
             else:
                 diff.data = np.sqrt(Sim1.data**2 + np.sum([i.data**2 for i in Sim2i], axis = 0))
+        
         diffP = diff.collapsed('time', iris.analysis.MEAN)
         
+         
         plotFun(diffP, '', plotN + 2 + plotNi, dlevels, dcmap, 
                 figure_filename=figure_dir + varname + '-difference')  
 
