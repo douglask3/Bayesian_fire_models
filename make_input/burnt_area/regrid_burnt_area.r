@@ -44,7 +44,12 @@ for_region <- function(rname, sname) {
 
     shp_rgn = shp[grep(sname, shp$name, ignore.case = TRUE), ]
     extent = ext(shp_rgn)
+    extent[3:4] =  -extent[4:3]
     dat = crop(dat, extent)
+    dat0 = dat
+    dat = flip(dat, 'vertical')
+    extent[3:4] =  -extent[4:3]
+    ext(dat) = extent
     dat = mask(dat, shp_rgn)  
 
     dates = substr(sapply(files, function(i) strsplit(i,'C6_')[[1]][2]), 1, 6)
@@ -55,6 +60,7 @@ for_region <- function(rname, sname) {
         writeCDF(dat, temp_out, overwrite=TRUE)
         add_date_to_file(temp_out, file_out, years, mnns, day, name = 'Burnt area')
     }
+    
     write_out(dat, out_file_hires)
     
     #writeCDF(dat, temp_out, overwrite=TRUE) 
