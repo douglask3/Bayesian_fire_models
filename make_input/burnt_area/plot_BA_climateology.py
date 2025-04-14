@@ -1,5 +1,5 @@
 
-filename = "data/data/driving_data2425/Pantanal/burnt_area.nc"
+
 import iris
 import iris.coord_categorisation as icat
 import numpy as np
@@ -16,50 +16,51 @@ from shapely.geometry import MultiPolygon
 from pdb import set_trace
 
 
-Region_title = "Pantanal" 
+def open_netcdf_and_find_clim(filename):
+    # Load NetCDF file
+    cube = iris.load_cube(filename)
+    
+    # Ensure time coordinate is properly formatted
+    time_coord = cube.coord("time") 
+    time_units = time_coord.units
 
-# Load NetCDF file
-cube = iris.load_cube(filename)
+    dates = time_units.num2date(time_coord.points)
+    last_date = dates[-1]
+    start_date = last_date.replace(year=last_date.year - 1)
+    
+    
+    # Add month categorisation to time
+    icat.add_month(cube, "time", name="month")
+    
+# Extract last 12 months of data    
+    constraint = iris.Constraint(
+        time=lambda cell: start_date <= cell.point <= last_date
+    )
+    last_12_months_cube = cube.extract(constraint)[1:]
+    
+    # Compute the climatological mean for each month
+    climatology = cube.aggregated_by("month", iris.analysis.MEAN)
+    
+    # Compute anomaly for the most recent year
+    last_year_constraint = iris.Constraint(
+        time=lambda cell: last_date.replace(year=last_date.year - 1) <= cell.point <= last_date
+    )
+    
+    last_year_cube = cube.extract(last_year_constraint)[1:]
+    #anomaly = last_year_cube.collapsed("time", iris.analysis.MEAN) - climatology
+    #set_trace()
+    anomaly = last_year_cube.copy()
+    anomaly.data = anomaly.data - climatology.data
+    return anomaly, climatology
 
-# Ensure time coordinate is properly formatted
-time_coord = cube.coord("time")
-time_units = time_coord.units
-
-dates = time_units.num2date(time_coord.points)
-last_date = dates[-1]
-start_date = last_date.replace(year=last_date.year - 1)
-
-
-# Add month categorisation to time
-icat.add_month(cube, "time", name="month")
-
-# Extract last 12 months of data
-constraint = iris.Constraint(
-    time=lambda cell: start_date <= cell.point <= last_date
-)
-last_12_months_cube = cube.extract(constraint)[1:]
-
-# Compute the climatological mean for each month
-climatology = cube.aggregated_by("month", iris.analysis.MEAN)
-
-# Compute anomaly for the most recent year
-last_year_constraint = iris.Constraint(
-    time=lambda cell: last_date.replace(year=last_date.year - 1) <= cell.point <= last_date
-)
-
-last_year_cube = cube.extract(last_year_constraint)[1:]
-#anomaly = last_year_cube.collapsed("time", iris.analysis.MEAN) - climatology
-#set_trace()
-anomaly = last_year_cube.copy()
-anomaly.data = anomaly.data - climatology.data
-# Load the shapefile
-shapefile_path = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
-gdf = gpd.read_file(shapefile_path)  # Load shapefile
-gdf["geometry"] = gdf["geometry"].buffer(0)
-shapefile_geometries = unary_union(gdf.geometry)  # Merge all geometries
-if isinstance(shapefile_geometries, MultiPolygon):
-    shapefile_geometries = list(shapefile_geometries.geoms)  # Extract individual polygons
-
+def load_shapefile(shapefile_path):
+    # Load the shapefile
+    gdf = gpd.read_file(shapefile_path)  # Load shapefile
+    gdf["geometry"] = gdf["geometry"].buffer(0)
+    shapefile_geometries = unary_union(gdf.geometry)  # Merge all geometries    
+    if isinstance(shapefile_geometries, MultiPolygon):
+        shapefile_geometries = list(shapefile_geometries.geoms)  # Extract individual polygons
+    return shapefile_geometries
 
 def plot_all_climatology(climatology, title="Annual Mean Burnt Area per Month",
                          fig_id="burnt_area_climatology", cmap='Oranges', 
@@ -116,33 +117,35 @@ def plot_all_climatology(climatology, title="Annual Mean Burnt Area per Month",
     plt.clf()
     plt.close()
 
+def plot_region(filename, shapefile_path, cmap, dcmap, levels, dlevels):
+    anomaly, climatology = open_netcdf_and_find_clim(filename)
+    shapefile_geometries = load_shapefile(shapefile_path)
+    
+    custom_cmap = LinearSegmentedColormap.from_list("cmap_interp", cmap, N=len(levels))
+    plot_all_climatology(climatology, cmap = custom_cmap, c_bins = levels,
+                        extend='max')
 
-
+    custom_cmap = LinearSegmentedColormap.from_list("dcmap_interp", dcmap[1:-1], 
+                                                    N = len(dlevels)-1)  
+    custom_cmap.set_under(dcmap[0]) 
+    custom_cmap.set_over(dcmap[-1])
+    plot_all_climatology(anomaly, "Burnt Area Anomaly Mar 24 - Feb 25", "burnt_area_anaomoly",
+                     cmap = custom_cmap, c_bins = dlevels,
+                     extend='both')
+'''
 # Define bins for climatology (zero-inflated, positive only)
 clim_bins = [0, 0.1, 0.5, 1, 2, 5, 10]
-clim_norm = mcolors.BoundaryNorm(boundaries=clim_bins, ncolors=len(clim_bins)-1)
+#clim_norm = mcolors.BoundaryNorm(boundaries=clim_bins, ncolors=len(clim_bins)-1)
 
-# Discrete colormap with same number of levels
-SoW_gradient_red = [
-    "#fff7ec", "#fee8c8", "#fdd49e", "#fdbb84",
-    "#fc8d59", "#ef6548", "#d7301f", "#b30000", "#7f0000"
-]
-
-SoW_diverging_TealOrange = ["#004c4b", "#008786", "#6bbbaf", "#b6e0db", "#ffffff", "#ffd8b8", "#ffb271", "#e57100", "#8a3b00"]
 
 
 #custom_cmap = ListedColormap(SoW_gradient_red)
 custom_cmap = LinearSegmentedColormap.from_list("SoW_red_interp", SoW_gradient_red, N=7)  # or whatever N you need
 
-plot_all_climatology(climatology, cmap = custom_cmap, c_bins = [0, 0.1, 0.5, 1, 2, 5, 10],
-                     extend='max')
 
-custom_cmap = LinearSegmentedColormap.from_list("SoW_red_interp", SoW_diverging_TealOrange[1:-1], N=10)  # or whatever N you need
-custom_cmap.set_under(SoW_diverging_TealOrange[0])  # darker blue
-custom_cmap.set_over(SoW_diverging_TealOrange[-1])
-plot_all_climatology(anomaly, "Burnt Area Anomaly in Last Year", "burnt_area_anaomoly",
-                     cmap=custom_cmap, c_bins = [-10, -5, -2, -1, -0.5, 0, 0.5, 1, 2, 5, 10],
-                     extend='both')
+
+
+
 set_trace()
 
 fig, ax = plt.subplots(figsize=(8, 6), subplot_kw={'projection': ccrs.PlateCarree()})
@@ -165,3 +168,26 @@ plt.savefig("figs/" + Region_title + "-burnt_area_anaomoly.png",
 plt.savefig("figs/" + Region_title + "-burnt_area_anaomoly.pdf", dpi=300, bbox_inches='tight')  # Save as PDF
 plt.clf()  
 plt.close()
+'''
+
+# Discrete colormap with same number of levels
+SoW_gradient_red = [
+    "#fff7ec", "#fee8c8", "#fdd49e", "#fdbb84",
+    "#fc8d59", "#ef6548", "#d7301f", "#b30000", "#7f0000"
+]
+
+SoW_diverging_TealOrange = ["#004c4b", "#008786", "#6bbbaf", "#b6e0db", "#ffffff", "#ffd8b8", "#ffb271", "#e57100", "#8a3b00"]
+
+
+
+if __name__=="__main__":    
+    shapefile_path = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
+
+    Region_title = "Pantanal" 
+    filename = "data/data/driving_data2425/Pantanal/burnt_area.nc"
+
+    cmap = SoW_gradient_red
+    dcmap = SoW_diverging_TealOrange
+    levels = [0, 0.1, 0.5, 1, 2, 5, 10]
+    dlevels = [-10, -5, -2, -1, -0.5, 0, 0.5, 1, 2, 5, 10]
+    plot_region(filename, shapefile_path, cmap, dcmap, levels, dlevels)
