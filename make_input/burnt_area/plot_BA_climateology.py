@@ -61,8 +61,20 @@ def load_shapefile(shapefile_path):
 
 def plot_all_climatology(climatology, title="Annual Mean Burnt Area per Month",
                          fig_id="burnt_area_climatology", cmap='Oranges', 
-                         c_bins = [0, 0.1, 0.5, 1, 2, 5, 10], extend = 'max'):
-    fig, axes = plt.subplots(3, 4, figsize=(12, 9),
+                         c_bins = [0, 0.1, 0.5, 1, 2, 5, 10], extend = 'max',
+                         sub_months = None):
+    if sub_months is None:
+        nrow = 3
+        ncol = 4
+    else:
+        nrow =  round(len(sub_months)**0.5)
+        ncol = int(np.ceil(len(sub_months)/nrow))
+        iris.coord_categorisation.add_month_number(climatology, 'time')
+        sub_months -= climatology.coord('month_number').points[0] - 1
+        #set_trace()
+        climatology = climatology[sub_months]
+    
+    fig, axes = plt.subplots(nrow, ncol, figsize=(ncol * 3, nrow * 3),
                              subplot_kw={'projection': ccrs.PlateCarree()})
 
     # Compute global min/max for consistent colour scale
@@ -75,7 +87,8 @@ def plot_all_climatology(climatology, title="Annual Mean Burnt Area per Month",
     # Load shapefile
     shp = shpreader.Reader("data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp")
     shapefile_geometries = list(shp.geometries())
-
+    #if sub_months is not None:
+    #    set_trace()
     for i, month_cube in enumerate(climatology.slices_over("month")):
         ax = axes.flat[i]
         month_name = month_cube.coord("month").points[0]  # Real month index
@@ -109,13 +122,13 @@ def plot_all_climatology(climatology, title="Annual Mean Burnt Area per Month",
     plt.clf()
     plt.close()
 
-def plot_region(filename, shapefile_path, cmap, dcmap, levels, dlevels):
+def plot_region(filename, shapefile_path, cmap, dcmap, levels, dlevels, *args, **kw):
     anomaly, climatology = open_netcdf_and_find_clim(filename)
     shapefile_geometries = load_shapefile(shapefile_path)
     
     custom_cmap = LinearSegmentedColormap.from_list("cmap_interp", cmap, N=len(levels))
     plot_all_climatology(climatology, cmap = custom_cmap, c_bins = levels,
-                        extend='max')
+                        extend='max', *args, **kw)
 
     custom_cmap = LinearSegmentedColormap.from_list("dcmap_interp", dcmap[1:-1], 
                                                     N = len(dlevels)-1)  
@@ -123,7 +136,7 @@ def plot_region(filename, shapefile_path, cmap, dcmap, levels, dlevels):
     custom_cmap.set_over(dcmap[-1])
     plot_all_climatology(anomaly, "Burnt Area Anomaly Mar 24 - Feb 25", "burnt_area_anaomoly",
                      cmap = custom_cmap, c_bins = dlevels,
-                     extend='both')
+                     extend='both', *args, **kw)
 
 # Discrete colormap with same number of levels
 SoW_gradient_red = [
@@ -139,10 +152,14 @@ if __name__=="__main__":
     shapefile_path = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
 
     Region_title = "Pantanal" 
-    filename = "data/data/driving_data2425/Pantanal/burnt_area.nc"
+    Region_dir = "Pantanal"
+    filename = "data/data/driving_data2425/" + Region_dir +"/burnt_area.nc"
 
     cmap = SoW_gradient_red
     dcmap = SoW_diverging_TealOrange
     levels = [0, 0.1, 0.5, 1, 2, 5, 10]
     dlevels = [-10, -5, -2, -1, -0.5, 0, 0.5, 1, 2, 5, 10]
+    sub_months = [5, 6, 7, 8]
     plot_region(filename, shapefile_path, cmap, dcmap, levels, dlevels)
+    plot_region(filename, shapefile_path, cmap, dcmap, levels, dlevels, 
+                sub_months = sub_months)
