@@ -1,5 +1,3 @@
-
-
 import iris
 import iris.coord_categorisation as icat
 import numpy as np
@@ -32,7 +30,7 @@ def open_netcdf_and_find_clim(filename):
     # Add month categorisation to time
     icat.add_month(cube, "time", name="month")
     
-# Extract last 12 months of data    
+    # Extract last 12 months of data    
     constraint = iris.Constraint(
         time=lambda cell: start_date <= cell.point <= last_date
     )
@@ -47,8 +45,7 @@ def open_netcdf_and_find_clim(filename):
     )
     
     last_year_cube = cube.extract(last_year_constraint)[1:]
-    #anomaly = last_year_cube.collapsed("time", iris.analysis.MEAN) - climatology
-    #set_trace()
+    
     anomaly = last_year_cube.copy()
     anomaly.data = anomaly.data - climatology.data
     return anomaly, climatology
@@ -71,13 +68,10 @@ def plot_all_climatology(climatology, title="Annual Mean Burnt Area per Month",
     # Compute global min/max for consistent colour scale
     clim_min, clim_max = np.min(climatology.data), np.max(climatology.data)
     
-    # Set norm (nonlinear for better visualization)
-    #if symmetric:
-    #    norm = mcolors.SymLogNorm(linthresh=0.1, linscale=0.1, vmin=-clim_max, vmax=clim_max, base=10)
-    #else:
-    #    norm = mcolors.LogNorm(vmin=max(clim_min, 1e-2), vmax=clim_max)  # Avoid log(0)
+    
     norm = mcolors.BoundaryNorm(boundaries=c_bins, ncolors=len(c_bins)-1, clip = False)
     cmap = plt.get_cmap(cmap, len(c_bins)-1)
+
     # Load shapefile
     shp = shpreader.Reader("data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp")
     shapefile_geometries = list(shp.geometries())
@@ -104,14 +98,12 @@ def plot_all_climatology(climatology, title="Annual Mean Burnt Area per Month",
         ax.set_title(month_name)  # Use real month name
 
     # Single colourbar
-    #cbar = fig.colorbar(im, ax=axes.ravel().tolist(), orientation='horizontal', 
-    #                    spacing='proportional', fraction=0.05, pad=0.1)
     cbar = fig.colorbar(im, ax=axes.ravel().tolist(), orientation='horizontal',
-                        ticks=c_bins, fraction=0.05, pad=0.1, extend = extend)#, spacing='proportional'
+                        ticks=c_bins, fraction=0.05, pad=0.1, extend = extend)
     cbar.set_label("Burnt Area")
 
     plt.suptitle(Region_title + " " + title)
-    #plt.tight_layout()
+    
     plt.savefig(f"figs/{Region_title}-{fig_id}.png", dpi=300, bbox_inches='tight')
     plt.savefig(f"figs/{Region_title}-{fig_id}.pdf", dpi=300, bbox_inches='tight')
     plt.clf()
@@ -132,43 +124,6 @@ def plot_region(filename, shapefile_path, cmap, dcmap, levels, dlevels):
     plot_all_climatology(anomaly, "Burnt Area Anomaly Mar 24 - Feb 25", "burnt_area_anaomoly",
                      cmap = custom_cmap, c_bins = dlevels,
                      extend='both')
-'''
-# Define bins for climatology (zero-inflated, positive only)
-clim_bins = [0, 0.1, 0.5, 1, 2, 5, 10]
-#clim_norm = mcolors.BoundaryNorm(boundaries=clim_bins, ncolors=len(clim_bins)-1)
-
-
-
-#custom_cmap = ListedColormap(SoW_gradient_red)
-custom_cmap = LinearSegmentedColormap.from_list("SoW_red_interp", SoW_gradient_red, N=7)  # or whatever N you need
-
-
-
-
-
-set_trace()
-
-fig, ax = plt.subplots(figsize=(8, 6), subplot_kw={'projection': ccrs.PlateCarree()})
-
-im = ax.pcolormesh(anomaly.coord("longitude").points, 
-                    anomaly.coord("latitude").points, 
-                    anomaly.data, 
-                    transform=ccrs.PlateCarree(), cmap='RdBu_r')
-
-# Add geographic features
-ax.coastlines()
-ax.add_feature(cfeature.BORDERS, linestyle='-', edgecolor='black', linewidth=0.5)  # Country borders
-ax.add_feature(cfeature.LAKES, alpha=0.5)  # Lakes
-ax.add_feature(cfeature.RIVERS, linestyle='-', edgecolor='blue')  # Major rivers
-
-ax.set_title(Region_title + " Burnt Area Anomaly in Last Year")
-plt.colorbar(im, ax=ax, orientation='horizontal')
-plt.savefig("figs/" + Region_title + "-burnt_area_anaomoly.png", 
-            dpi=300, bbox_inches='tight')  # Save as PNG
-plt.savefig("figs/" + Region_title + "-burnt_area_anaomoly.pdf", dpi=300, bbox_inches='tight')  # Save as PDF
-plt.clf()  
-plt.close()
-'''
 
 # Discrete colormap with same number of levels
 SoW_gradient_red = [
