@@ -55,7 +55,7 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
     Xf0 = np.log10(Xf[none0])
     pvf0 = pvf[none0]#10**pvf[none0]
     pvf0[pvf0 > 0.999] = 0.999
-    #sset_trace()
+    #set_trace()
     #pvf0 = 10**pvf0
     plot_id = ax.hist2d(Xf0, pvf0, bins=100, cmap='afmhot_r', norm=mpl.colors.LogNorm())
     y_min, y_max = plt.ylim()
@@ -185,6 +185,7 @@ def compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, levels, cmap
    # Obs.data = Obs.data * 100
     plot_BayesModel_maps(Sim[0], None, cmap, '', Obs, Nrows = 3, Ncols = 3, scale = 100,
                          figure_filename = figure_dir)
+    
     plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 4, Nrows = 3, Ncols = 3,
                                      figure_filename = figure_dir)
     
@@ -198,7 +199,7 @@ def evaluate_MaxEnt_model_from_namelist(training_namelist = None, evaluate_namel
 
     variables = read_variable_from_namelist_with_overwite(training_namelist, **kwargs)
     variables.update(read_variable_from_namelist_with_overwite(evaluate_namelist, **kwargs))
-   
+     
     return evaluate_MaxEnt_model(**variables)
 
 def plot_limitation_maps(fig_dir, filename_out, **common_args):
@@ -257,6 +258,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
                           link_func_class = MaxEnt, hyper = True, sample_error = True,
                           dir = '', 
                           dir_outputs = '', model_title = '', filename_out = '',
+                          filename_out_ext = '',
                           control_run_name = "control",
                           subset_function = None, subset_function_args = None,
                           sample_for_plot = 1, grab_old_trace = False, 
@@ -279,6 +281,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
         filename_out -- string of the start of the traces output name. Detault is blank. 
 		Some metadata will be saved in the filename, so even blank will 
                 save a file.
+        filename_out_ext -- string that gets added to filename_out for eval figures
         subset_function -- a list of constrain function useful for constraining and resticting 
                 data to spatial locations and time periods/months. Default is not to 
                 constrain (i.e "None" for no functions")
@@ -359,7 +362,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
     common_args['Sim'] = Sim[0]
     #set_trace()
     #jackknife(x_filen_list, fig_dir = fig_dir, **common_args)       
-    
+    filename_out += filename_out_ext 
     compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, *args, **kw)
     Bayes_benchmark(filename_out, fig_dir, Sim, Obs, lmask)
 

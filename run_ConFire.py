@@ -160,12 +160,13 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
 
     Evaluate, Y, X, lmask, scalers  = call_eval(training_namelist, namelist,
                         name + '/Evaluate', run_only = run_only, return_inputs = True,
+                        filename_out_ext = 'stochastic',
                         *args, **kws)
 
     Control, Y, X, lmask, scalers  = call_eval(training_namelist, namelist,
-                        name + '/control', run_only = True, return_inputs = True, 
+                        name + '/control', run_only = run_only, return_inputs = True, 
                         Y = Y, X = X, lmask = lmask, scalers = scalers,
-                        sample_error = False,
+                        sample_error = False, filename_out_ext = 'none_stochastic',
                         *args, **kws)
     
     
@@ -212,6 +213,7 @@ def run_ConFire(namelist):
     subset_function_args = select_from_info('subset_function_args')
     subset_function_eval = select_from_info('subset_function_eval')
     subset_function_args_eval = select_from_info('subset_function_args_eval')
+    if subset_function_args_eval is None: subset_function_args_eval =subset_function_args 
     regions = select_from_info('regions')
     time_series_percentiles = select_from_info('time_series_percentiles')
 
@@ -303,8 +305,8 @@ if __name__=="__main__":
     namelist = 'namelists/isimip-fwi2.txt'
     namelist = 'namelists/isimip3.txt'
     namelist = 'namelists/isimip2425.txt'
-    namelist = 'namelists/ar7_ref.txt'
-    namelist = 'namelists/ar7_simple.txt'
+    #namelist = 'namelists/ar7_ref.txt'
+    #namelist = 'namelists/ar7_simple.txt'
     #namelist = 'namelists/Pantanal_example.txt'
     #namelist = 'namelists/SOW2023.txt'
     
