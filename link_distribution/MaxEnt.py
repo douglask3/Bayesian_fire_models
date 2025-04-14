@@ -7,6 +7,12 @@ import numpy as np
 from pdb import set_trace
 import matplotlib.pyplot as plt
 
+def any_in(list_str, string):
+    return any(np.array([string in item for item in list_str]))
+
+def element_ref(list_v, list_names, string):
+    return [item for name, item in zip(list_names, list_v) if string in name]
+
 def overlap_pred(Y, qSpread):
     if qSpread is  None:
         return Y
@@ -62,7 +68,7 @@ class MaxEnt(object):
         
         return samples
         
-    def DensityDistFun(self, Y, fx, CA = None):
+    def DensityDistFun(self, Y, fx, qSpread = None,CA = None):
         """calculates the log-transformed continuous logit likelihood for Y given fx when Y
             and fx are probabilities between 0-1 with relative areas, CA
             Works with tensor variables.   
@@ -79,63 +85,91 @@ class MaxEnt(object):
         fx = tt.switch( tt.lt(fx, 0.00001), 0.00001, fx)
         fx = tt.switch( tt.gt(fx, 0.99999), 0.99999, fx)
         
-      
+        Y = overlap_pred(Y, qSpread)
         if CA is not None: 
             prob =  Y*CA*tt.log(fx) + (1.0-Y)*CA*tt.log((1-fx))
         else:
             prob = Y*tt.log(fx) + (1.0-Y)*tt.log((1-fx))
         return prob
     
+    def define_qSpread_param(self, params, param_names, inference = True, sigma = None):
+        #set_trace()
+        if any_in(param_names, 'qSpread_mu'):
+            mu = element_ref(params, param_names, '_mu')[0]
+            if sigma is None:
+                sigma = element_ref(params, param_names, '_sigma')[0]
+            
+            if inference:
+                qSpread = pm.Normal("qSpread", mu = mu, sigma = sigma)
+            else:
+                qSpread = np.random.normal(mu, sigma, 1)
+        elif any_in(param_names, 'qSpread'):
+            qSpread =  element_ref(params, param_names, 'qSpread')[0]
+        else:
+            qSpread = None
+        return qSpread
+    
+    def obs_given_(self, fx, Y, CA = None, params = None):#qSpread = None, stochastic = None):
+        if params is not None:
+            param_names = [param.name[5:] for param in params]
 
-    def obs_given_(self, fx, Y, CA = None, stochastic = None, qSpread = None):
-        if stochastic is not None:
-            #set_trace()
-            fx = tt.switch( tt.lt(fx, 0.00001), 0.00001, fx)
-            fx = tt.switch( tt.gt(fx, 0.99999), 0.99999, fx)
-            #fx = pm.Normal("prediction-stochastic", mu=pm.math.logit(fx), 
-            #                            sigma = stochastic)
-
-            #fx_stochastic = pm.Deterministic("fx_stochastic", 
-            #                                 custom_function(fx, fx, stochastic))
-            #fxSt = pm.CustomDist("fxSt", 
-            #         fx, 
-            #         stochastic, dist=self.fire_spread)
-            #fxST = pm.Deterministic("fxST", self.fire_spread(fx, stochastic))
-            #yay1 = self.fire_spread_random(0.5, 1, 10000)
-            ##yay2 = self.fire_spread_random(0.8, 1, 10000)
-            #yay3= self.fire_spread_random(0.8, 2, 10000)
-            #yay4 = self.fire_spread_random(0.8, 0.5, 10000)
-            fx = pm.CustomDist("fxST",
-                               fx, stochastic,
-                               logp = self.fire_spread_logp, 
-                               random=self.fire_spread_random,
-                               size=Y.shape[0])
-            set_trace()
-            #fx = pm.Deterministic("fxST", self.fire_spread(fx, n_samples=20))                           
-            #fx = pm.CustomDist( "fxST", fx, stochastic, 
-            #                     logp=self.fire_spread)
-            #fxST = pm.CustomDist("fxST", fx, stochastic, self.fire_spread, dist = fire_spread)
-            #set_trace()
-            #fx = pm.math.sigmoid(fx)
+            qSpread = self.define_qSpread_param(params, param_names)
         
-        Y = overlap_pred(Y, qSpread)
+            if any_in(param_names, 'stochastic'):
+                #set_trace()
+                fx = tt.switch( tt.lt(fx, 0.00001), 0.00001, fx)
+                fx = tt.switch( tt.gt(fx, 0.99999), 0.99999, fx)
+                #fx = pm.Normal("prediction-stochastic", mu=pm.math.logit(fx), 
+                #                            sigma = stochastic)
+    
+                #fx_stochastic = pm.Deterministic("fx_stochastic", 
+                #                                 custom_function(fx, fx, stochastic))
+                #fxSt = pm.CustomDist("fxSt", 
+                #         fx, 
+                #         stochastic, dist=self.fire_spread)
+                #fxST = pm.Deterministic("fxST", self.fire_spread(fx, stochastic))
+                #yay1 = self.fire_spread_random(0.5, 1, 10000)
+                ##yay2 = self.fire_spread_random(0.8, 1, 10000)
+                #yay3= self.fire_spread_random(0.8, 2, 10000)
+                #yay4 = self.fire_spread_random(0.8, 0.5, 10000)
+                #fx = pm.CustomDist("fxST",
+                #                   fx, stochastic,
+                #                   logp = self.fire_spread_logp, 
+                #                   random=self.fire_spread_random,
+                #                   size=Y.shape[0])
+                #set_trace()
+                #fx = pm.Deterministic("fxST", self.fire_spread(fx, n_samples=20))                           
+                #fx = pm.CustomDist( "fxST", fx, stochastic, 
+                #                     logp=self.fire_spread)
+                #fxST = pm.CustomDist("fxST", fx, stochastic, self.fire_spread, dist = fire_spread)
+                #set_trace()
+                #fx = pm.math.sigmoid(fx)
+            
+           # Y = overlap_pred(Y, qSpread)
+        
         if CA is None:
-            error = pm.DensityDist("error", fx,
+            error = pm.DensityDist("error", fx, qSpread,
                                    logp = self.DensityDistFun, 
                                    observed = Y)
         else:  
-            error = pm.DensityDist("error", fx, CA,
+            error = pm.DensityDist("error", fx, qSpread. CA,
                                    logp = self.DensityDistFun, 
                                    observed = Y)
         
         return error
             
-    def random_sample_given_central_limit_(self, mod, qSpread = None, CA = None): #
-        #return mod
+    def random_sample_given_central_limit_(self, mod, params = None, CA = None): #
+        param_names = params.keys()
+        params = params.values()
+        qSpread = self.define_qSpread_param(params, param_names, False, 0.0)
+        
         return overlap_inverse(mod, qSpread)
 
-    def random_sample_given_(self, mod, qSpread = None, CA = None):
-        #return mod
+    def random_sample_given_(self, mod, params = None, CA = None):
+        param_names = params.keys()
+        params = params.values()
+        qSpread = self.define_qSpread_param(params, param_names, False)
+        
         return overlap_inverse(mod, qSpread)
     
     def sample_given_(self, Y, X, *args, **kw):

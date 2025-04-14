@@ -96,28 +96,28 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
         param_in = contruct_param_comb(i, params, params_names, extra_params)
         link_param_in = {key: value for key, value in param_in.items() \
                        if key.startswith('link-')}
-
+        
         obj = class_object(param_in)
         out = getattr(obj, method)(X, *args, **kw)
         
     
         if out_index is not None: out = out[:, out_index]
         if test_eg_cube:
-            prob = link_func_class.sample_given_(eg_cube.data.flatten()[lmask], out, 
-                                                   *link_param_in.values())
+            
+            prob = link_func_class().sample_given_(eg_cube.data.flatten()[lmask], out, 
+                                                   [*link_param_in])
             
             prob = make_into_cube(prob, file_prob) 
         
         
         if hyper:
             if sample_error:
-                out = link_func_class.random_sample_given_(out, *link_param_in.values()) 
+                out = link_func_class().random_sample_given_(out, link_param_in) 
             else:
-                out = link_func_class.random_sample_given_central_limit_(out, 
-                                                                    *link_param_in.values()) 
+                out = link_func_class().random_sample_given_central_limit_(out, link_param_in) 
                      
         out = make_into_cube(out, file_sample)
-
+        
         if test_eg_cube: 
             return out, prob
         else:
