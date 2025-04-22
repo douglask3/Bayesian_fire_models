@@ -17,7 +17,7 @@ from constrain_cubes_standard import *
 from pdb import set_trace
 
 BA_file = "data/data/driving_data2425/burnt_area0p05-uk.nc"
-BA_file = "../fireMIPbenchmarking/data/benchmarkData/ISIMIP3a_obs/GFED5_Burned_Percentage.nc"
+BA_file = "/data/users/douglas.kelley/fireMIPbenchmarking/data/benchmarkData/ISIMIP3a_obs/GFED5_Burned_Percentage.nc"
 cube = iris.load_cube(BA_file)
 cube = sub_year_range(cube, [2002, 2025])
 cube = constrain_natural_earth(cube, 'United Kingdom')
