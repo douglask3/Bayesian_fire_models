@@ -98,15 +98,17 @@ class MaxEnt(object):
             mu = element_ref(params, param_names, '_mu')[0]
             if sigma is None:
                 sigma = element_ref(params, param_names, '_sigma')[0]
-            
-            if inference:
-                qSpread = pm.Normal("qSpread", mu = mu, sigma = sigma)
+            if sigma == 0.0:
+                qSpread = mu
             else:
-                qSpread = np.random.normal(mu, sigma, 1)
+                if inference:
+                    qSpread = pm.Normal("qSpread", mu = mu, sigma = sigma)
+                else:
+                    qSpread = np.random.normal(mu, sigma, 1)
         elif any_in(param_names, 'qSpread'):
             qSpread =  element_ref(params, param_names, 'qSpread')[0]
         else:
-            qSpread = None
+            qSpread = 1.0
         return qSpread
     
     def obs_given_(self, fx, Y, CA = None, params = None):#qSpread = None, stochastic = None):
@@ -152,13 +154,14 @@ class MaxEnt(object):
                                    logp = self.DensityDistFun, 
                                    observed = Y)
         else:  
-            error = pm.DensityDist("error", fx, qSpread. CA,
+            error = pm.DensityDist("error", fx, qSpread, CA,
                                    logp = self.DensityDistFun, 
                                    observed = Y)
         
         return error
             
     def random_sample_given_central_limit_(self, mod, params = None, CA = None): #
+        #return mod
         param_names = params.keys()
         params = params.values()
         qSpread = self.define_qSpread_param(params, param_names, False, 0.0)
@@ -166,6 +169,7 @@ class MaxEnt(object):
         return overlap_inverse(mod, qSpread)
 
     def random_sample_given_(self, mod, params = None, CA = None):
+        #return mod
         param_names = params.keys()
         params = params.values()
         qSpread = self.define_qSpread_param(params, param_names, False)
