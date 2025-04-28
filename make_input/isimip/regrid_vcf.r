@@ -1,10 +1,10 @@
 library(terra)
-library(gdalUtils)
+#library(gdalUtils)
 
 source("libs/add_date_time.r")
 
 
-path = '/scratch/dkelley/VCF_MOD44B_250m/'
+path = 'data/data/vcf/VCF_MOD44B_250m/'
 temp_path = 'temp2/regrid_vcf/'
 output_path = 'data/data/driving_data2425/'
 example_file = 'data/wwf_terr_ecos_0p5.nc'
@@ -65,6 +65,7 @@ forRegion <- function(area_name, shape_name, hv) {
         ext1 = ext(r1)
         ext2 = ext(r2)
         extc = intersect(ext1, ext2)
+        if (is.null(extc)) return(FALSE)
         return((extc[2] > extc[1]) & (extc[4] > extc[3]))
     }
       
@@ -86,7 +87,7 @@ forRegion <- function(area_name, shape_name, hv) {
     mn = 3
     day = 6
     
-    regrid_file <- function(file, band = 1, name = 'tree') {
+    regrid_file <- function(file, band = 1, name = 'tree', grab_cache = TRUE) {
         print(file)
         
         out_info0 = gsub('/', '', strsplit(file, path)[[1]][2], fixed = TRUE)
@@ -95,7 +96,7 @@ forRegion <- function(area_name, shape_name, hv) {
     
         out_info = paste0(temp_path, '-', band, '-', 
                           gsub('.hdf', '.txt', out_info0, fixed = TRUE))
-        if (file.exists(out_info)) {
+        if (file.exists(out_info) && grab_cache) {
             info = read.table(out_info)[1,1]
             if (info == 'NoOverlap') return(NULL)
             return(rast(as.character(info)))
@@ -107,8 +108,8 @@ forRegion <- function(area_name, shape_name, hv) {
             test = project(aggregate(dat, 100), newproj)
             overlap = test_if_overlap(test, eg_raster)
         } else overlap = TRUE
-    
-        if (!overlap || length(unique(dat)) == 1) {
+        
+        if (!overlap || (length(unique(dat)) == 1 && length(unique(dat[[1]])[[1]])==1)) {
             writeLines('NoOverlap', out_info)
             return(NULL)
         }
@@ -126,6 +127,7 @@ forRegion <- function(area_name, shape_name, hv) {
         veg_cover = land_cover = dat
         veg_cover[veg_cover>150] = 0
         veg_cover = find_area(veg_cover)
+        
         if (all(is.na(veg_cover[]))) {
             writeLines('NoOverlap', out_info)
             return(NULL)
@@ -136,7 +138,7 @@ forRegion <- function(area_name, shape_name, hv) {
         out = c(veg_cover, land_cover)
     
         nc_out = paste0(temp_path, sub('.hdf', '.nc',out_info0, fixed = TRUE))
-    
+        
         writeCDF(out, nc_out, overwrite = TRUE)
         writeLines(nc_out, out_info) 
         return(out)
@@ -152,7 +154,7 @@ forRegion <- function(area_name, shape_name, hv) {
         output_fname = paste0(output_path, '/', name, '_raw.nc')
         temp_fname = paste0(temp_path, '/', name, '/')
         dir.create(temp_fname, recursive = TRUE) 
-        temp_fname = paste0(temp_fname, '_collated.nc')
+        temp_fname = paste0(temp_fname, '_collated-3.nc')
         
         if (file.exists(output_fname)) {
             out = rast(output_fname)
@@ -160,12 +162,24 @@ forRegion <- function(area_name, shape_name, hv) {
         }
         
         dats = lapply(files, regrid_file, band, name)
-        years = as.numeric(years)
+        years = years0 = as.numeric(years)
         
         test = !sapply(dats, is.null)
         dats = dats[test]
         years = years[test]
-    
+        
+        expect_years = 2000:2020
+
+        missing_years = expect_years[sapply(expect_years, function(yr) !any(yr == years))]
+        if (length(missing_years) > 0) {
+            missing_files = files[sapply(files, function(file) any(grepl(missing_years, file)))]
+            lapply(missing_files, regrid_file, band, name, grab_cache = FALSE)
+            dats = lapply(files, regrid_file, band, name)
+            years = years0
+            test = !sapply(dats, is.null)
+            dats = dats[test]
+            years = years[test]  
+        }
         yearI = sort(unique(years))
         eg_raster[] = 0
         output = areaR = rep(eg_raster, max(2, length(yearI)))
@@ -184,12 +198,13 @@ forRegion <- function(area_name, shape_name, hv) {
         }
         
         cover = output/areaR
+        if (file.exists(temp_fname)) file.remove(temp_fname)
         writeCDF(cover, temp_fname, overwrite=TRUE)
         mn = rep(mn, length(yearI))
         day = rep(day, length(yearI))
         day = day-(4*as.integer(yearI/4) == yearI)
         add_date_to_file(temp_fname, output_fname, yearI, mn, day, name, 
-                         paste0(name, '-raw'), unit = '%')  
+                         paste0(name, '-raw'), varunit = '%')  
            
     }
 
