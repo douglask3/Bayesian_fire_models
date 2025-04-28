@@ -101,6 +101,8 @@ def Bayes_benchmark(filename_out, fig_dir, Y, X, lmask, logXmin = None, logYmin 
     X = X[X>0]
     scatter_metric_overall_and_percentiles(X, pos)
     plt.savefig(fig_dir + filename_out + '-posterior-position.png')
+    plt.clf()
+    plt.close()
 
 def scatter_metric_overall_and_percentiles(X, pos, xlabel = 'Burnt Area', 
                                            ylabel = 'Posterior Position', 

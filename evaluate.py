@@ -176,7 +176,8 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
 def compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, levels, cmap,
                         dlevels = None, dcmap = None,
                         *args, **kw):    
-    
+    plt.clf()
+    plt.close() 
     fig_dir = combine_path_and_make_dir(dir_outputs, '/figs/')
     figure_filename = fig_dir + filename_out + '-evaluation'
     figure_dir =  combine_path_and_make_dir(figure_filename)
