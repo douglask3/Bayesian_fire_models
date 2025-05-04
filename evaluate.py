@@ -9,7 +9,6 @@ from BayesScatter import *
 from response_curves import *
 from jackknife import *
 
-
 from read_variable_from_netcdf import *
 from combine_path_and_make_dir import * 
 from namelist_functions import *
@@ -193,7 +192,8 @@ def compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, levels, cmap
     plt.gcf().set_size_inches(14, 12)
     plt.gcf().tight_layout()
     plt.savefig(figure_filename + '.png', pad_inches=0.1)
-
+    plt.clf()
+    plt.close() 
 
 def evaluate_MaxEnt_model_from_namelist(training_namelist = None, evaluate_namelist = None, 
                                         **kwargs):
@@ -251,6 +251,8 @@ def plot_limitation_maps(fig_dir, filename_out, **common_args):
     plt.gcf().set_size_inches(8, 12)
     plt.gcf().tight_layout()
     plt.savefig(figName + '.png')
+    plt.clf()
+    plt.close() 
 
 def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file, 
                           extra_params = None,
