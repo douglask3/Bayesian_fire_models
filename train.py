@@ -104,7 +104,8 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None,
     except:
         pass
 
-    scatter_each_x_vs_y(x_filen_list, X, Y)
+    scatter_each_x_vs_y(x_filen_list, X, Y*100.0)
+    os.makedirs(dir_outputs + 'figs/', exist_ok=True)
     plt.savefig(dir_outputs + 'figs/X_vs_Ys.png')
     
     with pm.Model() as max_ent_model:
