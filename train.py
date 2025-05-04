@@ -103,7 +103,7 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None,
         Y = Y.data
     except:
         pass
-    
+
     scatter_each_x_vs_y(x_filen_list, X, Y)
     plt.savefig(dir_outputs + 'figs/X_vs_Ys.png')
     
@@ -209,7 +209,7 @@ def train_MaxEnt_model_from_namelist(namelist = None, **kwargs):
 def train_MaxEnt_model(y_filen, x_filen_list, CA_filen = None, model_class = FLAME,
                        priors = None, link_func_class = MaxEnt,
                        dir = '', filename_out = '',
-                       dir_outputs = '',
+                       dir_outputs = '', Y_scale = None,
                        fraction_data_for_sample = 1.0,
                        subset_function = None, subset_function_args = None,
                        niterations = 100, cores = 4, model_title = 'no_name',
@@ -293,6 +293,9 @@ def train_MaxEnt_model(y_filen, x_filen_list, CA_filen = None, model_class = FLA
         else:
             Y, X, lmask, scalers = read_all_data_from_netcdf(**common_args)
             CA = None
+        
+        if Y_scale is not None: 
+            Y = Y*Y_scale
         
         if np.min(Y) < 0.0 or np.max(Y) > 100:
             print("target variable does not meet expected unit range " + \
