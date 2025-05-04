@@ -305,6 +305,7 @@ if __name__=="__main__":
     namelist = 'namelists/isimip-fwi2.txt'
     namelist = 'namelists/isimip3.txt'
     namelist = 'namelists/isimip2425.txt'
+    namelist = 'namelists/isimip2425-test.txt'
     #namelist = 'namelists/ar7_ref.txt'
     #namelist = 'namelists/ar7_simple.txt'
     #namelist = 'namelists/Pantanal_example.txt'
