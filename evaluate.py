@@ -334,7 +334,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
                                     subset_function_args = subset_function_args)
     
     Obs.data[~np.reshape(lmask, Obs.shape)] = np.nan
-    #plot_basic_parameter_info(trace, fig_dir)
+    plot_basic_parameter_info(trace, fig_dir)
     #paramter_map(trace, x_filen_list, fig_dir) 
     
     common_args = {
@@ -352,7 +352,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
         'grab_old_trace': grab_old_trace}
     
     Sim = runSim_MaxEntFire(**common_args, run_name = control_run_name, test_eg_cube = True)
-    
+      
     if run_only: 
         if return_inputs: 
             return Sim, Y, X, lmask, scalers 
