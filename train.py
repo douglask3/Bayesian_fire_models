@@ -70,6 +70,71 @@ def set_priors(priors, X):
     return priors, link_priors
 
 
+import pymc as pm
+import numpy as np
+import copy
+
+def sample_priors(priors):
+    """Recursively sample from a priors dict that may contain PyMC distributions or nested lists."""
+    sampled = {}
+    
+    for key, val in priors.items():
+        #set_trace()
+        if isinstance(val, pytensor.tensor.variable.TensorVariable):
+            sampled[key] = pm.draw(val)#val.eval() if hasattr(val, 'eval') else pm.draw(val)
+        elif isinstance(val, list):
+            sampled[key] = [
+                pm.draw(v) if isinstance(v, pytensor.tensor.variable.TensorVariable) else v
+                for v in val
+            ]
+        else:
+            sampled[key] = val
+    return sampled
+
+def prior_predictive_check(model_class, X, Y, priors_template, n_samples=100):
+    predictions = []
+    
+    for _ in range(n_samples):
+        sampled_priors = sample_priors(priors_template)
+        #set_trace()
+        model = model_class(sampled_priors, inference=False)
+        y_pred = model.burnt_area(X)  # Assumes it returns a 1D array of shape (len(Y),)
+        #set_trace()
+        predictions.append(y_pred)
+
+    predictions = np.array(predictions)  # Shape: (n_samples, len(Y))
+    return predictions
+def plot_prior_predictive(predictions, Y, title="Prior Predictive Vases", jitter=0.01):
+    Y = np.asarray(Y)
+    preds = np.asarray(predictions)  # shape: (n_samples, len(Y))
+
+    lower90 = np.percentile(preds, 5, axis=0)
+    upper90 = np.percentile(preds, 95, axis=0)
+    lower100 = np.min(preds, axis=0)
+    upper100 = np.max(preds, axis=0)
+    #set_trace()
+    # Jitter Y values horizontally to avoid overplotting
+    #rng = np.random.default_rng(42)
+    #Y_jittered = Y + rng.normal(0, jitter, size=Y.shape)
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    for x, lo100, hi100, lo90, hi90 in zip(Y, lower100, upper100, lower90, upper90):
+        ax.plot([x, x], [lo100, hi100], color='lightgray', alpha=0.7, lw=1)
+        ax.plot([x, x], [lo90, hi90], color='steelblue', alpha=0.9, lw=2)
+
+    ax.set_xlabel("Observed Burned Area Fraction")
+    ax.set_ylabel("Prior Predicted Burned Area Fraction")
+    ax.set_title(title)
+
+    #  Apply pseudo-log scales to both axes
+    ax.set_xscale('symlog', linthresh=1e-4)
+    ax.set_yscale('symlog', linthresh=1e-4)
+
+    ax.grid(True, linestyle='--', alpha=0.4)
+    plt.tight_layout()
+    #plt.show()
+
 def fit_MaxEnt_probs_to_data(Y, X, CA = None, 
                              model_class = FLAME, link_func_class = MaxEnt,
                              niterations = 100, priors = None, inference_step_type = None, 
@@ -103,12 +168,18 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None,
         Y = Y.data
     except:
         pass
+    
     scatter_each_x_vs_y(x_filen_list, X, Y)
     plt.savefig(dir_outputs + 'figs/X_vs_Ys.png')
+    
     with pm.Model() as max_ent_model:
         priors, link_priors = set_priors(priors, X)
-        
+        preds = prior_predictive_check(model_class, X, Y, priors, n_samples=200)
+        plot_prior_predictive(preds, Y)
+        plt.savefig(dir_outputs + 'figs/prior_predictive.png')
+        plt.clf()
         ## run model
+        
         model = model_class(priors, inference = True)
         prediction = model.burnt_area(X)  
         
@@ -118,7 +189,7 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None,
 
         ## define error measurement
         if CA is not None: CA = CA.data
-
+        
         error = link_func_class().obs_given_(prediction, Y, CA, [*link_priors.values()])
         #    error = pm.DensityDist("error", prediction, *link_priors.values(), 
         #                           logp = link_func_class.obs_given_, 
