@@ -1,6 +1,6 @@
 ## model info
 regions:: ['Amazon']#'NW_Amazon']##, 'Canada','Greece']
-model_title::  'ConFire_<<region>>-2425-simplified2-qspreadSto-15'
+model_title::  'ConFire_<<region>>-2425-simplified2-qspreadSto-16'
 
 ## input data paths and filenames
 dir_training:: "data/data/driving_data2425/<<region>>/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019/"
@@ -24,11 +24,11 @@ priors:: {'pname': "driver_Direction", 'value': [[1, 1], [1, -1, -1, 1, 1, 1], [
 #priors:: {'pname': "Fmax",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 1.0}
 #priors:: {'pname': 'lin_correct', 'np': 1, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 4.0}
 priors:: {'pname': "x0",'np': 5, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
-priors:: {'pname': "betas",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 5.0}
-priors:: {'pname': "betas",'np': 6, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 5.0}
-priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 5.0}
-priors:: {'pname': "betas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 5.0}
-priors:: {'pname': "betas",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 5.0}
+priors:: {'pname': "betas",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "betas",'np': 6, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "betas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "betas",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
 #priors:: {'pname': "powers",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
 #priors:: {'pname': "powers",'np': 7, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
 #priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
