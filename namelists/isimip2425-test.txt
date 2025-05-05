@@ -38,7 +38,7 @@ inference_step_type:: "metropolis"
 link_func_class:: MaxEnt
 niterations:: 1000
 cores:: 5
-fraction_data_for_sample:: 0.6
+fraction_data_for_sample:: 0.2
 subset_function:: sub_year_months
 subset_function_args:: {'months_of_year': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]}
 region_months:: {'Pantanal': [5, 6, 7], 'Amazon': [0,1,2, 3]}
