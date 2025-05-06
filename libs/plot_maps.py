@@ -45,10 +45,10 @@ def plot_BayesModel_maps(Sim, levels, cmap, ylab = '', Obs = None,
     #levels = hist_limits(cube*scale, nlims = 7, symmetrical = False)[0]
     #levels = np.sort(np.append([0], levels[levels > 0.00001]))
     if levels is None:
-        levels = np.append(hist_limits(Obs*scale, nlims = 4, symmetrical = False)[0], 
-                           hist_limits(Sim*scale, nlims = 4, symmetrical = False)[0])
+        levels = np.append(hist_limits(Obs*scale, nlims = 6, symmetrical = False)[0], 
+                           hist_limits(Sim*scale, nlims = 6, symmetrical = False)[0])
         levels = np.sort(np.append([0], levels[levels > 0.00001]))
-       
+    #set_trace()   
     def plot_map(cube, plot_name, plot_n, **kw2):
         
         plot_annual_mean(cube, levels, cmap, plot_name = plot_name, scale = scale, 
