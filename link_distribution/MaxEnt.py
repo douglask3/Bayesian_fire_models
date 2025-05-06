@@ -157,7 +157,11 @@ class MaxEnt(object):
             error = pm.DensityDist("error", fx, qSpread, CA,
                                    logp = self.DensityDistFun, 
                                    observed = Y)
-        
+        mean_pred = tt.mean(fx)
+        penalty = pt.switch(mean_pred < 0.01, -1e6, 0.0)  # discourage implausibly low burn
+
+        # Apply the penalty
+        pm.Potential("burning_not_too_low", penalty)
         return error
             
     def random_sample_given_central_limit_(self, mod, params = None, CA = None): #
