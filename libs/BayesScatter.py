@@ -96,6 +96,8 @@ def Bayes_benchmark(filename_out, fig_dir, Y, X, lmask, logXmin = None, logYmin 
         run_NME_over_subset(X, Y, percentiles[i:(i+2)])
     
     plt.savefig(fig_dir + filename_out + '-NME_scores.png') 
+    plt.clf()
+    plt.close()
 
     pos = pos[X > 0]
     X = X[X>0]
