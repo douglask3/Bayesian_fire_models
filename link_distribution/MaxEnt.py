@@ -68,7 +68,7 @@ class MaxEnt(object):
         
         return samples
         
-    def DensityDistFun(self, Y, fx, qSpread = None,CA = None):
+    def DensityDistFun(self, Y, fx, Ncells, qSpread = None,CA = None):
         """calculates the log-transformed continuous logit likelihood for Y given fx when Y
             and fx are probabilities between 0-1 with relative areas, CA
             Works with tensor variables.   
@@ -82,15 +82,21 @@ class MaxEnt(object):
         Returns:
             1-d tensor array of liklihoods.
         """    
-        fx = tt.switch( tt.lt(fx, 0.00001), 0.00001, fx)
-        fx = tt.switch( tt.gt(fx, 0.99999), 0.99999, fx)
+        fx = tt.switch( tt.lt(fx, 0.000000001), 0.000000001, fx)
+        fx = tt.switch( tt.gt(fx, 0.999999999), 0.999999999, fx)
         
         Y = overlap_pred(Y, qSpread)
+        #set_trace()
         if CA is not None: 
             prob =  Y*CA*tt.log(fx) + (1.0-Y)*CA*tt.log((1-fx))
         else:
             prob = Y*tt.log(fx) + (1.0-Y)*tt.log((1-fx))
-        return prob
+
+        mean_fx = tt.mean(fx)
+        mean_y = tt.mean(Y)
+        #set_trace()
+        logp_global = mean_y * tt.log(mean_fx) + (1 - mean_y) * tt.log(1 - mean_fx)
+        return prob + logp_global #tt.sum(prob)
     
     def define_qSpread_param(self, params, param_names, inference = True, sigma = None):
         #set_trace()
@@ -116,11 +122,11 @@ class MaxEnt(object):
             param_names = [param.name[5:] for param in params]
 
             qSpread = self.define_qSpread_param(params, param_names)
-        
+            #mean_pred = tt.mean(fx)
             if any_in(param_names, 'stochastic'):
                 #set_trace()
-                fx = tt.switch( tt.lt(fx, 0.00001), 0.00001, fx)
-                fx = tt.switch( tt.gt(fx, 0.99999), 0.99999, fx)
+                fx = tt.switch( tt.lt(fx, 0.000000001), 0.000000001, fx)
+                fx = tt.switch( tt.gt(fx, 0.999999999), 0.999999999, fx)
                 #fx = pm.Normal("prediction-stochastic", mu=pm.math.logit(fx), 
                 #                            sigma = stochastic)
     
@@ -150,22 +156,22 @@ class MaxEnt(object):
            # Y = overlap_pred(Y, qSpread)
         
         if CA is None:
-            error = pm.DensityDist("error", fx, qSpread,
+            error = pm.DensityDist("error", fx, len(Y), qSpread,
                                    logp = self.DensityDistFun, 
                                    observed = Y)
         else:  
-            error = pm.DensityDist("error", fx, qSpread, CA,
+            error = pm.DensityDist("error", fx, len(Y), qSpread, CA,
                                    logp = self.DensityDistFun, 
                                    observed = Y)
-        mean_pred = tt.mean(fx)
-        penalty = pt.switch(mean_pred < 0.01, -1e6, 0.0)  # discourage implausibly low burn
+        
+        #penalty = tt.switch(mean_pred < 0.0000001, -1e8, 0.0)  # discourage implausibly low burn
 
         # Apply the penalty
-        pm.Potential("burning_not_too_low", penalty)
+        #pm.Potential("burning_not_too_low", penalty)
         return error
             
     def random_sample_given_central_limit_(self, mod, params = None, CA = None): #
-        #return mod
+        return mod
         param_names = params.keys()
         params = params.values()
         qSpread = self.define_qSpread_param(params, param_names, False, 0.0)
