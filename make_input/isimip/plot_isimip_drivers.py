@@ -92,8 +92,32 @@ def plot_map(ax, data, title, cmap):#, vmin=None, vmax=None):
     ax.add_feature(cfeature.LAND, facecolor='none', edgecolor='black', linewidth=0.2)
     ax.add_feature(cfeature.OCEAN, facecolor='white')
 
+def save_to_files(fig, fig_title):
+    fig.savefig(f"{fig_title}.png", dpi=300, bbox_inches='tight')#, pad_inches=0.1)
+    fig.savefig(f"{fig_title}.pdf", bbox_inches='tight')#, pad_inches=0.1)
+
+# Grab any data array to get extent — ideally one of the variables
+example_data = next(iter(datasets.values()))
+lat = example_data['lat'].values
+lon = example_data['lon'].values
+
+lat_extent = lat.max() - lat.min()
+lon_extent = lon.max() - lon.min()
+
+# Tune this factor to your liking — 0.25 gives ~1 inch per 4 degrees
+scaling = 0.25
+map_width = lon_extent * scaling
+map_height = lat_extent * scaling
+
+# Account for number of maps (e.g., 4x4 grid)
+cols = 4
+rows = 4
+fig_width = map_width * cols
+fig_height = map_height * rows
+
+
 # --- 1. JFM Mean Maps or Annual Mean ---
-fig1, axes1 = plt.subplots(4, 4, figsize=(18, 14), subplot_kw={'projection': ccrs.PlateCarree()})
+fig1, axes1 = plt.subplots(4, 4, figsize=(fig_width, fig_height), subplot_kw={'projection': ccrs.PlateCarree()})
 axes1 = axes1.flatten()
 fig1.suptitle("JFM or Annual Mean (2000–2019)", fontsize=16)
 
@@ -113,6 +137,7 @@ for i, (label, data) in enumerate(datasets.items()):
     axes1[i].add_feature(cfeature.RIVERS, edgecolor='blue', linewidth=0.67)
     '''
     plot_map(axes1[i], jfm_mean, label, colormaps[label])
+
 
 # --- 2. Max Burned Area Month or Year ---
 burned = datasets["Burned Area"]
@@ -145,6 +170,7 @@ for i, (label, data) in enumerate(datasets.items()):
     '''
     plot_map(axes2[i], sel_data, label, colormaps[label])
 
+
 # --- 3. Monthly Average Time Series ---
 fig3, axes3 = plt.subplots(4, 4, figsize=(18, 14))
 axes3 = axes3.flatten()
@@ -158,4 +184,9 @@ for i, (label, data) in enumerate(datasets.items()):
     axes3[i].set_ylabel("Mean Value")
 
 plt.tight_layout()
+
+save_to_files(fig1, "figs/Amazon_isimip_driving_annaul_average")
+save_to_files(fig2, "figs/Amazon_isimip_driving_at_max_BA")
+save_to_files(fig3, "figs/Amazon_isimip_driving_time_series")
+
 plt.show()
