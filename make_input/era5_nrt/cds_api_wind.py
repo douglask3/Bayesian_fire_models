@@ -56,11 +56,11 @@ def download_era5(variables, years = [1940], months = range(13),
     if shapefile_path is not None: 
         shapes = gpd.read_file(shapefile_path)
 
-    ## Extract the shape containing region_name in the name
-    region_shape = shapes[shapes['name'].str.contains(region_name, case=False, na=False)]
-    region_shape["geometry"] = region_shape["geometry"].buffer(0)
-    # Convert to a single geometry (union of multiple polygons if needed)
-    region_geom = unary_union(region_shape.geometry)
+        ## Extract the shape containing region_name in the name
+        region_shape = shapes[shapes['name'].str.contains(region_name, case=False, na=False)]
+        region_shape["geometry"] = region_shape["geometry"].buffer(0)
+        # Convert to a single geometry (union of multiple polygons if needed)
+        region_geom = unary_union(region_shape.geometry)
     
     def download_var(variable, statistics, year, mnths): 
         mnths = ['0' + str(i) if i < 10 else str(i) for i in mnths]
@@ -99,12 +99,14 @@ def download_era5(variables, years = [1940], months = range(13),
                 "28", "29", "30",
                 "31"
                 ],
-            "daily_statistic": statistics,
+            #"daily_statistic": statistics,
             "time_zone": "utc+00:00",
-            "frequency": "1_hourly",
             "area": area
         }
-
+        if statistics != "":
+            request["daily_statistic"] = statistics
+            request["frequency"] = "1_hourly"
+        #set_trace()
         client = cdsapi.Client()
         client.retrieve(dataset, request, temp_file)
         return(temp_file)
@@ -134,6 +136,7 @@ def download_era5(variables, years = [1940], months = range(13),
         return cropped_cube   
          
     def process_var(variable, statistics, variable_out):
+        
         out_file = out_dir + '/' + region_name.replace(' ', '_')
         try:
             os.mkdir(out_file)
@@ -157,7 +160,11 @@ def download_era5(variables, years = [1940], months = range(13),
             if year == yr_now and month > mnth_now:
                 return 
             file = download_var(variable, statistics, year, [month + 1])
-            return crop_cube(file)
+            if shapefile_path is not None: 
+                out = crop_cube(file)
+            else:
+                out = iris.load_cube(file)
+            return out     
             
         
         def for_year(year):
@@ -192,15 +199,15 @@ if __name__=="__main__":
     dataset = "derived-era5-single-levels-daily-statistics"
     
     area = [90, -180, -60, 180]
-    temp_dir = "/data/scratch/douglas.kelley/Bayesian_fire_models/temp/era5_nrt/"
+    temp_dir = "/data/users/douglas.kelley/Bayesian_fire_models/data-cds/era5_nrt/"
     out_dir = "data/data/driving_data2425/nrt_attribution//"
     shapefile_path = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
     region_names = ["northeast India",
-                   "Alberta",
-                   "Los Angeles",
-                   "Congo basin",
-                   "Amazon and Rio Negro rivers",
-                   "Pantanal basin"]
+                    "Alberta",
+                    "Los Angeles",
+                    "Congo basin",
+                    "Amazon and Rio Negro rivers",
+                    "Pantanal basin"]
     variables = [#["volumetric_soil_water_layer_1", "daily_minimum", "mrsos"],
                  ["10m_u_component_of_wind", "daily_mean", "u-wind"],
                  ["10m_v_component_of_wind", "daily_mean", "v-wind"],
@@ -216,6 +223,14 @@ if __name__=="__main__":
                  ["runoff", "daily_mean", "mrros"]
                  ]
     
+    for years in yearss:
+        download_era5(variables, years, months = range(12), 
+                          yr_now = yr_now, mnth_now = mnth_now,
+                          area = area, region_name = " ",
+                          dataset = dataset, 
+                          out_dir = out_dir, 
+                          temp_dir = temp_dir)    
+
     for region_name in region_names:
         for years in yearss:
             download_era5(variables, years, months = range(12), 
@@ -225,5 +240,27 @@ if __name__=="__main__":
                           out_dir = out_dir, 
                           temp_dir = temp_dir,
                           shapefile_path = shapefile_path)
+    
+    area = [90, -180, -90, 180]
+    dataset = "derived-era5-land-daily-statistics"
+    temp_dir = "/data/users/douglas.kelley/Bayesian_fire_models/data-cds/era5_land_/"
+    out_dir = "data/data/driving_data2425/era5_land//"
+    variables = [
+                    ["10m_u_component_of_wind", "daily_mean", "u-wind"],
+                    ["10m_v_component_of_wind", "daily_mean", "v-wind"],
+                    #["total_precipitation", "", "pr"], 
+                    ["2m_temperature", "daily_maximum", "tasmax"],
+                    ["2m_temperature", "daily_mean", "tas_mean"],
+                    ["2m_dewpoint_temperature", "daily_mean", "tasdew_mean"],
+                    ["2m_dewpoint_temperature", "daily_minimum", "tasdew_min"],
+                    ["2m_temperature", "daily_minimum", "tasmin"]
+                ]
 
-
+    for years in yearss:
+        download_era5(variables, years, months = range(12), 
+                          yr_now = yr_now, mnth_now = mnth_now,
+                          area = area,
+                          dataset = dataset, 
+                          out_dir = out_dir, 
+                          temp_dir = temp_dir,
+                          shapefile_path = None)
