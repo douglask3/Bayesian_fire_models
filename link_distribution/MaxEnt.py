@@ -82,8 +82,8 @@ class MaxEnt(object):
         Returns:
             1-d tensor array of liklihoods.
         """    
-        fx = tt.switch( tt.lt(fx, 0.000000001), 0.000000001, fx)
-        fx = tt.switch( tt.gt(fx, 0.999999999), 0.999999999, fx)
+        fx = tt.switch( tt.lt(fx, 0.00000000000001), 0.00000000000001, fx)
+        fx = tt.switch( tt.gt(fx, 0.99999999999999), 0.99999999999999, fx)
         
         Y = overlap_pred(Y, qSpread)
         #set_trace()
@@ -125,8 +125,8 @@ class MaxEnt(object):
             #mean_pred = tt.mean(fx)
             if any_in(param_names, 'stochastic'):
                 #set_trace()
-                fx = tt.switch( tt.lt(fx, 0.000000001), 0.000000001, fx)
-                fx = tt.switch( tt.gt(fx, 0.999999999), 0.999999999, fx)
+                fx = tt.switch( tt.lt(fx, 0.00000000000001), 0.00000000000001, fx)
+                fx = tt.switch( tt.gt(fx, 0.99999999999999), 0.99999999999999, fx)
                 #fx = pm.Normal("prediction-stochastic", mu=pm.math.logit(fx), 
                 #                            sigma = stochastic)
     
