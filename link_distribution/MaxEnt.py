@@ -96,7 +96,7 @@ class MaxEnt(object):
         mean_y = tt.mean(Y)
         #set_trace()
         logp_global = mean_y * tt.log(mean_fx) + (1 - mean_y) * tt.log(1 - mean_fx)
-        return prob + logp_global #tt.sum(prob)
+        return prob #+ logp_global #tt.sum(prob)
     
     def define_qSpread_param(self, params, param_names, inference = True, sigma = None):
         #set_trace()

@@ -1,6 +1,6 @@
 ## model info
 regions:: ['Amazon']#'NW_Amazon']##, 'Canada','Greece']
-model_title::  'ConFire_<<region>>-2425-simplified2-qspreadSto-24'
+model_title::  'ConFire_<<region>>-2425-simplified2-qspreadSto-25'
 
 ## input data paths and filenames
 dir_training:: "data/data/driving_data2425/<<region>>/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019/"
