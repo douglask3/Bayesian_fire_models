@@ -118,7 +118,8 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None,
         
         model = model_class(priors, inference = True)
         prediction = model.burnt_area(X)  
-        
+         
+        fx_pred = pm.Deterministic("fx_pred", prediction)
         #np.random.seed(42)
         #tt.config.gpuarray.random.set_rng_seed(42)
         #tt.config.floatX = 'float32'       
@@ -147,6 +148,20 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None,
         trace = pm.sample(niterations, step = step_method(), return_inferencedata = True, 
                           callback = trace_callback,#  init="jitter+adapt_diag",
                           *arg, **kw)
+        ppc = pm.sample_posterior_predictive(trace, var_names=["fx_pred"])
+
+        # Get mean prediction for each point
+    pred_mean = ppc.posterior_predictive["fx_pred"].mean(dim=["chain", "draw"]).values
+    # If fx_pred is 2D (samples x points), reshape accordingly
+
+    # Assuming your observed Y is still in memory:
+    plt.scatter(Y, pred_mean, alpha=0.5)
+    plt.plot([0, 0.15], [0, 0.15], 'r--')  # Line of equality
+    plt.xlabel("Observed Burned Fraction")
+    plt.ylabel("Predicted Burned Fraction (Mean)")
+    plt.title("Posterior Predictive vs Observed")
+    plt.grid(True)
+    plt.savefig(dir_outputs + "/figs/posterio_predictive.png")
 
     def filter_dict_elements_by_type(my_dict, included_types):
         def is_numeric(value):
@@ -270,6 +285,7 @@ def train_MaxEnt_model(y_filen, x_filen_list, CA_filen = None, model_class = FLA
         print("Old optimization found")
         print("======================")
         trace = az.from_netcdf(trace_file)
+        
         none_trace = read_variables_from_namelist(other_params_file)
         scalers = pd.read_csv(scale_file).values   
     else:
@@ -328,7 +344,7 @@ def train_MaxEnt_model(y_filen, x_filen_list, CA_filen = None, model_class = FLA
 
         trace.to_netcdf(trace_file)
         pd.DataFrame(scalers).to_csv(scale_file, index = False)
-
+        
         print("=====================")
         print("Optimization complete")
         print("=====================")
