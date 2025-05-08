@@ -1,6 +1,6 @@
 ## model info
 regions:: ['Amazon']#'NW_Amazon']##, 'Canada','Greece']
-model_title::  'ConFire_<<region>>-2425-simplified2-qspreadSto-25'
+model_title::  'ConFire_<<region>>-2425-simplified2-qspreadSto-26'
 
 ## input data paths and filenames
 dir_training:: "data/data/driving_data2425/<<region>>/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019/"
@@ -12,7 +12,7 @@ Y_scale:: 0.01
 ## Model info
 model_class:: ConFire
 #priors:: {'pname': "link-stochastic",'np': 1, 'dist': 'LogNormal', 'mu': 2.0, 'sigma': 1.0}
-priors:: {'pname': "link-qSpread_mu",'np': 1, 'dist': 'Normal', 'mu': 2.0, 'sigma': 1.0}
+priors:: {'pname': "link-qSpread_mu",'np': 1, 'dist': 'Normal', 'mu': 10.0, 'sigma': 1.0}
 priors:: {'pname': "link-qSpread_sigma",'np': 1, 'dist': 'Exponential', 'scale': 1.0}
 
 #priors:: {'pname': "link-qSpread",'np': 1, 'dist': 'LogNormal', 'mu': 2.0, 'sigma': 1.0}
