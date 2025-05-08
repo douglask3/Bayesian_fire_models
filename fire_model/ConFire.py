@@ -90,7 +90,7 @@ class ConFire(object):
         BA =  self.numPCK.prod(limitations, axis = 0)
         if self.Fmax is not None: sigmoid(self.Fmax, 1.0) * BA
         if self.lin_correct is not None: BA = sigmoid(self.lin_correct * logit(BA))
-        
+        BA = self.numPCK.power(BA, 0.2)
         return BA
     
     
