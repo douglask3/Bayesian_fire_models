@@ -108,9 +108,9 @@ class MaxEnt(object):
                 qSpread = mu
             else:
                 if inference:
-                    qSpread = pm.Normal("qSpread", mu = mu, sigma = sigma)
+                    qSpread = pm.LogNormal("qSpread", mu = mu, sigma = sigma)
                 else:
-                    qSpread = np.random.normal(mu, sigma, 1)
+                    qSpread = np.random.lognormal(mu, sigma, 1)
         elif any_in(param_names, 'qSpread'):
             qSpread =  element_ref(params, param_names, 'qSpread')[0]
         else:
