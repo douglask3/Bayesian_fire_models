@@ -43,12 +43,23 @@ class ConFire(object):
     def burnt_area(self, X, return_controls = False, return_limitations = False):
         ## finds controls        
         def cal_control(cid = 0):
+            
             ids = self.controlID[cid]
             betas =  self.betas[cid] * self.driver_Direction[cid]
             
             X_i = X[:,ids]
             if self.powers is not None:
-                X_i = self.numPCK.power(X_i, self.powers[cid])
+                powers_i = self.powers[cid]
+                X_i = self.numPCK.power(powers_i, X_i)  
+                #mask = self.numPCK.where(self.powers[cid] < 1)
+                #X_i[:,mask] = 2-X_i[:,mask]
+                if self.inference:
+                    mask = self.numPCK.lt(powers_i, 1)                # shape (N,)
+                    mask = mask.dimshuffle('x', 0)         # shape (1, N)
+                    X_i = self.numPCK.switch(mask, 2 - X_i, X_i)
+                else: 
+                    mask = powers_i < 1 
+                    X_i[:, mask] = 2 - X_i[:, mask]
             
             out = self.numPCK.sum(X_i * betas[None, ...], axis=-1)
             if self.log_control[cid]: out = self.numPCK.log(out)
