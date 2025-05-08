@@ -40,7 +40,7 @@ inference_step_type:: "metropolis"
 link_func_class:: MaxEnt
 niterations:: 1000
 cores:: 5
-fraction_data_for_sample:: 0.5
+fraction_data_for_sample:: 0.2
 subset_function:: sub_year_months
 subset_function_args:: {'months_of_year': [0, 1, 2, 3, 11]}
 region_months:: {'Pantanal': [5, 6, 7], 'Amazon': [0,1,2, 3]}
@@ -50,7 +50,7 @@ grab_old_trace::  False # set to True till you get the code running.
 dir_outputs:: 'outputs/outputs/'
 
 ## evaluation info
-sample_for_plot:: 100
+sample_for_plot:: 40
 control_names:: ['Fuel', 'Moisture', 'Ignition', 'Suppression']
 levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
 dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
