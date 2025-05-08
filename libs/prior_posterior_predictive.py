@@ -71,7 +71,7 @@ def plot_prior_predictive(predictions, Y, title="Prior Predictive Vases", jitter
     plt.tight_layout()
     #plt.show()
 
-def posterior_predictive_plot(pcc, variable = "fx_pred", dim = ["chain", "draw"]):
+def posterior_predictive_plot(ppc, Y, dir_outputs, variable = "fx_pred", dim = ["chain", "draw"]):
     # Get mean prediction for each point
     pred_mean = ppc.posterior_predictive[variable].mean(dim=dim).values
     # If fx_pred is 2D (samples x points), reshape accordingly
