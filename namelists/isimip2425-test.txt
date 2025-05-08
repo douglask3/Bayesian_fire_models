@@ -1,6 +1,6 @@
 ## model info
 regions:: ['Amazon']#'NW_Amazon']##, 'Canada','Greece']
-model_title::  'ConFire_<<region>>-2425-simplified2-qspreadSto-20'
+model_title::  'ConFire_<<region>>-2425-simplified2-qspreadSto-22'
 
 ## input data paths and filenames
 dir_training:: "data/data/driving_data2425/<<region>>/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019/"
@@ -41,7 +41,7 @@ niterations:: 1000
 cores:: 5
 fraction_data_for_sample:: 0.5
 subset_function:: sub_year_months
-subset_function_args:: {'months_of_year': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]}
+subset_function_args:: {'months_of_year': [0, 1, 2, 3, 11]}
 region_months:: {'Pantanal': [5, 6, 7], 'Amazon': [0,1,2, 3]}
 grab_old_trace::  False # set to True till you get the code running. 
                       # Then set to False when you start adding in new response curves
