@@ -15,7 +15,7 @@ from combine_path_and_make_dir import *
 from namelist_functions import *
 from pymc_extras import *
 from plot_scatters import *
-from prior_predictive import *
+from prior_posterior_predictive import *
 
 import os
 from   io     import StringIO
@@ -150,19 +150,8 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None,
                           *arg, **kw)
         ppc = pm.sample_posterior_predictive(trace, var_names=["fx_pred"])
 
-        # Get mean prediction for each point
-    pred_mean = ppc.posterior_predictive["fx_pred"].mean(dim=["chain", "draw"]).values
-    # If fx_pred is 2D (samples x points), reshape accordingly
-
-    # Assuming your observed Y is still in memory:
-    plt.scatter(Y, pred_mean, alpha=0.5)
-    plt.plot([0, 0.15], [0, 0.15], 'r--')  # Line of equality
-    plt.xlabel("Observed Burned Fraction")
-    plt.ylabel("Predicted Burned Fraction (Mean)")
-    plt.title("Posterior Predictive vs Observed")
-    plt.grid(True)
-    plt.savefig(dir_outputs + "/figs/posterio_predictive.png")
-
+    posterior_predictive_plot(pcc)
+    
     def filter_dict_elements_by_type(my_dict, included_types):
         def is_numeric(value):
             return isinstance(value, included_types) or (isinstance(value, list) and all(is_numeric(i) for i in value))
