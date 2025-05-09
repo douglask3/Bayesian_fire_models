@@ -68,7 +68,7 @@ class MaxEnt(object):
         
         return samples
         
-    def DensityDistFun(self, Y, fx, Ncells, qSpread = None,CA = None):
+    def DensityDistFun(self, Y, fx, Ncells, qSpread = 1.0, detection_epslion = 0.0, CA = None):
         """calculates the log-transformed continuous logit likelihood for Y given fx when Y
             and fx are probabilities between 0-1 with relative areas, CA
             Works with tensor variables.   
@@ -85,6 +85,7 @@ class MaxEnt(object):
         fx = tt.switch( tt.lt(fx, 0.00000000000001), 0.00000000000001, fx)
         fx = tt.switch( tt.gt(fx, 0.99999999999999), 0.99999999999999, fx)
         
+        Y = (Y + detection_epslion)/(1.0 + detection_epslion)
         Y = overlap_pred(Y, qSpread)
         #set_trace()
         if CA is not None: 
@@ -101,9 +102,9 @@ class MaxEnt(object):
     def define_qSpread_param(self, params, param_names, inference = True, sigma = None):
         #set_trace()
         if any_in(param_names, 'qSpread_mu'):
-            mu = element_ref(params, param_names, '_mu')[0]
+            mu = element_ref(params, param_names, 'qSpread_mu')[0]
             if sigma is None:
-                sigma = element_ref(params, param_names, '_sigma')[0]
+                sigma = element_ref(params, param_names, 'qSpread_sigma')[0]
             if sigma == 0.0:
                 qSpread = mu
             else:
@@ -117,11 +118,32 @@ class MaxEnt(object):
             qSpread = 1.0
         return qSpread
     
-    def obs_given_(self, fx, Y, CA = None, params = None):#qSpread = None, stochastic = None):
+    def define_detection_efficency_param(self, params, param_names, 
+                                         inference = True, determined = False):
+        #set_trace()
+
+        if any_in(param_names, 'detection_alpha'):
+            alpha = element_ref(params, param_names, 'detection_alpha')[0]
+            beta  = element_ref(params, param_names, 'detection_beta' )[0]
+            if determined:
+                epsilon = alpha/(alpha + beta)
+            else:
+                if inference:
+                    epsilon = pm.Beta("epsilon", alpha = alpha, beta = beta)
+                else:
+                    epsilon = np.random.beta(alpha, beta, 1)
+        elif any_in(param_names, 'detection'):
+            epsilon =  element_ref(params, param_names, 'detection')[0]
+        else:
+            epsilon = 0.0
+        return epsilon
+    
+    def obs_given_(self, fx, Y, CA = None, params = None):
         if params is not None:
             param_names = [param.name[5:] for param in params]
-
             qSpread = self.define_qSpread_param(params, param_names)
+            detection_epslion = self.define_detection_efficency_param(params, param_names)
+            
             #mean_pred = tt.mean(fx)
             if any_in(param_names, 'stochastic'):
                 #set_trace()
@@ -156,11 +178,11 @@ class MaxEnt(object):
            # Y = overlap_pred(Y, qSpread)
         
         if CA is None:
-            error = pm.DensityDist("error", fx, len(Y), qSpread,
+            error = pm.DensityDist("error", fx, len(Y), qSpread, detection_epslion,
                                    logp = self.DensityDistFun, 
                                    observed = Y)
         else:  
-            error = pm.DensityDist("error", fx, len(Y), qSpread, CA,
+            error = pm.DensityDist("error", fx, len(Y), qSpread, detection_epslion, CA,
                                    logp = self.DensityDistFun, 
                                    observed = Y)
         
@@ -174,8 +196,7 @@ class MaxEnt(object):
         return mod
         param_names = params.keys()
         params = params.values()
-        qSpread = self.define_qSpread_param(params, param_names, False, 0.0)
-        
+        qSpread = self.define_qSpread_param(params, param_names, False, 0.0)        
         return overlap_inverse(mod, qSpread)
 
     def random_sample_given_(self, mod, params = None, CA = None):
@@ -183,7 +204,8 @@ class MaxEnt(object):
         param_names = params.keys()
         params = params.values()
         qSpread = self.define_qSpread_param(params, param_names, False)
-        
+        detection_epslion = self.define_detection_efficency_param(params, param_names, False)
+        #set_trace()
         return overlap_inverse(mod, qSpread)
     
     def sample_given_(self, Y, X, *args, **kw):
