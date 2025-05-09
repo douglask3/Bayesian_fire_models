@@ -1,10 +1,11 @@
 import iris
 import numpy as np
-
+from pdb import set_trace
 
 
 # Load the cube
 def work_out_change(dir, file_in, file_out):
+    
     cube = iris.load_cube(dir + file_in)
 
     # Check time dimension
@@ -35,7 +36,7 @@ def work_out_change(dir, file_in, file_out):
 
 if __name__=="__main__":
     
-    regions = ['Amazon', 'NWIndia', 'Alberta', 'LA', 'Congo','Pantanal']
+    regions = ['NWIndia', 'Alberta', 'LA', 'Congo','Pantanal', 'Amazon']
 
     clims = ["obsclim", "counterclim"]
     periods3a = ["period_2000_2019", "period_1901_1920"]
@@ -58,13 +59,13 @@ if __name__=="__main__":
             for period in periods3a:
                 dir = "data/data/driving_data2425/" + region + "/isimp3a/" + clim + \
                       "/GSWP3-W5E5/" +  period + "/"
-        
-            run_for_all_files(dir)
+                
+                run_for_all_files(dir)
 
         for experiment in experiments:
             for model in models:
                 for period in periods3b:
-                    dir = "data/data/driving_data2425" + region + "isimp3b/" + \
+                    dir = "data/data/driving_data2425/" + region + "isimp3b/" + \
                           experiment + "/" + model + "/" + period + "/"
                 try:
                     run_for_all_files(dir)
