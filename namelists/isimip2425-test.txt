@@ -1,6 +1,6 @@
 ## model info
 regions:: ['Amazon']#'NW_Amazon']##, 'Canada','Greece']
-model_title::  'ConFire_<<region>>-2425-simplified2-qspreadSto-27'
+model_title::  'ConFire_<<region>>-2425-simplified2-qspreadSto-29'
 
 ## input data paths and filenames
 dir_training:: "data/data/driving_data2425/<<region>>/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019/"
@@ -14,6 +14,8 @@ model_class:: ConFire
 #priors:: {'pname': "link-stochastic",'np': 1, 'dist': 'LogNormal', 'mu': 2.0, 'sigma': 1.0}
 priors:: {'pname': "link-qSpread_mu",'np': 1, 'dist': 'Normal', 'mu': 10.0, 'sigma': 1.0}
 priors:: {'pname': "link-qSpread_sigma",'np': 1, 'dist': 'Exponential', 'scale': 1.0}
+priors:: {'pname': "link-detection_alpha",'np': 1, 'dist': 'HalfNormal', 'sigma': 1.0}
+priors:: {'pname': "link-detection_beta",'np': 1, 'dist': 'HalfNormal', 'sigma': 1.0}
 
 #priors:: {'pname': "link-qSpread",'np': 1, 'dist': 'LogNormal', 'mu': 2.0, 'sigma': 1.0}
 #priors:: {'pname': "link-p0",'np': 1, 'dist': 'Uniform', 'lower': 0.0, 'upper': 1.0}
@@ -44,7 +46,7 @@ fraction_data_for_sample:: 0.2
 subset_function:: sub_year_months
 subset_function_args:: {'months_of_year': [0, 1, 2, 3, 11]}
 region_months:: {'Pantanal': [5, 6, 7], 'Amazon': [0,1,2, 3]}
-grab_old_trace::  False # set to True till you get the code running. 
+grab_old_trace::  True # set to True till you get the code running. 
                       # Then set to False when you start adding in new response curves
 ### output info
 dir_outputs:: 'outputs/outputs/'
