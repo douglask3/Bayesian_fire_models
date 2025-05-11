@@ -255,6 +255,7 @@ def plot_limitation_maps(fig_dir, filename_out, **common_args):
     plt.close() 
 
 def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file, 
+                          Y_scale = None,
                           extra_params = None,
                           other_params_file = None, CA_filen = None, 
                           model_class = FLAME,
@@ -300,7 +301,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
         look in dir_outputs + model_title, and you'll see figure and tables from evaluation, 
         projection, reponse curves, jackknifes etc (not all implmenented yet)
     """
-    
+    plt.close('all') 
     dir_outputs = combine_path_and_make_dir(dir_outputs, model_title)
     dir_samples = combine_path_and_make_dir(dir_outputs, '/samples/')     
     dir_samples = combine_path_and_make_dir(dir_samples, filename_out)
@@ -334,9 +335,10 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
     Obs = read_variable_from_netcdf(y_filen, dir,
                                     subset_function = subset_function, 
                                     subset_function_args = subset_function_args)
-    
+    Obs.data = Obs.data / 100.0
     Obs.data[~np.reshape(lmask, Obs.shape)] = np.nan
-    plot_basic_parameter_info(trace, fig_dir)
+    if Y_scale is not None: Y_scale = Y_scale / 100.0
+    #plot_basic_parameter_info(trace, fig_dir)
     #paramter_map(trace, x_filen_list, fig_dir) 
     
     common_args = {
@@ -354,7 +356,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
         'grab_old_trace': grab_old_trace}
     
     Sim = runSim_MaxEntFire(**common_args, run_name = control_run_name, test_eg_cube = True)
-      
+     
     if run_only: 
         if return_inputs: 
             return Sim, Y, X, lmask, scalers 
