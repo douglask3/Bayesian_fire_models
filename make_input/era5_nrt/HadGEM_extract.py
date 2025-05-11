@@ -41,27 +41,27 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
         print(member)
         completed_file = temp_dir + experiment[1] + variable + member + str(start_year) + shapefile_path.replace('/', '-') + '.txt'
         #set_trace()
-        if os.path.isfile(completed_file) and False:
-            return
+        #if os.path.isfile(completed_file) and False:
+        #    return
         mfiles = [file for file in files if member in file]
         mfiles = [file for file in mfiles if int(file[-9:-5]) >= start_year]
         mfiles.sort()
         mfiles = [var_dir + file for file in mfiles]
         if len(mfiles) == 0:
             set_trace()
-
+        
         cube = iris.load(mfiles).concatenate()
         if len(cube) > 1:
             return
         else:
             cube = cube[0]
-        
+        #set_trace()
         def process_region(region_name, cube):
             out_file = out_dir + '/' + region_name.replace(' ', '_') + \
                        '/HadGEM_' + experiment[1] + \
                        '/' + variable + '/' + member + '-' + str(start_year) + '.nc'
-            if os.path.isfile(out_file):
-                return
+            #if os.path.isfile(out_file):
+            #    return
             os.makedirs(os.path.dirname(out_file), exist_ok=True)
             
             
@@ -92,7 +92,7 @@ if __name__=="__main__":
     temp_dir = "/data/scratch/douglas.kelley/Bayesian_fire_models/temp/hadgem_nrt/"
     out_dir = "data/data/driving_data2425/nrt_attribution/"
 
-    start_year = 2023
+    start_years = [2023, 2013]
 
     shapefile_path = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
     region_names = ["northeast India",
@@ -102,12 +102,13 @@ if __name__=="__main__":
                    "Amazon and Rio Negro rivers",
                    "Pantanal basin"]
 
-    variables = ['tasmax', 'tas', 'pr', 'hursmin', 'sfcWind']#, 'uas', 'vas',  'mrros', 
+    variables = ['pr', 'tasmax', 'tas', 'hursmin', 'sfcWind']#, 'uas', 'vas',  'mrros', 
     experiments = [['historicalExt', 'ALL'], ['historicalNatExt', 'NAT']]
-    process_variables(experiments, variables, start_year, dir, sub_dir,
-                     out_dir, 
-                     temp_dir,
-                     region_names = region_names,
-                     shapefile_path = shapefile_path)
+    for start_year in start_years:
+        process_variables(experiments, variables, start_year, dir, sub_dir,
+                          out_dir, 
+                          temp_dir,
+                          region_names = region_names,
+                          shapefile_path = shapefile_path)
 
 
