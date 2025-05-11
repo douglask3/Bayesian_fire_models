@@ -9,7 +9,6 @@ from BayesScatter import *
 from response_curves import *
 from jackknife import *
 
-
 from read_variable_from_netcdf import *
 from combine_path_and_make_dir import * 
 from namelist_functions import *
@@ -55,7 +54,7 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
     Xf0 = np.log10(Xf[none0])
     pvf0 = pvf[none0]#10**pvf[none0]
     pvf0[pvf0 > 0.999] = 0.999
-    #sset_trace()
+    #set_trace()
     #pvf0 = 10**pvf0
     plot_id = ax.hist2d(Xf0, pvf0, bins=100, cmap='afmhot_r', norm=mpl.colors.LogNorm())
     y_min, y_max = plt.ylim()
@@ -176,7 +175,8 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
 def compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, levels, cmap,
                         dlevels = None, dcmap = None,
                         *args, **kw):    
-    
+    plt.clf()
+    plt.close() 
     fig_dir = combine_path_and_make_dir(dir_outputs, '/figs/')
     figure_filename = fig_dir + filename_out + '-evaluation'
     figure_dir =  combine_path_and_make_dir(figure_filename)
@@ -185,20 +185,22 @@ def compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, levels, cmap
    # Obs.data = Obs.data * 100
     plot_BayesModel_maps(Sim[0], None, cmap, '', Obs, Nrows = 3, Ncols = 3, scale = 100,
                          figure_filename = figure_dir)
+    
     plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 4, Nrows = 3, Ncols = 3,
                                      figure_filename = figure_dir)
     
     plt.gcf().set_size_inches(14, 12)
     plt.gcf().tight_layout()
     plt.savefig(figure_filename + '.png', pad_inches=0.1)
-
+    plt.clf()
+    plt.close() 
 
 def evaluate_MaxEnt_model_from_namelist(training_namelist = None, evaluate_namelist = None, 
                                         **kwargs):
 
     variables = read_variable_from_namelist_with_overwite(training_namelist, **kwargs)
     variables.update(read_variable_from_namelist_with_overwite(evaluate_namelist, **kwargs))
-   
+     
     return evaluate_MaxEnt_model(**variables)
 
 def plot_limitation_maps(fig_dir, filename_out, **common_args):
@@ -249,14 +251,18 @@ def plot_limitation_maps(fig_dir, filename_out, **common_args):
     plt.gcf().set_size_inches(8, 12)
     plt.gcf().tight_layout()
     plt.savefig(figName + '.png')
+    plt.clf()
+    plt.close() 
 
 def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file, 
+                          Y_scale = None,
                           extra_params = None,
                           other_params_file = None, CA_filen = None, 
                           model_class = FLAME,
                           link_func_class = MaxEnt, hyper = True, sample_error = True,
                           dir = '', 
                           dir_outputs = '', model_title = '', filename_out = '',
+                          filename_out_ext = '',
                           control_run_name = "control",
                           subset_function = None, subset_function_args = None,
                           sample_for_plot = 1, grab_old_trace = False, 
@@ -279,6 +285,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
         filename_out -- string of the start of the traces output name. Detault is blank. 
 		Some metadata will be saved in the filename, so even blank will 
                 save a file.
+        filename_out_ext -- string that gets added to filename_out for eval figures
         subset_function -- a list of constrain function useful for constraining and resticting 
                 data to spatial locations and time periods/months. Default is not to 
                 constrain (i.e "None" for no functions")
@@ -294,7 +301,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
         look in dir_outputs + model_title, and you'll see figure and tables from evaluation, 
         projection, reponse curves, jackknifes etc (not all implmenented yet)
     """
-    
+    plt.close('all') 
     dir_outputs = combine_path_and_make_dir(dir_outputs, model_title)
     dir_samples = combine_path_and_make_dir(dir_outputs, '/samples/')     
     dir_samples = combine_path_and_make_dir(dir_samples, filename_out)
@@ -328,8 +335,9 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
     Obs = read_variable_from_netcdf(y_filen, dir,
                                     subset_function = subset_function, 
                                     subset_function_args = subset_function_args)
-    
+    Obs.data = Obs.data / 100.0
     Obs.data[~np.reshape(lmask, Obs.shape)] = np.nan
+    if Y_scale is not None: Y_scale = Y_scale / 100.0
     #plot_basic_parameter_info(trace, fig_dir)
     #paramter_map(trace, x_filen_list, fig_dir) 
     
@@ -348,7 +356,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
         'grab_old_trace': grab_old_trace}
     
     Sim = runSim_MaxEntFire(**common_args, run_name = control_run_name, test_eg_cube = True)
-    
+     
     if run_only: 
         if return_inputs: 
             return Sim, Y, X, lmask, scalers 
@@ -359,7 +367,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
     common_args['Sim'] = Sim[0]
     #set_trace()
     #jackknife(x_filen_list, fig_dir = fig_dir, **common_args)       
-    
+    filename_out += filename_out_ext 
     compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, *args, **kw)
     Bayes_benchmark(filename_out, fig_dir, Sim, Obs, lmask)
 

@@ -14,6 +14,8 @@ from read_variable_from_netcdf import *
 from combine_path_and_make_dir import * 
 from namelist_functions import *
 from pymc_extras import *
+from plot_scatters import *
+from prior_posterior_predictive import *
 
 import os
 from   io     import StringIO
@@ -67,7 +69,6 @@ def set_priors(priors, X):
                        if key.startswith('link-')}
     
     return priors, link_priors
-            
 
 def fit_MaxEnt_probs_to_data(Y, X, CA = None, 
                              model_class = FLAME, link_func_class = MaxEnt,
@@ -102,22 +103,31 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None,
         Y = Y.data
     except:
         pass
+
+    scatter_each_x_vs_y(x_filen_list, X, Y*100.0)
+    os.makedirs(dir_outputs + 'figs/', exist_ok=True)
+    plt.savefig(dir_outputs + 'figs/X_vs_Ys.png')
     
     with pm.Model() as max_ent_model:
         priors, link_priors = set_priors(priors, X)
-        
+        preds = prior_predictive_check(model_class, X, Y, priors, n_samples=200)
+        plot_prior_predictive(preds, Y)
+        plt.savefig(dir_outputs + 'figs/prior_predictive.png')
+        plt.clf()
         ## run model
+        
         model = model_class(priors, inference = True)
         prediction = model.burnt_area(X)  
-        
+         
+        fx_pred = pm.Deterministic("fx_pred", prediction)
         #np.random.seed(42)
         #tt.config.gpuarray.random.set_rng_seed(42)
         #tt.config.floatX = 'float32'       
 
         ## define error measurement
         if CA is not None: CA = CA.data
-
-        error = link_func_class().obs_given_(prediction, Y, CA, *link_priors.values())
+        
+        error = link_func_class().obs_given_(prediction, Y, CA, [*link_priors.values()])
         #    error = pm.DensityDist("error", prediction, *link_priors.values(), 
         #                           logp = link_func_class.obs_given_, 
         #                           observed = Y)
@@ -134,11 +144,14 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None,
             step_method = get_step_method(inference_step_type) 
         
         graph = pm.model_to_graphviz(max_ent_model) 
-        graph.render("model_graph", format="png", view=True)  # Saves and opens
+        graph.render(dir_outputs + "/model_graph", format="png")  # Saves and opens
         trace = pm.sample(niterations, step = step_method(), return_inferencedata = True, 
                           callback = trace_callback,#  init="jitter+adapt_diag",
                           *arg, **kw)
+        ppc = pm.sample_posterior_predictive(trace, var_names=["fx_pred"])
 
+    posterior_predictive_plot(ppc, Y, dir_outputs)
+    
     def filter_dict_elements_by_type(my_dict, included_types):
         def is_numeric(value):
             return isinstance(value, included_types) or (isinstance(value, list) and all(is_numeric(i) for i in value))
@@ -201,7 +214,7 @@ def train_MaxEnt_model_from_namelist(namelist = None, **kwargs):
 def train_MaxEnt_model(y_filen, x_filen_list, CA_filen = None, model_class = FLAME,
                        priors = None, link_func_class = MaxEnt,
                        dir = '', filename_out = '',
-                       dir_outputs = '',
+                       dir_outputs = '', Y_scale = None,
                        fraction_data_for_sample = 1.0,
                        subset_function = None, subset_function_args = None,
                        niterations = 100, cores = 4, model_title = 'no_name',
@@ -261,6 +274,7 @@ def train_MaxEnt_model(y_filen, x_filen_list, CA_filen = None, model_class = FLA
         print("Old optimization found")
         print("======================")
         trace = az.from_netcdf(trace_file)
+        
         none_trace = read_variables_from_namelist(other_params_file)
         scalers = pd.read_csv(scale_file).values   
     else:
@@ -285,6 +299,9 @@ def train_MaxEnt_model(y_filen, x_filen_list, CA_filen = None, model_class = FLA
         else:
             Y, X, lmask, scalers = read_all_data_from_netcdf(**common_args)
             CA = None
+        
+        if Y_scale is not None: 
+            Y = Y*Y_scale
         
         if np.min(Y) < 0.0 or np.max(Y) > 100:
             print("target variable does not meet expected unit range " + \
@@ -316,7 +333,7 @@ def train_MaxEnt_model(y_filen, x_filen_list, CA_filen = None, model_class = FLA
 
         trace.to_netcdf(trace_file)
         pd.DataFrame(scalers).to_csv(scale_file, index = False)
-
+        
         print("=====================")
         print("Optimization complete")
         print("=====================")

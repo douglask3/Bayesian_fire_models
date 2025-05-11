@@ -1,3 +1,6 @@
+
+
+
 import iris
 import numpy as np
 import cartopy.crs as ccrs
@@ -8,12 +11,16 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import BoundaryNorm
 from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from libs.to_precision import *
+
 from pdb import set_trace as browser
 from numpy import inf
 import math
 
-from libs import git_info
+import sys
+sys.path.append('../../libs/')
+sys.path.append('libs/')
+import git_info
+from to_precision import *
 from pdb import set_trace
 
 def plot_BayesModel_maps(Sim, levels, cmap, ylab = '', Obs = None, 
@@ -38,12 +45,12 @@ def plot_BayesModel_maps(Sim, levels, cmap, ylab = '', Obs = None,
     #levels = hist_limits(cube*scale, nlims = 7, symmetrical = False)[0]
     #levels = np.sort(np.append([0], levels[levels > 0.00001]))
     if levels is None:
-        levels = np.append(hist_limits(Obs*scale, nlims = 4, symmetrical = False)[0], 
-                           hist_limits(Sim*scale, nlims = 4, symmetrical = False)[0])
+        levels = np.append(hist_limits(Obs*scale, nlims = 6, symmetrical = False)[0], 
+                           hist_limits(Sim*scale, nlims = 6, symmetrical = False)[0])
         levels = np.sort(np.append([0], levels[levels > 0.00001]))
-       
+    #set_trace()   
     def plot_map(cube, plot_name, plot_n, **kw2):
-        
+        levels = hist_limits(cube*scale, nlims = 6, symmetrical = False)[0]
         plot_annual_mean(cube, levels, cmap, plot_name = plot_name, scale = scale, 
                      Nrows = Nrows, Ncols = Ncols, plot_n = plot_n + plot0, *args, **kw, **kw2)
         
