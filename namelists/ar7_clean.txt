@@ -1,5 +1,5 @@
 ## model info
-model_title::  'ConFire_AR7-clean-3'
+model_title::  'ConFire_AR7-clean-4'
 ## input data paths and filenames
 dir_training:: "data/data/driving_data/Global/isimp3a/obsclim/GSWP3-W5E5/period_2010_2012/masked/"
 y_filen:: "burnt_area.nc"
@@ -9,7 +9,7 @@ x_filen_list:: ["pr_mean.nc", "tas_max.nc", "Tree_cover_vcf.nc", "Total_cover_vc
 
 ## Model info
 model_class:: ConFire
-priors:: {'pname': "link-qSpread",'np': 1, 'dist': 'LogNormal', 'mu': 2.0, 'sigma': 1.0}
+#priors:: {'pname': "link-qSpread",'np': 1, 'dist': 'LogNormal', 'mu': 2.0, 'sigma': 1.0}
 priors:: {'pname': "controlID", 'value': [[0, 1, 2, 4], [2,3, 5]]}
 priors:: {'pname': "control_Direction", 'value': [-1, 1]}
 priors:: {'pname': "driver_Direction", 'value': [[1, -1, 1, -1], [1, 1, 1]]}
@@ -25,7 +25,7 @@ inference_step_type:: "metropolis"
 link_func_class:: MaxEnt
 niterations:: 1000
 cores:: 5
-fraction_data_for_sample:: 0.02
+fraction_data_for_sample:: 0.05
 subset_function:: sub_year_months
 subset_function_args:: {'months_of_year': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]}
 grab_old_trace:: True # set to True till you get the code running. 
