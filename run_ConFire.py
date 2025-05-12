@@ -299,11 +299,7 @@ def run_ConFire(namelist):
         for region in regions: run_for_regions(region)
 
 if __name__=="__main__":
-    namelist = 'namelists/ar7_clean.txt'
+    namelist = 'namelists/isimip2425-test.txt'
     
     run_ConFire(namelist)
-    set_trace()
 
-    
-
-    
