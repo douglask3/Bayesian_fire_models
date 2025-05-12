@@ -42,7 +42,7 @@ def above_percentile_mean(cube, cube_assess = None, percentile = 0.95):
     print("finding " + str(percentile) + " for year" + str(cube.coord('year').points))
     if cube_assess is None: cube_assess = cube
     area_cube = iris.analysis.cartography.area_weights(cube_assess)
-
+    
     # Sort the cube by fractional burnt values in descending order
     sorted_indices = np.argsort(cube_assess.data.ravel())
     sorted_cube_data = cube_assess.data.ravel()[sorted_indices]
@@ -121,7 +121,7 @@ def make_time_series(cube, name, figName, percentile = None, cube_assess = None,
     np.savetxt(out_file, area_weighted_mean.data, delimiter=',')
     
     TS = area_weighted_mean.collapsed('realization', 
-                                      iris.analysis.PERCENTILE, percent=[25, 75])
+                                      iris.analysis.PERCENTILE, percent=[5, 10, 25, 75, 90, 95])
     
     time_coord = TS.coord('time')
     time_datetime = time_coord.units.num2date(time_coord.points)
@@ -129,16 +129,13 @@ def make_time_series(cube, name, figName, percentile = None, cube_assess = None,
     TS = np.append(time_datetime[:, None], np.transpose(TS.data), axis = 1)
     
     out_file = figName + '/time_series-' + name + '.csv'
-    np.savetxt(out_file, TS, delimiter=',', header = "year,p25%,p75%")
+    np.savetxt(out_file, TS, delimiter=',', header = "year,p5%,p10%, p25%,p75%,p90%,p95%")
     return TS
 
 def make_both_time_series(percentiles, *args, **kw):
     if percentiles is None: return None
     for percentile in percentiles:
         make_time_series(*args, **kw, percentile = percentile) 
-    #make_time_series(*args, **kw)
-    #make_time_series(*args, **kw, percentile = 90)
-    #make_time_series(*args, **kw, percentile = 95) 
 
 def run_experiment(training_namelist, namelist, control_direction, control_names, 
                    output_dir, output_file, 
