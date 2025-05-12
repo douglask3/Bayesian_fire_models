@@ -298,40 +298,12 @@ def run_ConFire(namelist):
     else:
         for region in regions: run_for_regions(region)
 
-
-
 if __name__=="__main__":
-    namelist = 'namelists/ConFire_Canada.txt'
-    namelist = 'namelists/Greece.txt'
-    namelist = 'namelists/tuning.txt'
-    namelist = 'namelists/isimip-fwi2.txt'
-    namelist = 'namelists/isimip3.txt'
-    namelist = 'namelists/isimip2425.txt'
-    namelist = 'namelists/isimip2425-test.txt'
-    #namelist = 'namelists/ar7_ref.txt'
-    #namelist = 'namelists/ar7_simple.txt'
-    #namelist = 'namelists/Pantanal_example.txt'
-    #namelist = 'namelists/SOW2023.txt'
+    namelist = 'namelists/ar7_clean.txt'
     
     run_ConFire(namelist)
     set_trace()
-    #experiment_TS = np.array([make_time_series(cube[0], name)  for cube, name in zip(experiment, experiment_names)])
-    
-    
 
     
-    
-    colors = [(0, 1, 0, 0.5), (0, 0, 1, 0.5), (1, 0, 0, 0.5), (0, 0, 0, 0.5)]  # Green, Blue, Red, Black with 50% opacity
-    
-    fig, ax = plt.subplots()
-    
-    for i in range(standard_TS.shape[0]):
-        ax.fill_between(range(standard_TS.shape[2]), 
-                        standard_TS[i, 0, :], standard_TS[i, 1, :], color=colors[i])
 
-    # Set labels and title
-    ax.set_xlabel('X-axis')
-    ax.set_ylabel('Y-axis')
-    ax.set_title('Polygons with Color Vision Impaired Color Combination')
-    
     

@@ -53,7 +53,7 @@ dir_outputs:: 'outputs/outputs/'
 
 ## evaluation info
 sample_for_plot:: 200
-control_names:: ['Fuel', 'Moisture', 'Ignition', 'Suppression']
+control_names:: ['Fuel', 'Moisture', 'Ignition', 'Fragmentation', 'Suppression']
 levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
 dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
 cmap:: 'OrRd'
