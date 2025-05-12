@@ -1,6 +1,6 @@
 ## model info
-regions:: ['Amazon']#'NW_Amazon']##, 'Canada','Greece']
-model_title::  'ConFire_<<region>>-2425-simplified2-qspreadSto-31'
+regions:: ['LA', 'Pantanal', 'Congo', 'Amazon', 'NWIndia', 'Alberta']
+model_title::  'ConFire_<<region>>-2425-attempt1'
 
 ## input data paths and filenames
 dir_training:: "data/data/driving_data2425/<<region>>/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019/"
@@ -43,9 +43,11 @@ link_func_class:: MaxEnt
 niterations:: 1000
 cores:: 10
 fraction_data_for_sample:: 0.2
+min_data_points_for_sample:: 4000
 subset_function:: sub_year_months
 subset_function_args:: {'months_of_year': [0, 1, 2, 3, 11]}
-region_months:: {'Pantanal': [5, 6, 7], 'Amazon': [0,1,2, 3]}
+
+region_months:: {'LA': [0], 'Pantanal': [5, 6, 7, 8], 'Amazon': [0,1,2, 3], 'Congo': [5,6,7], 'NWIndia': [3], 'Alberta': [6]}
 grab_old_trace::  True # set to True till you get the code running. 
                       # Then set to False when you start adding in new response curves
 ### output info
