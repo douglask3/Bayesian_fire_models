@@ -157,7 +157,6 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
 
     figName = output_dir + 'figs/' + output_file + '-' + name + 'control_TS'
     makeDir(figName + '/')
-
     Evaluate, Y, X, lmask, scalers  = call_eval(training_namelist, namelist,
                         name + '/Evaluate', run_only = run_only, return_inputs = True,
                         filename_out_ext = 'stochastic',
@@ -216,7 +215,7 @@ def run_ConFire(namelist):
     if subset_function_args_eval is None: subset_function_args_eval =subset_function_args 
     regions = select_from_info('regions')
     time_series_percentiles = select_from_info('time_series_percentiles')
-
+    
     def run_for_regions(region = None):
         
         if region is None:
@@ -268,6 +267,7 @@ def run_ConFire(namelist):
     
         run_experiment(training_namelist, namelist, control_direction, control_names,
                                   output_dir, output_file, 'baseline', 
+                                  time_series_percentiles = time_series_percentiles, 
                                   model_title = model_title, 
                                   subset_function = subset_function_eval,
                                   subset_function_args = subset_function_args_eval)
@@ -283,7 +283,9 @@ def run_ConFire(namelist):
 
             [run_experiment(training_namelist, namelist, control_direction, 
                                          control_names,
-                                         output_dir, output_file, name, dir = dir, 
+                                         output_dir, output_file, name, 
+                                         time_series_percentiles = time_series_percentiles, 
+                                         dir = dir, 
                                          y_filen = y_filen, model_title = model_title,
                                          subset_function_args = subset_function_args) \
                               for name, dir in zip(experiment_names, experiment_dirs)]
