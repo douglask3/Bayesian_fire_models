@@ -197,20 +197,9 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
         
     open(temp_file, 'a').close() 
 
-# Wrap the call to run_experiment in a function
-def run_single_experiment(args):
-    name, dir = args
-    return run_experiment(
-                training_namelist, namelist, control_direction, control_names,
-                output_dir, output_file, name,
-                time_series_percentiles=time_series_percentiles,
-                dir=dir,
-                y_filen=y_filen,
-                model_title=model_title,
-                subset_function_args=subset_function_args
-            )
-def run_wrapper(kwargs):
+def run_experiment_wrapper(kwargs):
     run_experiment(**kwargs)
+
 def run_ConFire(namelist):   
     
     run_info = read_variables_from_namelist(namelist) 
@@ -291,14 +280,7 @@ def run_ConFire(namelist):
                                   model_title = model_title, 
                                   subset_function = subset_function_eval,
                                   subset_function_args = subset_function_args_eval)
-        #set_trace()
         '''
-        #run_experiment(training_namelist, namelist, control_direction, control_names,
-        #                          output_dir, output_file, 'baseline', 
-        #                          time_series_percentiles = time_series_percentiles, 
-        #                          model_title = model_title, 
-        #                          subset_function = subset_function_eval,
-        #                          subset_function_args = subset_function_args_eval)
         y_filen = [run_info['y_filen']]
         names_all = ['baseline']
         dirs_all = []
@@ -315,9 +297,8 @@ def run_ConFire(namelist):
             dirs_all = dirs_all + experiment_dirs
             y_filen = y_filen + y_filen1 * len(experiment_dirs)
         except:
-            pass    
-        #experiment_args = list(zip(names_all, dirs_all))
-        
+            pass   
+
         args_list = [dict(training_namelist=training_namelist,
                           namelist=namelist,
                           control_direction=control_direction,
@@ -334,54 +315,14 @@ def run_ConFire(namelist):
                          )
                     for name, dir, yfile in zip(names_all, dirs_all, y_filen)
                 ]
-        set_trace()
-        '''
-
-        run_experiment(training_namelist, namelist, control_direction, control_names,
-                                  output_dir, output_file, 'baseline', 
-                                  time_series_percentiles = time_series_percentiles, 
-                                  model_title = model_title, 
-                                  subset_function = subset_function_eval,
-                                  subset_function_args = subset_function_args_eval)
-        '''
-        set_trace()
-        #try:
-        with ProcessPoolExecutor() as executor: list(executor.map(run_wrapper, args_list))
-        '''
-        # except:
-               
-            #try:
-            #with ProcessPoolExecutor() as executor:
-            #    futures = [executor.submit(run_single_experiment, arg) for arg in experiment_args]
-            #    for future in as_completed(futures):
-            #        future.result()
-            #with ProcessPoolExecutor() as executor: executor.map(run_single_experiment, experiment_args)
-        set_trace()
-            #training_namelist, namelist, control_direction, 
-            #                         control_names,
-            #                         output_dir, output_file, name, 
-            #                         time_series_percentiles = time_series_percentiles, 
-            #                         dir = dir, 
-            #                         y_filen = y_filen, model_title = model_title,
-            #                         subset_function_args = subset_function_args
-            try:
-                yay = 1
-            except:
-                #print("ERRROROROROROROROROROORORO")
-                for args in experiment_args:
-                    run_single_experiment(args)
-            
-            [run_experiment(training_namelist, namelist, control_direction, 
-                                     control_names,
-                                     output_dir, output_file, name, 
-                                     time_series_percentiles = time_series_percentiles, 
-                                     dir = dir, 
-                                     y_filen = y_filen, model_title = model_title,
-                                     subset_function_args = subset_function_args) \
-                          for name, dir in zip(experiment_names, experiment_dirs)]
+         
+        try:
+            with ProcessPoolExecutor() as executor:
+                list(executor.map(run_experiment_wrapper, args_list))
         except:
-            pass
-        '''
+            for args in args_list:
+                run_experiment_wrapper(args)
+            
 
     if regions is None:
         run_for_regions(None)
