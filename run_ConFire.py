@@ -7,6 +7,11 @@ import cftime
 
 import matplotlib.pyplot as plt
 
+try:
+    from concurrent.futures import ProcessPoolExecutor, as_completed
+except:
+    pass
+
 def call_eval(training_namelist, namelist,
               control_run_name, extra_params = None, run_only = True, *args, **kw):
     return evaluate_MaxEnt_model_from_namelist(training_namelist, namelist,
@@ -127,8 +132,11 @@ def make_time_series(cube, name, figName, percentile = None, cube_assess = None,
     time_datetime = time_coord.units.num2date(time_coord.points)
     time_datetime = cftime.date2num(time_datetime, 'days since 0001-01-01 00:00:00')/365.24
     TS = np.append(time_datetime[:, None], np.transpose(TS.data), axis = 1)
-    
-    out_file = figName + '/time_series-' + name + '.csv'
+    if percentile is None:
+        percentile_name = 'all' 
+    else:
+        percentile_name = str(percentile) 
+    out_file = figName + '/time_series-' + name + '-' + percentile_name + '.csv'
     np.savetxt(out_file, TS, delimiter=',', header = "year,p5%,p10%, p25%,p75%,p90%,p95%")
     return TS
 
@@ -136,6 +144,7 @@ def make_both_time_series(percentiles, *args, **kw):
     if percentiles is None: return None
     for percentile in percentiles:
         make_time_series(*args, **kw, percentile = percentile) 
+
 
 def run_experiment(training_namelist, namelist, control_direction, control_names, 
                    output_dir, output_file, 
@@ -147,7 +156,8 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
     print("running: " + name)
     name = name + '-'
 
-    temp_file = 'temp/run_ConFire_lock' + (output_dir + output_file + name).replace('/', '_') + '.txt'
+    temp_file = 'temp/run_ConFire_lock' + (output_dir + \
+            output_file + name).replace('/', '_') + '.txt'
     #if os.path.isfile(temp_file): return None
 
     figName = output_dir + 'figs/' + output_file + '-' + name + 'control_TS'
@@ -187,6 +197,20 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
         
     open(temp_file, 'a').close() 
 
+# Wrap the call to run_experiment in a function
+def run_single_experiment(args):
+    name, dir = args
+    return run_experiment(
+                training_namelist, namelist, control_direction, control_names,
+                output_dir, output_file, name,
+                time_series_percentiles=time_series_percentiles,
+                dir=dir,
+                y_filen=y_filen,
+                model_title=model_title,
+                subset_function_args=subset_function_args
+            )
+def run_wrapper(kwargs):
+    run_experiment(**kwargs)
 def run_ConFire(namelist):   
     
     run_info = read_variables_from_namelist(namelist) 
@@ -257,17 +281,29 @@ def run_ConFire(namelist):
             return exp_list_all
     
         
-
-        y_filen = run_info['x_filen_list'][0]
-    
+        
+        '''
         run_experiment(training_namelist, namelist, control_direction, control_names,
                                   output_dir, output_file, 'baseline', 
                                   time_series_percentiles = time_series_percentiles, 
+                                  dir = params['dir'],
+                                  y_filen = run_info['y_filen'],
                                   model_title = model_title, 
                                   subset_function = subset_function_eval,
                                   subset_function_args = subset_function_args_eval)
-        
+        #set_trace()
+        '''
+        #run_experiment(training_namelist, namelist, control_direction, control_names,
+        #                          output_dir, output_file, 'baseline', 
+        #                          time_series_percentiles = time_series_percentiles, 
+        #                          model_title = model_title, 
+        #                          subset_function = subset_function_eval,
+        #                          subset_function_args = subset_function_args_eval)
+        y_filen = [run_info['y_filen']]
+        names_all = ['baseline']
+        dirs_all = []
         try:
+            y_filen1 = [run_info['x_filen_list'][0]]
             experiment_dirs  = run_info['experiment_dir']
             experiment_names = run_info['experiment_names']
             experiments = run_info['experiment_experiment']
@@ -275,18 +311,77 @@ def run_ConFire(namelist):
             models = run_info['experiment_model']
             experiment_dirs = find_replace_period_model(experiment_dirs)
             experiment_names = find_replace_period_model(experiment_names)
+            names_all = names_all + experiment_names
+            dirs_all = dirs_all + experiment_dirs
+            y_filen = y_filen + y_filen1 * len(experiment_dirs)
+        except:
+            pass    
+        #experiment_args = list(zip(names_all, dirs_all))
+        
+        args_list = [dict(training_namelist=training_namelist,
+                          namelist=namelist,
+                          control_direction=control_direction,
+                          control_names=control_names,
+                          output_dir=output_dir,
+                          output_file=output_file,
+                          name=name,
+                          time_series_percentiles=time_series_percentiles,
+                          dir=dir,
+                          y_filen=yfile,
+                          model_title=model_title,
+                          subset_function = subset_function_eval,
+                          subset_function_args = subset_function_args_eval
+                         )
+                    for name, dir, yfile in zip(names_all, dirs_all, y_filen)
+                ]
+        set_trace()
+        '''
 
+        run_experiment(training_namelist, namelist, control_direction, control_names,
+                                  output_dir, output_file, 'baseline', 
+                                  time_series_percentiles = time_series_percentiles, 
+                                  model_title = model_title, 
+                                  subset_function = subset_function_eval,
+                                  subset_function_args = subset_function_args_eval)
+        '''
+        set_trace()
+        #try:
+        with ProcessPoolExecutor() as executor: list(executor.map(run_wrapper, args_list))
+        '''
+        # except:
+               
+            #try:
+            #with ProcessPoolExecutor() as executor:
+            #    futures = [executor.submit(run_single_experiment, arg) for arg in experiment_args]
+            #    for future in as_completed(futures):
+            #        future.result()
+            #with ProcessPoolExecutor() as executor: executor.map(run_single_experiment, experiment_args)
+        set_trace()
+            #training_namelist, namelist, control_direction, 
+            #                         control_names,
+            #                         output_dir, output_file, name, 
+            #                         time_series_percentiles = time_series_percentiles, 
+            #                         dir = dir, 
+            #                         y_filen = y_filen, model_title = model_title,
+            #                         subset_function_args = subset_function_args
+            try:
+                yay = 1
+            except:
+                #print("ERRROROROROROROROROROORORO")
+                for args in experiment_args:
+                    run_single_experiment(args)
+            
             [run_experiment(training_namelist, namelist, control_direction, 
-                                         control_names,
-                                         output_dir, output_file, name, 
-                                         time_series_percentiles = time_series_percentiles, 
-                                         dir = dir, 
-                                         y_filen = y_filen, model_title = model_title,
-                                         subset_function_args = subset_function_args) \
-                              for name, dir in zip(experiment_names, experiment_dirs)]
+                                     control_names,
+                                     output_dir, output_file, name, 
+                                     time_series_percentiles = time_series_percentiles, 
+                                     dir = dir, 
+                                     y_filen = y_filen, model_title = model_title,
+                                     subset_function_args = subset_function_args) \
+                          for name, dir in zip(experiment_names, experiment_dirs)]
         except:
             pass
-
+        '''
 
     if regions is None:
         run_for_regions(None)
