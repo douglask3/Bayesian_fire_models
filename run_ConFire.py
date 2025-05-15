@@ -92,7 +92,21 @@ def add_lan_lon_bounds(cube):
         pass
     return(cube)
     
-def make_time_series(cube, name, figName, percentile = None, cube_assess = None, *args, **kw):
+def make_time_series(cube, name, figName, percentile = None, cube_assess = None, 
+                     grab_old = False, *args, **kw):
+
+    if percentile is None or percentile == 0.0:        
+        out_dir = figName + '/mean/'
+        percentile_name = '0.0' 
+    else:
+        out_dir = figName + '/pc-' + str(percentile) + '/'
+        percentile_name = str(percentile)
+    
+    out_file_points = out_dir + 'points-' + name + '.csv'
+    out_file_TS = figName + '/time_series-' + name + '-' + percentile_name + '.csv'
+    if os.path.isfile(out_file_TS) and os.path.isfile(out_file_points) and grab_old:    
+        return out_file_TS, out_file_points
+
     if cube_assess is None: cube_assess = cube
     cube = add_lan_lon_bounds(cube)
     cube_assess = add_lan_lon_bounds(cube_assess)
@@ -106,7 +120,6 @@ def make_time_series(cube, name, figName, percentile = None, cube_assess = None,
                                    for i in range(cube.shape[0])]
         
         area_weighted_mean = iris.cube.CubeList(area_weighted_mean).merge_cube()
-        out_dir = figName + '/mean/'
     
     else:
         def percentile_for_relization(cube, i):
@@ -119,11 +132,10 @@ def make_time_series(cube, name, figName, percentile = None, cube_assess = None,
         area_weighted_mean = [percentile_for_relization(cube, i) for i in range(cube.shape[0])]
         area_weighted_mean = iris.cube.CubeList(area_weighted_mean).merge_cube()       
         
-        out_dir = figName + '/pc-' + str(percentile) + '/'
+        
     
     makeDir(out_dir)
-    out_file = out_dir + 'points-' + name + '.csv'
-    np.savetxt(out_file, area_weighted_mean.data, delimiter=',')
+    np.savetxt(out_file_points, area_weighted_mean.data, delimiter=',')
     
     TS = area_weighted_mean.collapsed('realization', 
                                       iris.analysis.PERCENTILE, percent=[5, 10, 25, 75, 90, 95])
@@ -132,13 +144,10 @@ def make_time_series(cube, name, figName, percentile = None, cube_assess = None,
     time_datetime = time_coord.units.num2date(time_coord.points)
     time_datetime = cftime.date2num(time_datetime, 'days since 0001-01-01 00:00:00')/365.24
     TS = np.append(time_datetime[:, None], np.transpose(TS.data), axis = 1)
-    if percentile is None:
-        percentile_name = 'all' 
-    else:
-        percentile_name = str(percentile) 
-    out_file = figName + '/time_series-' + name + '-' + percentile_name + '.csv'
-    np.savetxt(out_file, TS, delimiter=',', header = "year,p5%,p10%, p25%,p75%,p90%,p95%")
-    return TS
+    
+    
+    np.savetxt(out_file_TS, TS, delimiter=',', header = "year,p5%,p10%, p25%,p75%,p90%,p95%")
+    return out_file_TS, out_file_points
 
 def make_both_time_series(percentiles, *args, **kw):
     if percentiles is None: return None
@@ -174,11 +183,12 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
                         *args, **kws)
     
     
+    grab_old = read_variables_from_namelist(namelist)['grab_old_trace']
     evaluate_TS = make_both_time_series(time_series_percentiles, Evaluate[0], 'Evaluate', 
-                                        figName, cube_assess = Control[0])
+                                        figName, cube_assess = Control[0], grab_old = grab_old)
     
     control_TS = make_both_time_series(time_series_percentiles, Control[0], 'Control', 
-                                       figName, cube_assess = Control[0])
+                                       figName, cube_assess = Control[0], grab_old = grab_old)
 
     
     if  control_names is None: return None
@@ -192,7 +202,8 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
                       cube_assess = Control[0], **kws) \
                         for i in range(len(control_direction))]
         limitation_TS = np.array([make_both_time_series(time_series_percentiles, \
-                                                        cube[0], ltype + '-' + name, figName) \
+                                                        cube[0], ltype + '-' + name, figName,
+                                                        grab_old = grab_old) \
                            for cube, name in zip(limitation, control_names)])
         
     open(temp_file, 'a').close() 
@@ -322,6 +333,7 @@ def run_ConFire(namelist):
                     for name, dir, yfile in zip(names_all, dirs_all, y_filen)
                 ]
         
+        run_experiment_wrapper(args_list[0])
         if len(args_list) == 1: 
             run_experiment_wrapper(args_list[0])
         else:
