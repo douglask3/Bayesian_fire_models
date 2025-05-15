@@ -33,7 +33,7 @@ class ConFire(object):
         self.x0 = select_param_or_default('x0', [0])
         self.log_control = select_param_or_default('log_control', 
                                                    [False] * len(self.control_Direction))
-        
+        #set_trace()
         self.betas = select_param_or_default('betas', [[0]], stack = False)
         self.powers = select_param_or_default('powers', None, stack = False)
         self.driver_Direction = self.params['driver_Direction']
@@ -60,9 +60,11 @@ class ConFire(object):
                 else: 
                     mask = powers_i < 1 
                     X_i[:, mask] = 2 - X_i[:, mask]
-            
+             
             out = self.numPCK.sum(X_i * betas[None, ...], axis=-1)
-            if self.log_control[cid]: out = self.numPCK.log(out)
+            
+            if self.log_control[cid]:
+                out = self.numPCK.log(out)
             out = out + self.x0[cid]
             return(out)
             
