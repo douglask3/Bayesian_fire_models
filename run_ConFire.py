@@ -4,11 +4,11 @@ from evaluate import *
 from   io     import StringIO
 import numpy  as np
 import cftime
-
 import matplotlib.pyplot as plt
 
 try:
     from concurrent.futures import ProcessPoolExecutor, as_completed
+    from multiprocessing import get_context
 except:
     pass
 
@@ -198,7 +198,12 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
     open(temp_file, 'a').close() 
 
 def run_experiment_wrapper(kwargs):
-    run_experiment(**kwargs)
+    try:
+        run_experiment(**kwargs)
+    except Exception as e:
+        print(f"[ERROR] Experiment failed with kwargs={kwargs['name']}:\n{e}")
+        import traceback
+        traceback.print_exc()
 
 def run_ConFire(namelist):   
     
@@ -283,7 +288,8 @@ def run_ConFire(namelist):
         '''
         y_filen = [run_info['y_filen']]
         names_all = ['baseline']
-        dirs_all = []
+        
+        dirs_all = [params['dir']]
         try:
             y_filen1 = [run_info['x_filen_list'][0]]
             experiment_dirs  = run_info['experiment_dir']
@@ -298,7 +304,7 @@ def run_ConFire(namelist):
             y_filen = y_filen + y_filen1 * len(experiment_dirs)
         except:
             pass   
-
+        
         args_list = [dict(training_namelist=training_namelist,
                           namelist=namelist,
                           control_direction=control_direction,
@@ -315,14 +321,19 @@ def run_ConFire(namelist):
                          )
                     for name, dir, yfile in zip(names_all, dirs_all, y_filen)
                 ]
-         
-        try:
-            with ProcessPoolExecutor() as executor:
-                list(executor.map(run_experiment_wrapper, args_list))
-        except:
-            for args in args_list:
-                run_experiment_wrapper(args)
-            
+        
+        if len(args_list) == 1: 
+            run_experiment_wrapper(args_list[0])
+        else:
+            try:
+                with get_context("spawn").Pool(processes=4) as pool:
+                    pool.map(run_experiment_wrapper, args_list)
+                
+                #with ProcessPoolExecutor() as executor:
+                #    list(executor.map(run_experiment_wrapper, args_list))
+            except:
+                for args in args_list:
+                    run_experiment_wrapper(args)
 
     if regions is None:
         run_for_regions(None)
@@ -331,6 +342,6 @@ def run_ConFire(namelist):
 
 if __name__=="__main__":
     namelist = 'namelists/isimip2425-test.txt'
-    
+    #namelist = "namelists/ar7_clean.txt"
     run_ConFire(namelist)
 
