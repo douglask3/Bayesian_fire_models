@@ -1,6 +1,6 @@
 ## model info
-regions:: ['LA', 'Pantanal', 'Congo', 'Amazon', 'NWIndia', 'Alberta']
-model_title::  'ConFire_<<region>>-2425-attempt1'
+regions:: ['LA', 'Congo', 'Pantanal', 'Amazon', 'NWIndia', 'Alberta']
+model_title::  'ConFire_<<region>>-2425-attempt2'
 
 ## input data paths and filenames
 dir_training:: "data/data/driving_data2425/<<region>>/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019/"
@@ -54,7 +54,7 @@ grab_old_trace::  True # set to True till you get the code running.
 dir_outputs:: 'outputs/outputs/'
 
 ## evaluation info
-sample_for_plot:: 200
+sample_for_plot:: 500
 control_names:: ['Fuel', 'Moisture', 'Ignition', 'Fragmentation', 'Suppression']
 levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
 dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
