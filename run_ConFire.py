@@ -276,6 +276,8 @@ def run_ConFire(namelist):
                             if "<<experiment>>" not in item and "<<model>>" not in item]
             looped_items = [item for item in exp_list \
                             if "<<experiment>>" in item and "<<model>>" in item]
+            if periods is None and periods is None: 
+                return exp_list_all
             for experiment, period in zip(experiments, periods):
                 for model in models:
                     dirs = [item.replace("<<period>>", period) for item in looped_items]    
@@ -292,11 +294,11 @@ def run_ConFire(namelist):
         dirs_all = [params['dir']]
         try:
             y_filen1 = [run_info['x_filen_list'][0]]
-            experiment_dirs  = run_info['experiment_dir']
-            experiment_names = run_info['experiment_names']
-            experiments = run_info['experiment_experiment']
-            periods = run_info['experiment_period']
-            models = run_info['experiment_model']
+            experiment_dirs  = select_from_info('experiment_dir')
+            experiment_names = select_from_info('experiment_names')
+            experiments = select_from_info('experiment_experiment')
+            periods = select_from_info('experiment_period')
+            models = select_from_info('experiment_model')
             experiment_dirs = find_replace_period_model(experiment_dirs)
             experiment_names = find_replace_period_model(experiment_names)
             names_all = names_all + experiment_names
