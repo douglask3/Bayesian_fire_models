@@ -220,14 +220,15 @@ def run_ConFire(namelist):
     
     run_info = read_variables_from_namelist(namelist) 
 
-    def select_from_info(item):
+    def select_from_info(item, alternative = None):
         try:
             out = run_info[item]
         except:
-            out = None
+            out = alternative
         return out
 
     control_direction = select_from_info('control_Direction')
+    
     if control_direction is None:
         control_direction = [param['value'] for param in run_info['priors'] \
                              if param['pname'] == 'control_Direction'][-1]
@@ -284,19 +285,7 @@ def run_ConFire(namelist):
                     exp_list_all += dirs
              
             return exp_list_all
-    
         
-        
-        '''
-        run_experiment(training_namelist, namelist, control_direction, control_names,
-                                  output_dir, output_file, 'baseline', 
-                                  time_series_percentiles = time_series_percentiles, 
-                                  dir = params['dir'],
-                                  y_filen = run_info['y_filen'],
-                                  model_title = model_title, 
-                                  subset_function = subset_function_eval,
-                                  subset_function_args = subset_function_args_eval)
-        '''
         y_filen = [run_info['y_filen']]
         names_all = ['baseline']
         
@@ -333,19 +322,16 @@ def run_ConFire(namelist):
                     for name, dir, yfile in zip(names_all, dirs_all, y_filen)
                 ]
         
-        #run_experiment_wrapper(args_list[0])
-        if len(args_list) == 1: 
-            run_experiment_wrapper(args_list[0])
-        else:
+        if len(args_list) > 1 and select_from_info('parallelize', False): 
             try:
                 with get_context("spawn").Pool(processes=4) as pool:
                     pool.map(run_experiment_wrapper, args_list)
-                
-                #with ProcessPoolExecutor() as executor:
-                #    list(executor.map(run_experiment_wrapper, args_list))
             except:
                 for args in args_list:
                     run_experiment_wrapper(args)
+        else:
+            for args in args_list:
+                run_experiment_wrapper(args)
 
     if regions is None:
         run_for_regions(None)
