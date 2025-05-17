@@ -322,7 +322,7 @@ def run_ConFire(namelist):
                     for name, dir, yfile in zip(names_all, dirs_all, y_filen)
                 ]
         
-        if len(args_list) > 1 and select_from_info('parallelize', False): 
+        if len(args_list) > 1 and select_from_info('parallelize', True): 
             try:
                 with get_context("spawn").Pool(processes=4) as pool:
                     pool.map(run_experiment_wrapper, args_list)
