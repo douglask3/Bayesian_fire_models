@@ -1,0 +1,63 @@
+## model info
+regions:: ['Amazon']#'LA', 'Congo', 'v', 'NWIndia', 'Alberta']
+model_title::  'ConFire_nrt_<<region>>-2425'
+
+## input data paths and filenames
+
+dir_training:: "data/data/driving_data2425/<<region>>/nrt/era5_monthly/"
+y_filen:: "burnt_area.nc"
+CA_filen:: None
+x_filen_list:: ["precip.nc", "dry_days.nc", "max_consec_dry.nc", "tas_max.nc", "hurs_min.nc", "hurs_mean.nc", "wind_max.nc", "cropland_regridded_to_era5.nc", "pasture_regridded_to_era5.nc", "rural_population_regridded_to_era5.nc", "total_irrigated_regridded_to_era5.nc", "urban_area_regridded_to_era5.nc", "urban_population_regridded_to_era5.nc"]
+Y_scale:: 0.01
+
+## Model info
+model_class:: ConFire
+priors:: {'pname': "link-qSpread_mu",'np': 1, 'dist': 'Normal', 'mu': 1.0, 'sigma': 0.5}
+priors:: {'pname': "link-qSpread_sigma",'np': 1, 'dist': 'HalfNormal', 'sigma': 0.5}
+
+#priors:: {'pname': "link-qSpread",'np': 1, 'dist': 'LogNormal', 'mu': 2.0, 'sigma': 1.0}
+priors:: {'pname': "controlID", 'value': [[0, 1, 2, 3, 4, 5], [7], [8, 9, 11, 12], [8, 9, 10, 11, 12]]}
+priors:: {'pname': "control_Direction", 'value': [1, 1, 1, 1, 1]}
+priors:: {'pname': "driver_Direction", 'value': [[-1, 1, 1, 1, -1, -1], [1], [1, 1, 1, 1], [-1, -1, -1, -1, -1]]}
+#priors:: {'pname': "Fmax",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 1.0}
+#priors:: {'pname': 'lin_correct', 'np': 1, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 4.0}
+priors:: {'pname': "x0",'np': 4, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
+priors:: {'pname': "betas",'np': 6, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas",'np': 5, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 6, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 5, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+
+### optimization info
+inference_step_type:: "metropolis"
+link_func_class:: MaxEnt
+niterations:: 1000
+cores:: 10
+fraction_data_for_sample:: 0.1
+min_data_points_for_sample:: 1000
+subset_function:: sub_year_months
+subset_function_args:: {'months_of_year': [0, 1, 2, 3, 11]}
+region_months:: {'LA': [0], 'Pantanal': [5, 6, 7, 8], 'Amazon': [0,1,2, 3], 'Congo': [5,6,7], 'NWIndia': [3], 'Alberta': [6]}
+grab_old_trace::  True # set to True till you get the code running. 
+                      # Then set to False when you start adding in new response curves
+### output info
+dir_outputs:: 'outputs/outputs/'
+
+## evaluation info
+sample_for_plot:: 20
+control_names:: ['Moisture', 'Wind', 'Ignition', 'Suppression']
+levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
+dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
+cmap:: 'OrRd'
+dcmap:: 'RdBu_r'
+dir_projecting:: "data/data/driving_data2425/<<region>>/nrt/era5_monthly/"
+
+## experiment info
+
+experiment_dir:: ["data/data/driving_data2425/<<region>>/nrt/era5_monthly/", "data/data/driving_data2425/<<region>>/nrt/era5_monthly/CF/"]
+experiment_type:: ['single', 'ensemble']
+experiment_names:: ["factual", "counterfactual"]
+time_series_percentiles:: [0.0, 95.0]

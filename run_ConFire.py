@@ -354,6 +354,7 @@ def run_ConFire(namelist):
 
 if __name__=="__main__":
     namelist = 'namelists/isimip2425-test.txt'
+    namelist = 'namelists/nrt2425.txt'
     #namelist = "namelists/ar7_clean.txt"
     run_ConFire(namelist)
 
