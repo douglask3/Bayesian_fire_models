@@ -333,7 +333,7 @@ def run_ConFire(namelist):
                     for name, dir, yfile in zip(names_all, dirs_all, y_filen)
                 ]
         
-        run_experiment_wrapper(args_list[0])
+        #run_experiment_wrapper(args_list[0])
         if len(args_list) == 1: 
             run_experiment_wrapper(args_list[0])
         else:
