@@ -53,11 +53,15 @@ def regrid_hyde_cube(hyde_file, target_file, hyde_dir = "", target_dir = ""):
     hyde_regridded = hyde_cube_cropped.regrid(era5_cube, iris.analysis.Linear())
     
     # Optional: Save output
-    iris.save(hyde_regridded, target_dir + hyde_file[:-3] + "cropland_regridded_to_era5.nc")
+    iris.save(hyde_regridded, target_dir + hyde_file[:-3] + "_regridded_to_era5.nc")
 
 if __name__=="__main__":
     target_dir = "data/data/driving_data2425/Amazon/nrt/era5_monthly/"
     hyde_dir = "data/data/HYDE/"
-    hyde_file = "cropland.nc"
+    hyde_files = ["cropland.nc", "grazing_land.nc", "pasture.nc", "population_density.nc", 
+                  "rangeland.nc", "rural_population.nc", "total_irrigated.nc", "urban_area.nc",
+                  "urban_population.nc"]
     target_file = 'precip.nc'
-    regrid_hyde_cube(hyde_file, target_file, hyde_dir, target_dir)
+    for hyde_file in hyde_files:
+        regrid_hyde_cube(hyde_file, target_file, hyde_dir, target_dir)
+
