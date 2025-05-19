@@ -3,6 +3,7 @@
 outputs/
 temp/
 data/
+figs/
 *.png
 *__pycache__*
 *.pdf
