@@ -1,5 +1,5 @@
 ## model info
-model_title::  'ConFire_AR7-clean-4'
+model_title::  'ConFire_AR7-clean-5'
 ## input data paths and filenames
 dir_training:: "data/data/driving_data/Global/isimp3a/obsclim/GSWP3-W5E5/period_2010_2012/masked/"
 y_filen:: "burnt_area.nc"
@@ -17,8 +17,8 @@ priors:: {'pname': "x0",'np': 2, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
 priros:: {'pname': "log_control", "value": [False, True])
 priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 5.0}
 priors:: {'pname': "betas",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 5.0}
-priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 5.0}
-priors:: {'pname': "powers",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 5.0}
+#priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 5.0}
+#priors:: {'pname': "powers",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 5.0}
 
 ### optimization info
 inference_step_type:: "metropolis"
