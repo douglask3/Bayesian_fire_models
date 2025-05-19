@@ -58,7 +58,7 @@ parallelize:: False
 
 ## experiment info
 
-experiment_dir:: ["data/data/driving_data2425/<<region>>/nrt/era5_monthly/", ["data/data/driving_data2425/<<region>>/nrt/era5_monthly/CF/", "data/data/driving_data2425/<<region>>/nrt/era5_monthly/"]]
+experiment_dir:: ["data/data/driving_data2425/<<region>>/nrt/era5_monthly/", "data/data/driving_data2425/<<region>>/nrt/era5_monthly/CF/::data/data/driving_data2425/<<region>>/nrt/era5_monthly/"]
 experiment_type:: ['single', 'ensemble']
 experiment_names:: ["factual", "counterfactual"]
 time_series_percentiles:: [0.0, 95.0]
