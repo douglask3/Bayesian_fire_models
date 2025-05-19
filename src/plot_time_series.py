@@ -23,6 +23,10 @@ def plot_burnt_area_vs_obs_time_series(dir_obs, dir_mod, region):
         cube.coord('latitude').guess_bounds()
     except:
         pass
+    try:
+        iris.coord_categorisation.add_month_number(cube, 'time')
+    except:
+        pass
     # Calculate grid cell area weights
     
     
