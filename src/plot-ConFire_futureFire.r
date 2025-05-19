@@ -1,6 +1,6 @@
 library(raster)
 library(sf)
-source("sourceAllLibs.r")
+source("libs/sourceAllLibs.r")
 sourceAllLibs("libs/")
 library(ncdf4)
 library(rnaturalearth)
@@ -24,13 +24,13 @@ dlevels2 = c(0.1, 0.2, 0.5, 0.75, 1, 1.5, 2, 5, 10)
 nsample = 10
 
 
-region = 'Canada'; countries = c('Canada')
+region = 'Amazon'; countries = c('Brazil','Guyana', 'Suriname')
 #region = 'Greece'; countries = c('Greece')
 #region = 'NW_Amazon'; countries = c('Brazil')
 
-dir = paste0("outputs/ConFire_", region, "-final/samples/_13-frac_points_0.5/")
+dir = paste0("outputs/ConFire_", region, "-2425-attempt2/samples/_13-frac_points_0.5/")
 eg_rast = raster(paste0("outputs/ConFire_", region, "-final/samples/_13-frac_points_0.5/baseline-/control/sample-pred0.nc"))
-plt_width = c('Canada' = 1, 'NW_Amazon' = 1, 'Greece' = 0.67)[region]
+plt_width = c('Amazon' = 1, 'NW_Amazon' = 1, 'Greece' = 0.67)[region]
 plt_height = plt_width*nrow(eg_rast)/ncol(eg_rast)
 
 
@@ -48,7 +48,7 @@ addCoast <- function(countries) {
 }
 plot_control <- function(run, control, name, years = c(2000, 2019), cols, levels, dats0 = NULL, addLab = FALSE, ...) {
     
-    tfile = paste0(c('temp2/plot-ConFire_futureFire/', region, run, control, name, years), 
+    tfile = paste0(c('temp2/plot-ConFire_futureFire/', region, run, control, name, years, nsample), 
                    collapse = '-')
     get_dat <- function(id) {
         dirs = list.files(paste0(dir, id), full.names=TRUE)
