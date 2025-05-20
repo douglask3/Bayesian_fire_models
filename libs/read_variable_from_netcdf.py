@@ -32,12 +32,15 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
     Returns:
         Y - if make_flat, a numpy vector of the target variable, otherwise returns iris cube
     """
+    if filename[0] == '~' or filename[0] == '/' or filename[0] == '.': 
+        dir = ''
+    if filename[-3:] != '.nc': 
+        filename = filename + '.nc'
     dir = dir.split('||')
     
     print("Opening:")
     print(filename)
     def open_from_dir(dir):
-        if filename[0] == '~' or filename[0] == '/' or filename[0] == '.': dir = ''
         try:
             if isinstance(filename, str):        
                 dataset = iris.load_cube(dir + filename, callback=sort_time)
