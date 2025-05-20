@@ -11,6 +11,7 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
                               subset_function_args = None,
                               time_series = None, time_points = None, extent = None,
                               return_time_points = False, return_extent = False,
+                              x_find_mode = None,
                               *args, **kw):
     """Read data from a netCDF file 
         Assumes that the variables in the netcdf file all have the name "variable"
@@ -31,27 +32,40 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
     Returns:
         Y - if make_flat, a numpy vector of the target variable, otherwise returns iris cube
     """
-
+    dir = dir.split('||')
+    
     print("Opening:")
     print(filename)
-    if filename[0] == '~' or filename[0] == '/' or filename[0] == '.': dir = ''
-    try:
-        if isinstance(filename, str):        
-            dataset = iris.load_cube(dir + filename, callback=sort_time)
-        else:
-            dataset = iris.load_cube(dir + filename[0], filename[1], callback=sort_time)
-    except:
+    def open_from_dir(dir):
+        if filename[0] == '~' or filename[0] == '/' or filename[0] == '.': dir = ''
         try:
-            dataset = iris.load_cube(dir + filename)
+            if isinstance(filename, str):        
+                dataset = iris.load_cube(dir + filename, callback=sort_time)
+            else:
+                dataset = iris.load_cube(dir + filename[0], filename[1], callback=sort_time)
         except:
-            print("==============\nERROR!")
-            print("can't open data.")
-            print("Check directory (''" + dir + "''), filename (''" + filename + \
+            try:
+                dataset = iris.load_cube(dir + filename)
+            except:
+                dataset = None
+        return dataset
+
+    i = 0
+    dataset = None
+    
+    while i <= len(dir) and dataset is None:
+        dataset = open_from_dir(dir[i])
+        i += 1
+    
+    if dataset is None:
+        print("==============\nERROR!")
+        print("can't open data.")
+        print("Check directory (''" + dir + "''), filename (''" + filename + \
               "'') or file format")
-            print("==============")
-            set_trace()
+        print("==============")
+        set_trace()
+    
     coord_names = [coord.name() for coord in dataset.coords()]
-    if dataset is None: return None
     if time_points is not None:     
         if 'time' in coord_names:
             dataset = dataset.interpolate([('time', time_points)], iris.analysis.Linear())
