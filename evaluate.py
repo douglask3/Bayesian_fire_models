@@ -264,6 +264,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
                           dir_outputs = '', model_title = '', filename_out = '',
                           filename_out_ext = '',
                           control_run_name = "control",
+                          experiment_type = 'single',
                           subset_function = None, subset_function_args = None,
                           sample_for_plot = 1, grab_old_trace = False, 
                           run_response_curves = False, 
@@ -306,6 +307,10 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
     dir_samples = combine_path_and_make_dir(dir_outputs, '/samples/')     
     dir_samples = combine_path_and_make_dir(dir_samples, filename_out)
 
+    dir_driving_data = combine_path_and_make_dir(dir_outputs, '/driving_data_store/')     
+    dir_driving_data = combine_path_and_make_dir(dir_driving_data, 
+                                                 filename_out + '/' + control_run_name)
+    
     fig_dir = combine_path_and_make_dir(dir_outputs, '/figs/')
     trace = az.from_netcdf(trace_file)
     
@@ -322,6 +327,8 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
         'dir': dir,
         'scalers': scalers,
         'x_normalise01': True,
+        'x_find_mode': experiment_type,
+        'dir_driving_data': dir_driving_data,
         'subset_function': subset_function,
         'subset_function_args': subset_function_args
     }

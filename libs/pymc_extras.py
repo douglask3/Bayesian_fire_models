@@ -2,6 +2,7 @@ import arviz as az
 import numpy as np
 import pymc as pm
 import iris
+import random
 
 import os
 import sys
@@ -98,12 +99,18 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
                        if key.startswith('link-')}
         
         obj = class_object(param_in)
-        out = getattr(obj, method)(X, *args, **kw)
+        if isinstance(X, list):
+            Xi = random.choice(X)
+        else:
+            Xi = X
+        if isinstance(Xi, str) and Xi[-4:] == '.npy':
+            Xi = np.load(Xi)
+        
+        out = getattr(obj, method)(Xi, *args, **kw)
         
     
         if out_index is not None: out = out[:, out_index]
         if test_eg_cube:
-            
             prob = link_func_class().sample_given_(eg_cube.data.flatten()[lmask], out, 
                                                    [*link_param_in])
             

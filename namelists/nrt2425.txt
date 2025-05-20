@@ -7,7 +7,7 @@ model_title::  'ConFire_nrt_<<region>>-2425'
 dir_training:: "data/data/driving_data2425/<<region>>/nrt/era5_monthly/"
 y_filen:: "burnt_area.nc"
 CA_filen:: None
-x_filen_list:: ["precip.nc", "dry_days.nc", "max_consec_dry.nc", "tas_max.nc", "hurs_min.nc", "hurs_mean.nc", "wind_max.nc", "cropland_regridded_to_era5.nc", "pasture_regridded_to_era5.nc", "rural_population_regridded_to_era5.nc", "total_irrigated_regridded_to_era5.nc", "urban_area_regridded_to_era5.nc", "urban_population_regridded_to_era5.nc"]
+x_filen_list:: ["precip", "dry_days", "max_consec_dry", "tas_max", "hurs_min", "hurs_mean", "wind_max", "cropland_regridded_to_era5", "pasture_regridded_to_era5", "rural_population_regridded_to_era5", "total_irrigated_regridded_to_era5", "urban_area_regridded_to_era5", "urban_population_regridded_to_era5"]
 Y_scale:: 0.01
 
 ## Model info
@@ -47,6 +47,7 @@ grab_old_trace::  True # set to True till you get the code running.
 dir_outputs:: 'outputs/outputs/'
 
 ## evaluation info
+#y_filen_eval:: 'burnt_area.nc'
 sample_for_plot:: 20
 control_names:: ['Moisture', 'Wind', 'Ignition', 'Suppression']
 levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
@@ -57,8 +58,7 @@ dir_projecting:: "data/data/driving_data2425/<<region>>/nrt/era5_monthly/"
 parallelize:: False
 
 ## experiment info
-
-experiment_dir:: ["data/data/driving_data2425/<<region>>/nrt/era5_monthly/", "data/data/driving_data2425/<<region>>/nrt/era5_monthly/CF/::data/data/driving_data2425/<<region>>/nrt/era5_monthly/"]
-experiment_type:: ['single', 'ensemble']
+experiment_dir:: ["data/data/driving_data2425/<<region>>/nrt/era5_monthly/", "data/data/driving_data2425/<<region>>/nrt/era5_monthly/CF/||data/data/driving_data2425/<<region>>/nrt/era5_monthly/"]
+experiment_type:: ['single', 'ensemble-single']
 experiment_names:: ["factual", "counterfactual"]
 time_series_percentiles:: [0.0, 95.0]

@@ -211,10 +211,12 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
 def run_experiment_wrapper(kwargs):
     try:
         run_experiment(**kwargs)
+        return (kwargs, "success")
     except Exception as e:
         print(f"[ERROR] Experiment failed with kwargs={kwargs['name']}:\n{e}")
         import traceback
         traceback.print_exc()
+        return (kwargs, f"error: {e}")
 
 def run_ConFire(namelist):   
     
@@ -290,10 +292,11 @@ def run_ConFire(namelist):
         
         y_filen = [run_info['y_filen']]
         names_all = ['baseline']
-        
+        exp_type = ['single']        
         dirs_all = [params['dir']]
+        
         try:
-            y_filen1 = [run_info['x_filen_list'][0]]
+            y_filen1 = [select_from_info('y_filen_eval', run_info['x_filen_list'][0])]
             experiment_dirs  = select_from_info('experiment_dir')
             experiment_names = select_from_info('experiment_names')
             experiments = select_from_info('experiment_experiment')
@@ -301,6 +304,8 @@ def run_ConFire(namelist):
             models = select_from_info('experiment_model')
             experiment_dirs = find_replace_period_model(experiment_dirs)
             experiment_names = find_replace_period_model(experiment_names)
+            exp_type = exp_type + \
+                select_from_info('experiment_type', ['single'] * len(experiment_names))
             names_all = names_all + experiment_names
             dirs_all = dirs_all + experiment_dirs
             y_filen = y_filen + y_filen1 * len(experiment_dirs)
@@ -316,12 +321,13 @@ def run_ConFire(namelist):
                           name=name,
                           time_series_percentiles=time_series_percentiles,
                           dir=dir,
+                          experiment_type = expt,
                           y_filen=yfile,
                           model_title=model_title,
                           subset_function = subset_function_eval,
                           subset_function_args = subset_function_args_eval
                          )
-                    for name, dir, yfile in zip(names_all, dirs_all, y_filen)
+                    for name, dir, expt, yfile in zip(names_all, dirs_all, exp_type, y_filen)
                 ]
         
         if len(args_list) > 1 and select_from_info('parallelize', True): 
@@ -342,7 +348,7 @@ def run_ConFire(namelist):
 
 if __name__=="__main__":
     namelist = 'namelists/isimip2425-test.txt'
-    #namelist = 'namelists/nrt2425.txt'
+    namelist = 'namelists/nrt2425.txt'
     #namelist = "namelists/ar7_clean.txt"
     run_ConFire(namelist)
 
