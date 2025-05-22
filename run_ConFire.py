@@ -106,7 +106,7 @@ def make_time_series(cube, name, figName, percentile = None, cube_assess = None,
     out_file_TS = figName + '/time_series-' + name + '-' + percentile_name + '.csv'
     if os.path.isfile(out_file_TS) and os.path.isfile(out_file_points) and grab_old:    
         return out_file_TS, out_file_points
-
+    
     if cube_assess is None: cube_assess = cube
     cube = add_lan_lon_bounds(cube)
     cube_assess = add_lan_lon_bounds(cube_assess)
@@ -157,7 +157,10 @@ def make_both_time_series(percentiles, *args, **kw):
 
 def run_experiment(training_namelist, namelist, control_direction, control_names, 
                    output_dir, output_file, 
-                   name = '', time_series_percentiles = None, *args, **kws):
+                   name = '', time_series_percentiles = None, 
+                   limitation_types = None, *args, **kws):
+
+    
     if "baseline" in name: 
         run_only = False
     else:
@@ -191,20 +194,25 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
                                        figName, cube_assess = Control[0], grab_old = grab_old)
 
     
-    if  control_names is None: return None
-
-    for ltype, FUN in zip(['standard', 'potential'],
-                          [Standard_limitation, Potential_limitation]):
-        
-        limitation = [FUN(training_namelist, namelist, i, 
-                      name, control_direction, *args, 
-                      Y = Y, X = X, lmask = lmask, scalers = scalers, 
-                      cube_assess = Control[0], **kws) \
+    if control_names is None: return None
+    
+    if limitation_types is not None:
+        limitation_types_funs = []
+        if 'standard' in limitation_types:
+            limitation_types_funs += [Standard_limitation]
+        if 'potential' in limitation_types:
+            limitation_types_funs += [Potential_limitation]
+    
+        for ltype, FUN in zip(limitation_types,limitation_types_funs):
+            limitation = [FUN(training_namelist, namelist, i, 
+                          name, control_direction, *args, 
+                          Y = Y, X = X, lmask = lmask, scalers = scalers, 
+                              cube_assess = Control[0], **kws) \
                         for i in range(len(control_direction))]
-        limitation_TS = np.array([make_both_time_series(time_series_percentiles, \
+            limitation_TS = np.array([make_both_time_series(time_series_percentiles, \
                                                         cube[0], ltype + '-' + name, figName,
                                                         grab_old = grab_old) \
-                           for cube, name in zip(limitation, control_names)])
+                               for cube, name in zip(limitation, control_names)])
         
     open(temp_file, 'a').close() 
 
@@ -302,6 +310,7 @@ def run_ConFire(namelist):
             experiments = select_from_info('experiment_experiment')
             periods = select_from_info('experiment_period')
             models = select_from_info('experiment_model')
+            limitation_types = select_from_info('limitation_types')
             experiment_dirs = find_replace_period_model(experiment_dirs)
             experiment_names = find_replace_period_model(experiment_names)
             exp_type = exp_type + \
@@ -311,7 +320,7 @@ def run_ConFire(namelist):
             y_filen = y_filen + y_filen1 * len(experiment_dirs)
         except:
             pass   
-        
+         
         args_list = [dict(training_namelist=training_namelist,
                           namelist=namelist,
                           control_direction=control_direction,
@@ -320,6 +329,7 @@ def run_ConFire(namelist):
                           output_file=output_file,
                           name=name,
                           time_series_percentiles=time_series_percentiles,
+                          limitation_types = limitation_types, 
                           dir=dir,
                           experiment_type = expt,
                           y_filen=yfile,
@@ -329,7 +339,7 @@ def run_ConFire(namelist):
                          )
                     for name, dir, expt, yfile in zip(names_all, dirs_all, exp_type, y_filen)
                 ]
-        
+        #args_list.reverse()
         if len(args_list) > 1 and select_from_info('parallelize', True): 
             try:
                 with get_context("spawn").Pool(processes=4) as pool:
@@ -348,7 +358,7 @@ def run_ConFire(namelist):
 
 if __name__=="__main__":
     namelist = 'namelists/isimip2425-test.txt'
-    namelist = 'namelists/nrt2425.txt'
+    #namelist = 'namelists/nrt2425.txt'
     #namelist = "namelists/ar7_clean.txt"
     run_ConFire(namelist)
 
