@@ -158,8 +158,7 @@ def make_both_time_series(percentiles, *args, **kw):
 def run_experiment(training_namelist, namelist, control_direction, control_names, 
                    output_dir, output_file, 
                    name = '', time_series_percentiles = None, 
-                   limitation_types = None, *args, **kws):
-
+                   limitation_types = None, controls_to_plot = None,*args, **kws):
     
     if "baseline" in name: 
         run_only = False
@@ -192,11 +191,10 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
     
     control_TS = make_both_time_series(time_series_percentiles, Control[0], 'Control', 
                                        figName, cube_assess = Control[0], grab_old = grab_old)
-
     
-    if control_names is None: return None
-    
-    if limitation_types is not None:
+    if limitation_types is not None and controls_to_plot is not None:
+        if control_names is None: 
+            control_names = [srt(i) for i in controls_to_plot]
         limitation_types_funs = []
         if 'standard' in limitation_types:
             limitation_types_funs += [Standard_limitation]
@@ -208,7 +206,7 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
                           name, control_direction, *args, 
                           Y = Y, X = X, lmask = lmask, scalers = scalers, 
                               cube_assess = Control[0], **kws) \
-                        for i in range(len(control_direction))]
+                        for i in controls_to_plot]
             limitation_TS = np.array([make_both_time_series(time_series_percentiles, \
                                                         cube[0], ltype + '-' + name, figName,
                                                         grab_old = grab_old) \
@@ -311,6 +309,8 @@ def run_ConFire(namelist):
             periods = select_from_info('experiment_period')
             models = select_from_info('experiment_model')
             limitation_types = select_from_info('limitation_types')
+            controls_to_plot = select_from_info('controls_to_plot', 
+                                                 range(len(control_direction)))
             experiment_dirs = find_replace_period_model(experiment_dirs)
             experiment_names = find_replace_period_model(experiment_names)
             exp_type = exp_type + \
@@ -330,6 +330,7 @@ def run_ConFire(namelist):
                           name=name,
                           time_series_percentiles=time_series_percentiles,
                           limitation_types = limitation_types, 
+                          controls_to_plot = controls_to_plot,
                           dir=dir,
                           experiment_type = expt,
                           y_filen=yfile,
