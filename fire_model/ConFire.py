@@ -33,7 +33,6 @@ class ConFire(object):
         self.x0 = select_param_or_default('x0', [0])
         self.log_control = select_param_or_default('log_control', 
                                                    [False] * len(self.control_Direction))
-        #set_trace()
         self.betas = select_param_or_default('betas', [[0]], stack = False)
         self.powers = select_param_or_default('powers', None, stack = False)
         self.driver_Direction = self.params['driver_Direction']
