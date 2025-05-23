@@ -4,12 +4,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Load the data
-factual = pd.read_csv("outputs/outputs/ConFire_Amazon-2425-attempt4/figs/_15-frac_points_0.5-baseline-control_TS/mean/points-Evaluate.csv", header=None)
-counterfactual = pd.read_csv("outputs/outputs/ConFire_Amazon-2425-attempt4/figs/_15-frac_points_0.5-counterfactual-control_TS/mean/points-Evaluate.csv", header=None)
+factual = pd.read_csv("outputs/outputs/ConFire_nrt2_Amazon-2425/figs/_13-frac_points_0.5-factual-control_TS/mean/points-Evaluate.csv", header=None)
+counterfactual = pd.read_csv("outputs/outputs/ConFire_nrt2_Amazon-2425/figs/_13-frac_points_0.5-counterfactual-control_TS/mean/points-Evaluate.csv", header=None)
 ix = [i for i in range(factual.shape[1]) if i % 12 in [1, 2, 3]]
 # Flatten the arrays to 1D
 factual_flat = factual.values[:,ix].flatten()*100
-counterfactual_flat = counterfactual.values[:,12:][:,ix].flatten()*100
+counterfactual_flat = counterfactual.values[:,ix].flatten()*100 #[:,12:]
 set_trace()
 
 # Scatter plot 1: Factual vs Counterfactual
@@ -57,7 +57,8 @@ else:
     jfm_ba = jfm_ba.max(axis=1)*10  # mean over JFM
 
 # Mean burned area during JFM
-jfm_mean_value = jfm_ba.mean().item()  # Get scalar
+set_trace()
+jfm_mean_value = jfm_ba.mean(axis = (1,2))[-3:].mean().item()*100  # Get scalar
 plt.axvline(jfm_mean_value, color='red', linestyle='--', label='Observed Burned Area')
 
 mask = factual_flat > jfm_mean_value
