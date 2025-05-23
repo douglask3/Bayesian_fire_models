@@ -9,11 +9,11 @@ import pandas as pd
 from pdb import set_trace
 
 # List of regions
-regions = ["Amazon", "Congo", "LA", "Pantanal"]
+regions = ["Amazon", "Congo", "LA", "Pantanal", "NWIndia", "Alberta"]
 csv_dir_out = 'data/data/driving_data2425/'
 
 # Set up a 2x3 grid of subplots
-fig, axes = plt.subplots(2, 2, figsize=(18, 8))#, constrained_layout=True)
+fig, axes = plt.subplots(2, 3, figsize=(18, 8))#, constrained_layout=True)
 axes = axes.flatten()  # Flatten to make it easier to loop through
 
 
