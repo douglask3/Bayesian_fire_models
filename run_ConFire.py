@@ -69,7 +69,6 @@ def above_percentile_mean(cube, cube_assess = None, percentile = 0.95):
     # Mask out grid cells below the area-weighted 95th percentile threshold
     
     masked_cube = cube.copy()
-    #masked_cube.data = np.ma.masked_less(cube_assess.data, threshold_value)
     masked_cube.data[cube_assess.data < threshold_value] = np.nan
     masked_cube.data.mask[cube_assess.data < threshold_value] = True
     
@@ -77,7 +76,7 @@ def above_percentile_mean(cube, cube_assess = None, percentile = 0.95):
     masked_area_cube = area_cube.copy()
     
     mean_cube = masked_cube.collapsed(['latitude', 'longitude'], iris.analysis.MEAN, weights=masked_area_cube)
-    #set_trace()#0.00125249
+    
     return(mean_cube)
     
 def add_lan_lon_bounds(cube):
@@ -92,18 +91,18 @@ def add_lan_lon_bounds(cube):
         pass
     return(cube)
     
-def make_time_series(cube, name, figName, percentile = None, cube_assess = None, 
+def make_time_series(cube, name, output_path, percentile = None, cube_assess = None, 
                      grab_old = False, *args, **kw):
 
     if percentile is None or percentile == 0.0:        
-        out_dir = figName + '/mean/'
+        out_dir = output_path + '/mean/'
         percentile_name = '0.0' 
     else:
-        out_dir = figName + '/pc-' + str(percentile) + '/'
+        out_dir = output_path + '/pc-' + str(percentile) + '/'
         percentile_name = str(percentile)
     
     out_file_points = out_dir + 'points-' + name + '.csv'
-    out_file_TS = figName + '/time_series-' + name + '-' + percentile_name + '.csv'
+    out_file_TS = output_path + '/time_series-' + name + '-' + percentile_name + '.csv'
     if os.path.isfile(out_file_TS) and os.path.isfile(out_file_points) and grab_old:    
         return out_file_TS, out_file_points
     
@@ -135,11 +134,20 @@ def make_time_series(cube, name, figName, percentile = None, cube_assess = None,
         
     
     makeDir(out_dir)
-    np.savetxt(out_file_points, area_weighted_mean.data, delimiter=',')
+    def output_cube_to_csv(cube, extra_dim, filename):
+        data = cube.data
+        realizations = cube.coord(extra_dim).points
+        times = cube.coord('time').units.num2date(cube.coord('time').points)
+        df = pd.DataFrame(data, index=realizations, columns=[t.isoformat() for t in times])
+        df.index.name = extra_dim
+        df.to_csv(filename)
+        #np.savetxt(out_file_points, area_weighted_mean.data, delimiter=',')
+    output_cube_to_csv(area_weighted_mean, 'realization', out_file_points)
     
     TS = area_weighted_mean.collapsed('realization', 
                                       iris.analysis.PERCENTILE, percent=[5, 10, 25, 75, 90, 95])
     
+    output_cube_to_csv(TS, 'percentile_over_realization', out_file_TS)
     time_coord = TS.coord('time')
     time_datetime = time_coord.units.num2date(time_coord.points)
     time_datetime = cftime.date2num(time_datetime, 'days since 0001-01-01 00:00:00')/365.24
@@ -186,10 +194,14 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
     
     
     grab_old = read_variables_from_namelist(namelist)['grab_old_trace']
+    
+    out_dir_ts = output_dir +'/time_series/' +  output_file + '/' + name
     evaluate_TS = make_both_time_series(time_series_percentiles, Evaluate[0], 'Evaluate', 
-                                        figName, cube_assess = Control[0], grab_old = grab_old)
+                                        out_dir_ts,
+                                        cube_assess = Control[0], grab_old = grab_old)
     
     control_TS = make_both_time_series(time_series_percentiles, Control[0], 'Control', 
+                                       out_dir_ts,
                                        figName, cube_assess = Control[0], grab_old = grab_old)
     
     if limitation_types is not None and controls_to_plot is not None:
@@ -208,7 +220,7 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
                               cube_assess = Control[0], **kws) \
                         for i in controls_to_plot]
             limitation_TS = np.array([make_both_time_series(time_series_percentiles, \
-                                                        cube[0], ltype + '-' + name, figName,
+                                                        cube[0], ltype + '-' + name, out_dir_ts,
                                                         grab_old = grab_old) \
                                for cube, name in zip(limitation, control_names)])
         
@@ -362,4 +374,4 @@ if __name__=="__main__":
     #namelist = 'namelists/nrt2425.txt'
     #namelist = "namelists/ar7_clean.txt"
     run_ConFire(namelist)
-
+    
