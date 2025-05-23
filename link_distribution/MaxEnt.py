@@ -1,5 +1,6 @@
 import pytensor
 import pytensor.tensor as tt
+from pytensor.tensor import gammaln
 from pytensor.tensor import TensorVariable
 import pymc as pm
 from typing import Optional, Tuple
@@ -95,9 +96,14 @@ class MaxEnt(object):
 
         mean_fx = tt.mean(fx)
         mean_y = tt.mean(Y)
-        #set_trace()
-        logp_global = mean_y * tt.log(mean_fx) + (1 - mean_y) * tt.log(1 - mean_fx)
-        return prob + logp_global #tt.sum(prob)
+        k = Ncells/2.0 # 1.0/tt.var(Y)#
+        epsilon = 0.000000000001
+        alpha = mean_y * k + epsilon
+        beta = (1 - mean_y) * k + epsilon
+        logp_global = ((alpha - 1) * tt.log(mean_fx)+ (beta - 1) * tt.log(1 - mean_fx) \
+                       - (gammaln(alpha) + gammaln(beta) - gammaln(alpha + beta)))
+        #logp_global = mean_y * tt.log(mean_fx) + (1 - mean_y) * tt.log(1 - mean_fx)
+        return prob + logp_global/Ncells #tt.sum(prob)
     
     def define_qSpread_param(self, params, param_names, inference = True, sigma = None):
         #set_trace()
