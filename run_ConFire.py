@@ -237,7 +237,7 @@ def run_experiment_wrapper(kwargs):
         return (kwargs, f"error: {e}")
 
 def run_ConFire(namelist):   
-    
+    print(f"Running ConFLAME with namelist: {namelist}")
     run_info = read_variables_from_namelist(namelist) 
 
     def select_from_info(item, alternative = None):
@@ -352,7 +352,7 @@ def run_ConFire(namelist):
                          )
                     for name, dir, expt, yfile in zip(names_all, dirs_all, exp_type, y_filen)
                 ]
-        #args_list.reverse()
+        args_list.reverse()
         if len(args_list) > 1 and select_from_info('parallelize', True): 
             try:
                 with get_context("spawn").Pool(processes=4) as pool:
@@ -370,7 +370,13 @@ def run_ConFire(namelist):
         for region in regions: run_for_regions(region)
 
 if __name__=="__main__":
-    namelist = 'namelists/isimip2425-test.txt'
+    import sys
+
+    if len(sys.argv) < 2:
+        print("Usage: python run_ConFire.py <namelist_path>")
+        sys.exit(1)
+    namelist = sys.argv[1]
+    #namelist = 'namelists/isimip2425-test.txt'
     #namelist = 'namelists/nrt2425.txt'
     #namelist = "namelists/ar7_clean.txt"
     run_ConFire(namelist)
