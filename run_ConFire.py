@@ -21,7 +21,8 @@ def call_eval(training_namelist, namelist,
     
    
 def Standard_limitation(training_namelist, namelist,
-                        controlID, name, control_direction, *args, **kws):   
+                        controlID, name, control_direction, *args, **kws):  
+    
     control_Directioni = np.array(control_direction.copy())
     control_Directioni[:] = 0.0
     control_Directioni[controlID] = control_direction[controlID]
@@ -130,8 +131,6 @@ def make_time_series(cube, name, output_path, percentile = None, cube_assess = N
 
         area_weighted_mean = [percentile_for_relization(cube, i) for i in range(cube.shape[0])]
         area_weighted_mean = iris.cube.CubeList(area_weighted_mean).merge_cube()       
-        
-        
     
     makeDir(out_dir)
     def output_cube_to_csv(cube, extra_dim, filename):
@@ -174,7 +173,7 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
         run_only = True
     print("running: " + name)
     name = name + '-'
-
+    
     temp_file = 'temp/run_ConFire_lock' + (output_dir + \
             output_file + name).replace('/', '_') + '.txt'
     #if os.path.isfile(temp_file): return None
@@ -192,17 +191,16 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
                         sample_error = False, filename_out_ext = 'none_stochastic',
                         *args, **kws)
     
-    
     grab_old = read_variables_from_namelist(namelist)['grab_old_trace']
-    
     out_dir_ts = output_dir +'/time_series/' +  output_file + '/' + name
+    
     evaluate_TS = make_both_time_series(time_series_percentiles, Evaluate[0], 'Evaluate', 
                                         out_dir_ts,
                                         cube_assess = Control[0], grab_old = grab_old)
     
     control_TS = make_both_time_series(time_series_percentiles, Control[0], 'Control', 
                                        out_dir_ts,
-                                       figName, cube_assess = Control[0], grab_old = grab_old)
+                                       cube_assess = Control[0], grab_old = grab_old)
     
     if limitation_types is not None and controls_to_plot is not None:
         if control_names is None: 
@@ -220,7 +218,8 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
                               cube_assess = Control[0], **kws) \
                         for i in controls_to_plot]
             limitation_TS = np.array([make_both_time_series(time_series_percentiles, \
-                                                        cube[0], ltype + '-' + name, out_dir_ts,
+                                                        cube[0], \
+                                                        ltype + '-' + name, out_dir_ts, \
                                                         grab_old = grab_old) \
                                for cube, name in zip(limitation, control_names)])
         
@@ -352,7 +351,7 @@ def run_ConFire(namelist):
                          )
                     for name, dir, expt, yfile in zip(names_all, dirs_all, exp_type, y_filen)
                 ]
-        args_list.reverse()
+        #args_list.reverse()
         if len(args_list) > 1 and select_from_info('parallelize', True): 
             try:
                 with get_context("spawn").Pool(processes=4) as pool:
