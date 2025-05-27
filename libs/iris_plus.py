@@ -6,7 +6,33 @@ from pdb import set_trace
 
 #Function to sort out the time dimension
 def sort_time(cube, field, filename):
+    '''
+    Standardises and sorts the time coordinate in an Iris cube. 
+    Ensures consistent calendar units, resets time bounds, 
+    and adds useful time-based coordinates (year, month).
+
+    Inputs:
+    -------
+    cube     - iris.cube.Cube
+               The data cube with a time coordinate to be standardised.
+    field    - Not used directly in this function, but often required 
+               when this function is used as a callback during loading 
+               (e.g., in iris.load_cubes).
+    filename - Not used directly in this function, but can be useful 
+              in error messages or logging if extended later.
+
+    Operations:
+    ---------
+    - Clears any existing time bounds
+    - Converts time coordinate to "days since 1661-01-01" with proleptic Gregorian calendar
+    - Replaces and resets the time dimension in the cube
+    - Adds 'year' and 'month' auxiliary coordinates based on the time coordinate
+    - Attempts to remove the 'history' attribute if present
     
+    Output:
+    -------
+        cube     - The modified Iris cube with cleaned and standardised time metadata
+    '''
     cube.coord("time").bounds=None
     tcoord = cube.coord("time")
     tcoord.units = cf_units.Unit(tcoord.units.origin, calendar="gregorian")
@@ -14,13 +40,11 @@ def sort_time(cube, field, filename):
     tcoord.units = cf_units.Unit(tcoord.units.origin, calendar="proleptic_gregorian")
     cube.remove_coord("time")
     cube.add_dim_coord(tcoord, 0) # might need to find this dimension
-
+    
     try:
         iris.coord_categorisation.add_year(cube, 'time')
     except:
-        pass
-
-    
+        pass  
     try:               
         try:
             cube.remove_coord("month")
@@ -41,7 +65,7 @@ def add_bounds(cube):
     """
     Add bounds to common spatial and temporal coordinates in an Iris cube.
 
-    Parameters:
+    Inputs:
     ----------
     cube : iris.cube.Cube
         An Iris cube that may lack coordinate bounds for 'time', 'longitude', or 'latitude'.
