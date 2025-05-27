@@ -1,5 +1,6 @@
 from train import *
 from evaluate import *
+from iris_plus import add_bounds
 
 from   io     import StringIO
 import numpy  as np
@@ -79,18 +80,7 @@ def above_percentile_mean(cube, cube_assess = None, percentile = 0.95):
     mean_cube = masked_cube.collapsed(['latitude', 'longitude'], iris.analysis.MEAN, weights=masked_area_cube)
     
     return(mean_cube)
-    
-def add_lan_lon_bounds(cube):
-    try: 
-        cube.coord('latitude').guess_bounds()
-    except:
-        pass
-    
-    try:
-        cube.coord('longitude').guess_bounds()
-    except:
-        pass
-    return(cube)
+
     
 def make_time_series(cube, name, output_path, percentile = None, cube_assess = None, 
                      grab_old = False, *args, **kw):
@@ -108,8 +98,8 @@ def make_time_series(cube, name, output_path, percentile = None, cube_assess = N
         return out_file_TS, out_file_points
     
     if cube_assess is None: cube_assess = cube
-    cube = add_lan_lon_bounds(cube)
-    cube_assess = add_lan_lon_bounds(cube_assess)
+    cube = add_bounds(cube)
+    cube_assess = add_bounds(cube_assess)
     
     cube.data = np.ma.masked_invalid(cube.data)
     grid_areas = iris.analysis.cartography.area_weights(cube)
