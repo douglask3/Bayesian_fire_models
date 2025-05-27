@@ -46,7 +46,6 @@ def Potential_limitation(training_namelist, namelist,
                      *args, **kws)
 
 def above_percentile_mean(cube, cube_assess = None, percentile = 0.95):
-    print("finding " + str(percentile) + " for year" + str(cube.coord('year').points))
     if cube_assess is None: cube_assess = cube
     area_cube = iris.analysis.cartography.area_weights(cube_assess)
     
@@ -59,32 +58,22 @@ def above_percentile_mean(cube, cube_assess = None, percentile = 0.95):
     cumulative_area = np.cumsum(sorted_area_data * sorted_cube_data)
 
     # Determine the total area of the grid cells
-    total_area = np.sum(sorted_area_data * sorted_cube_data)
+    total_area = np.nansum(sorted_area_data * sorted_cube_data)
 
     # Find the index where the cumulative sum exceeds the percentile threshold of the total area
     threshold_index = np.argmax(cumulative_area > (percentile/100.0) * total_area)
 
     # Use this index to obtain the fractional burnt value 
     # corresponding to the area-weighted percentile threshold
-    threshold_value = sorted_cube_data[threshold_index]
-    
-    # Mask out grid cells below the area-weighted 95th percentile threshold
-    
-    masked_cube = cube.copy()
-    masked_cube.data[cube_assess.data < threshold_value] = np.nan
-    masked_cube.data.mask[cube_assess.data < threshold_value] = True
-    
-    # Calculate the area of the grid cells above the threshold
-    masked_area_cube = area_cube.copy()
-    
-    mean_cube = masked_cube.collapsed(['latitude', 'longitude'], iris.analysis.MEAN, weights=masked_area_cube)
-    
-    return(mean_cube)
+    threshold_value = sorted_cube_data[threshold_index]#
+
+    mask = (cube_assess.data >= threshold_value) & (~cube_assess.data.mask)
+    return np.sum(cube.data[mask] * area_data_np[mask]) / np.sum(area_data_np[mask])
 
     
 def make_time_series(cube, name, output_path, percentile = None, cube_assess = None, 
                      grab_old = False, *args, **kw):
-
+    print("finding " + str(percentile) + " for " + name)
     if percentile is None or percentile == 0.0:        
         out_dir = output_path + '/mean/'
         percentile_name = '0.0' 
@@ -103,47 +92,38 @@ def make_time_series(cube, name, output_path, percentile = None, cube_assess = N
     
     cube.data = np.ma.masked_invalid(cube.data)
     grid_areas = iris.analysis.cartography.area_weights(cube)
-     
+            
     if percentile is None or percentile == 0.0:
         area_weighted_mean =  [cube[i].collapsed(['latitude', 'longitude'],
                                                  iris.analysis.MEAN, weights = grid_areas[i]) \
                                    for i in range(cube.shape[0])]
         
-        area_weighted_mean = iris.cube.CubeList(area_weighted_mean).merge_cube()
+        area_weighted_mean = iris.cube.CubeList(area_weighted_mean).merge_cube().data
     
     else:
         def percentile_for_relization(cube, i):
+            print("\tprocessing enemble" + str(i))
             out = [above_percentile_mean(cube[i][j], cube_assess[i][j], percentile, *args, **kw) for j in range(cube.shape[1])]
-            for i in range(len(out)): out[i].remove_coord('month')
-            for i in range(len(out)): out[i].remove_coord('year')
-            out = iris.cube.CubeList(out).merge_cube()
-            return(out)
+            return out
 
-        area_weighted_mean = [percentile_for_relization(cube, i) for i in range(cube.shape[0])]
-        area_weighted_mean = iris.cube.CubeList(area_weighted_mean).merge_cube()       
+        area_weighted_mean = np.array([percentile_for_relization(cube, i) \
+                                      for i in range(cube.shape[0])])      
     
     makeDir(out_dir)
-    def output_cube_to_csv(cube, extra_dim, filename):
-        data = cube.data
-        realizations = cube.coord(extra_dim).points
+    def output_cube_to_csv(data, realizations, extra_dim,  filename): 
         times = cube.coord('time').units.num2date(cube.coord('time').points)
         df = pd.DataFrame(data, index=realizations, columns=[t.isoformat() for t in times])
         df.index.name = extra_dim
         df.to_csv(filename)
         #np.savetxt(out_file_points, area_weighted_mean.data, delimiter=',')
-    output_cube_to_csv(area_weighted_mean, 'realization', out_file_points)
+    output_cube_to_csv(area_weighted_mean, cube.coord('realization').points, 
+                       'realization', out_file_points)
+
+    percentiles = [5, 10, 25, 75, 90, 95]
+    TS = np.nanpercentile(area_weighted_mean,  percentiles, axis = 0)
     
-    TS = area_weighted_mean.collapsed('realization', 
-                                      iris.analysis.PERCENTILE, percent=[5, 10, 25, 75, 90, 95])
-    
-    output_cube_to_csv(TS, 'percentile_over_realization', out_file_TS)
-    time_coord = TS.coord('time')
-    time_datetime = time_coord.units.num2date(time_coord.points)
-    time_datetime = cftime.date2num(time_datetime, 'days since 0001-01-01 00:00:00')/365.24
-    TS = np.append(time_datetime[:, None], np.transpose(TS.data), axis = 1)
-    
-    
-    np.savetxt(out_file_TS, TS, delimiter=',', header = "year,p5%,p10%, p25%,p75%,p90%,p95%")
+    output_cube_to_csv(TS, percentiles,  'percentiles', out_file_TS)
+
     return out_file_TS, out_file_points
 
 def make_both_time_series(percentiles, *args, **kw):
@@ -341,7 +321,7 @@ def run_ConFire(namelist):
                          )
                     for name, dir, expt, yfile in zip(names_all, dirs_all, exp_type, y_filen)
                 ]
-        #args_list.reverse()
+        args_list.reverse()
         if len(args_list) > 1 and select_from_info('parallelize', True): 
             try:
                 with get_context("spawn").Pool(processes=4) as pool:
