@@ -38,14 +38,33 @@ def sort_time(cube, field, filename):
 
 
 def add_bounds(cube):
+    """
+    Add bounds to common spatial and temporal coordinates in an Iris cube.
+
+    Parameters:
+    ----------
+    cube : iris.cube.Cube
+        An Iris cube that may lack coordinate bounds for 'time', 'longitude', or 'latitude'.
+
+    Returns:
+    -------
+    iris.cube.Cube
+        The same Iris cube, with bounds guessed and added (where possible) to
+        the 'time', 'longitude', and 'latitude' coordinates.
+
+    Notes:
+    -----
+    - If a coordinate already has bounds, or if guessing bounds fails, the function
+      silently skips it (using try/except).
+    - This can be useful for preparing data for operations that require coordinate bounds
+      (e.g., regridding or area averaging).
+    """
     coords = ('time', 'longitude', 'latitude')
     for coord in coords:
         try: 
             cube.coord(coord).guess_bounds()
         except:
-            pass
-            #if not cube.coord(coord).has_bounds():
-            
+            pass            
     return(cube)
 
 
