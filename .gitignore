@@ -10,3 +10,4 @@ figs/
 *.pyc
 temp*
 *donotcommit*
+pymc_env/*
