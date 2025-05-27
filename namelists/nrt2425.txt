@@ -1,35 +1,37 @@
 ## model info
-regions:: ['Amazon']#'LA', 'Congo', 'Pantanal', 'NWIndia', 'Alberta']
-model_title::  'ConFire_nrt4<<region>>-2425'
+regions:: ['Amazon', 'LA', 'Congo', 'Pantanal', 'NWIndia', 'Alberta']
+model_title::  'ConFire_nrt4<<region>>-2425-fuel2'
 
 ## input data paths and filenames
 
 dir_training:: "data/data/driving_data2425/<<region>>/nrt/era5_monthly/"
 y_filen:: "burnt_area.nc"
 CA_filen:: None
-x_filen_list:: ["precip", "dry_days", "max_consec_dry", "tas_max", "hurs_min", "hurs_mean", "wind_max", "cropland_regridded_to_era5", "pasture_regridded_to_era5", "rural_population_regridded_to_era5", "total_irrigated_regridded_to_era5", "urban_area_regridded_to_era5", "urban_population_regridded_to_era5"]
+x_filen_list:: ["precip", "dry_days", "max_consec_dry", "tas_max", "hurs_min", "hurs_mean", "wind_max", "cropland_regridded_to_era5", "pasture_regridded_to_era5", "rural_population_regridded_to_era5", "total_irrigated_regridded_to_era5", "urban_area_regridded_to_era5", "urban_population_regridded_to_era5", "cvh_.nc", "cvl_.nc", "LI.nc", "month_laih.nc", "month_lail.nc", "TV_CFUEL_CORRECTED_MAP.nc"]
+#TV_DFMC.nc, TV_LFMC.nc
 Y_scale:: 0.01
 
 ## Model info
 model_class:: ConFire
 priors:: {'pname': "link-qSpread_mu",'np': 1, 'dist': 'Normal', 'mu': 1.0, 'sigma': 0.5}
 priors:: {'pname': "link-qSpread_sigma",'np': 1, 'dist': 'HalfNormal', 'sigma': 0.5}
-
 #priors:: {'pname': "link-qSpread",'np': 1, 'dist': 'LogNormal', 'mu': 2.0, 'sigma': 1.0}
-priors:: {'pname': "controlID", 'value': [[0, 1, 2, 3, 4, 5], [7], [8, 9, 11, 12], [8, 9, 10, 11, 12]]}
-priors:: {'pname': "control_Direction", 'value': [1, 1, 1, 1, 1]}
-priors:: {'pname': "driver_Direction", 'value': [[-1, 1, 1, 1, -1, -1], [1], [1, 1, 1, 1], [-1, -1, -1, -1, -1]]}
+priors:: {'pname': "controlID", 'value': [[13, 14, 16, 17, 18], [0, 1, 2, 3, 4, 5], [6], [7, 8, 9, 11, 12, 15], [7, 8, 9, 10, 11, 12]]}
+priors:: {'pname': "driver_Direction", 'value': [[1, 1, 1, 1, 1], [-1, 1, 1, 1, -1, -1], [1], [1, 1, 1, 1, 1, 1], [-1, -1, -1, -1, -1, -1]]}
+priors:: {'pname': "control_Direction", 'value': [1, 1, 1, 1, 1, 1]}
 #priors:: {'pname': "Fmax",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 1.0}
 #priors:: {'pname': 'lin_correct', 'np': 1, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 4.0}
-priors:: {'pname': "x0",'np': 4, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
+priors:: {'pname': "x0",'np': 5, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
+priors:: {'pname': "betas",'np': 5, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "betas",'np': 6, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "betas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
-priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
-priors:: {'pname': "betas",'np': 5, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas",'np': 6, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas",'np': 6, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 5, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 priors:: {'pname': "powers",'np': 6, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
-priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
-priors:: {'pname': "powers",'np': 5, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 6, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 6, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 
 ### optimization info
 inference_step_type:: "metropolis"
@@ -55,9 +57,11 @@ dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
 cmap:: 'OrRd'
 dcmap:: 'RdBu_r'
 dir_projecting:: "data/data/driving_data2425/<<region>>/nrt/era5_monthly/"
-parallelize:: False
+parallelize:: True
 
 ## experiment info
+limitation_types:: ['standard']
+controls_to_plot:: [0, 1, 2, 3, 4]
 experiment_dir:: ["data/data/driving_data2425/<<region>>/nrt/era5_monthly/", "data/data/driving_data2425/<<region>>/nrt/era5_monthly/CF/||data/data/driving_data2425/<<region>>/nrt/era5_monthly/"]
 experiment_type:: ['single', 'ensemble-single']
 experiment_names:: ["factual", "counterfactual"]
