@@ -8,16 +8,20 @@ import os
 import matplotlib.colors as mcolors
 from pdb import set_trace
 # Define the base directory
-base_dir = "outputs/outputs/ConFire_Amazon-2425-simplified2-qspreadSto-29/samples/_15-frac_points_0.2/baseline-/"
+base_dir = "outputs/outputs/ConFire_nrt4Amazon-2425-fuel2/samples/_19-frac_points_0.5//baseline-/"
 
 # List of experiment subdirectories
 experiments = ["control", "Evaluate", "Standard_0", "Standard_1", "Standard_2", "Standard_3" , "Standard_4"] #, "Potential0", "Potential1"
 
 same_norm = False
 
+max_smaples = 100
+
 # Function to load and concatenate all files in a directory
 def load_ensemble(directory):
     file_paths = sorted(glob.glob(os.path.join(directory, "sample-pred*.nc")))
+    skips = max([1, round(len(file_paths)/max_smaples)])
+    file_paths = file_paths[::skips]
     
     cubes = iris.cube.CubeList([iris.load_cube(fp) for fp in file_paths])
     return cubes.merge_cube()  # Merge along realization dimension if possible
