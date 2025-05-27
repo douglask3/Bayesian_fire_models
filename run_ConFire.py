@@ -73,7 +73,7 @@ def above_percentile_mean(cube, cube_assess = None, percentile = 0.95):
     
 def make_time_series(cube, name, output_path, percentile = None, cube_assess = None, 
                      grab_old = False, *args, **kw):
-    print("finding " + str(percentile) + " for " + name)
+    print("finding " + str(percentile) + " for " + name + "\n\t into:" + output_path)
     if percentile is None or percentile == 0.0:        
         out_dir = output_path + '/mean/'
         percentile_name = '0.0' 
