@@ -9,6 +9,9 @@ from BayesScatter import *
 from response_curves import *
 from jackknife import *
 
+#from train import *
+from extend_np_range import *
+
 from read_variable_from_netcdf import *
 from combine_path_and_make_dir import * 
 from namelist_functions import *
@@ -33,9 +36,12 @@ from scipy.optimize import linear_sum_assignment
 from pdb import set_trace
 
 
+def flatten(xss):
+    return [x for xs in xss for x in xs]
+
 def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Ncols = 2,
                                      figure_filename = None):
-    
+   
     def flatten_to_dim0(cube):           
         x = cube.data.flatten()[lmask]        
         x = x.reshape([cube.shape[0], int(len(x)/cube.shape[0])])
@@ -145,8 +151,10 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
                          scale = 1, figure_filename = figure_filename + 'obs_liklihood')
     
     ax = plt.subplot(Nrows, Ncols, plot_n + 3)
-    
-    BayesScatter(Obs, Sim[0], lmask,  0.000001, 0.000001, ax)
+
+    BayesScatter(Obs, Sim[0], lmask,  0.000001, 0.000001, ax, 
+                 figure_filename = figure_filename + 'Scatter')
+
     
     pos = np.mean(X[np.newaxis, :, :] > Y, axis = 0)
     pos[X == 0] = np.nan
@@ -173,10 +181,33 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
     
 
 def compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, levels, cmap,
-                        dlevels = None, dcmap = None,
                         *args, **kw):    
+ 
+    
+    """ Plots the summery evaluation plot.
+    Arguments:
+        filename_out -- string of filename of resultant figure
+        dir_outputs -- string of path where to output figure. The figure gets output into a 
+                dir 'fig' within this (which is created if it doesnt already exist)
+        Obs -- An iris cube of coords time, latitude and longitude that the model (Sim) will 
+                be evaluated against
+	Sim -- An iris cube of coords realizations time, latitude and longitude that the
+                function evaluates. Realizations coord is teh different model enembles
+        lmask -- numpy array of same shape a Obs that describes which are valid cells of 
+                comparison.
+	levels -- list containing numerics, describing the colourbar levels when plotting
+                straight map of Obs and Sim.
+        cmap -- string of name of colourmap for maps.
+    
+    Returns:
+        evaluation file wiyj map of Obs, 10-90%ile of Sim, scatter of liklihood of Obs
+        giving Sim and maps of Obs given Sim likihood ranges, and ''Bayesian Scatter' of
+        Obs vs Sim with positio of Obs in Sim as maps.
+    """
+    
     plt.clf()
-    plt.close() 
+    plt.close()
+    
     fig_dir = combine_path_and_make_dir(dir_outputs, '/figs/')
     figure_filename = fig_dir + filename_out + '-evaluation'
     figure_dir =  combine_path_and_make_dir(figure_filename)
@@ -197,6 +228,18 @@ def compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, levels, cmap
 
 def evaluate_MaxEnt_model_from_namelist(training_namelist = None, evaluate_namelist = None, 
                                         **kwargs):
+    """ Runs evaluation from namelists. Reads namelists and passes to evaluate_MaxEnt_model.
+    Arguments:
+        training_namelist -- a namelist see 'namelists/simple_example.txt' for an example,
+            with all the information that is output from the training step of the workflow 
+            (see train.py)
+        evaluate_namelist -- a namelist see 'namelists/simple_example.txt' for an example,
+            with all the information required for evaluation. Any repeats in evaluate_namelist              overwrite training_namelist   
+        **kwargs -- additional args for us in evaluate_MaxEnt_model. Overwrites any mathcing
+            arguments in namelist  
+    Returns:
+        see evaluate_MaxEnt_model
+    """
 
     variables = read_variable_from_namelist_with_overwite(training_namelist, **kwargs)
     variables.update(read_variable_from_namelist_with_overwite(evaluate_namelist, **kwargs))
@@ -270,6 +313,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
                           run_response_curves = False, 
                           response_grouping = None, run_only = False, return_inputs = False,
                           Y = None, X = None, lmask = None, scalers = None, *args, **kw):
+
     """ Runs prediction and evalutation of the sampled model based on previously run trace.
     Arguments:
         trace - pymc traces nc or nc fileiles, probably from a 'train_MaxEnt_model' run
@@ -372,8 +416,9 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
     #plot_limitation_maps(fig_dir, filename_out, **common_args)
     
     common_args['Sim'] = Sim[0]
-    #set_trace()
-    #jackknife(x_filen_list, fig_dir = fig_dir, **common_args)       
+
+     
+
     filename_out += filename_out_ext 
     compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, *args, **kw)
     Bayes_benchmark(filename_out, fig_dir, Sim, Obs, lmask)
