@@ -18,7 +18,7 @@ shape_names = list("northeast India",
                    "Amazon and Rio Negro rivers",
                    "Pantanal basin")
 
-region_names = c('NWIndia', 'Alberta', 'LA', 'Congo', 'Amazon', 'Pantanal')
+region_names = c('NEIndia', 'Alberta', 'LA', 'Congo', 'Amazon', 'Pantanal')
 eg_raster_dir  = "data/data/driving_data2425/<<REGION>>/isimp3a/obsclim/GSWP3-W5E5/period_2002_2019/tree_cover_jules-es.nc"
 eg_raster_nrt_dir = 'data/data/driving_data2425/<<REGION>>/nrt/era5_monthly/precip.nc'
 out_file_hires  = "data/data/driving_data2425/<<REGION>>/burnt_area.nc"
