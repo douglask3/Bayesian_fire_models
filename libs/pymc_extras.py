@@ -3,6 +3,7 @@ import numpy as np
 import pymc as pm
 import iris
 import random
+import datetime
 
 import os
 import sys
@@ -93,7 +94,7 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
 
         
         print("Generating Sample:" + file_sample)
-
+        print(datetime.datetime.now())
         param_in = contruct_param_comb(i, params, params_names, extra_params)
         link_param_in = {key: value for key, value in param_in.items() \
                        if key.startswith('link-')}

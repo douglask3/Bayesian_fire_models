@@ -7,12 +7,15 @@ import iris
 from iris_plus import *
 from constrain_cubes_standard import *
 from scipy.interpolate import RegularGridInterpolator
+import datetime
 
 def read_variable_from_netcdf_from_dir(dir, filename, find_no_files = False, ens_no = None):
     print("Opening:")
     print(filename)
     print("From:")
     print(dir)
+    print("At:")
+    print(datetime.datetime.now())
     
     if filename[0] == '~' or filename[0] == '/' or filename[0] == '.': 
         dir = ''
