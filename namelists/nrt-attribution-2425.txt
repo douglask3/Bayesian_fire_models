@@ -1,6 +1,6 @@
 ## model info
-regions:: ['Amazon', 'LA', 'Congo', 'Pantanal', 'NWIndia', 'Alberta']
-model_title::  'ConFire_nrt4<<region>>-2425-fuel2'
+regions:: ['LA', 'Congo', 'Pantanal', 'Amazon', 'NEIndia', 'Alberta']
+model_title::  'ConFLAME_nrt<<region>>-2425'
 
 ## input data paths and filenames
 
