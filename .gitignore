@@ -1,6 +1,13 @@
 *swp
+*.swo
 outputs/
 temp/
 data/
-
+figs/
+*.png
 *__pycache__*
+*.pdf
+*.pyc
+temp*
+*donotcommit*
+pymc_env/*

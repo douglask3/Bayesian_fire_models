@@ -1,16 +1,58 @@
 import numpy as np
 from pdb import set_trace
-
+import glob
+import os
+from random import randrange
 import iris
-from libs.iris_plus import *
-from libs.constrain_cubes_standard import *
-from libs.read_variable_from_netcdf import *
+from iris_plus import *
+from constrain_cubes_standard import *
+from scipy.interpolate import RegularGridInterpolator
+import datetime
+
+def read_variable_from_netcdf_from_dir(dir, filename, find_no_files = False, ens_no = None):
+    print("Opening:")
+    print(filename)
+    print("From:")
+    print(dir)
+    print("At:")
+    print(datetime.datetime.now())
+    
+    if filename[0] == '~' or filename[0] == '/' or filename[0] == '.': 
+        dir = ''
+    
+    if find_no_files or ens_no is not None:
+        files = glob.glob(dir + '**', recursive = True)
+        files = [file for file in files if filename in file]
+        if find_no_files:
+            return(len(files))
+
+    if filename[-3:] != '.nc': 
+        filename = filename + '.nc'
+
+    try:
+        if ens_no is not None and len(files) > 1:
+            try:    
+                dataset = iris.load_cube(files[ens_no], callback=sort_time)
+            except:
+                dataset = iris.load_cube(files[ens_no])
+        elif isinstance(filename, str):        
+            dataset = iris.load_cube(dir + filename, callback=sort_time)
+        else:
+            dataset = iris.load_cube(dir + filename[0], filename[1], callback=sort_time)
+    except:
+        try:
+            dataset = iris.load_cube(dir + filename)
+        except:
+            dataset = None
+    return dataset
 
 def read_variable_from_netcdf(filename, dir = '', subset_function = None, 
                               make_flat = False, units = None, 
                               subset_function_args = None,
-                              time_series = None, 
-                              time_points = None, return_time_points = False,
+                              time_series = None, time_points = None, extent = None,
+                              return_time_points = False, return_extent = False,
+                              find_no_files = False,
+                              ens_no = None,
                               *args, **kw):
     """Read data from a netCDF file 
         Assumes that the variables in the netcdf file all have the name "variable"
@@ -31,27 +73,25 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
     Returns:
         Y - if make_flat, a numpy vector of the target variable, otherwise returns iris cube
     """
-
-    print("Opening:")
-    print(filename)
-    if filename[0] == '~' or filename[0] == '/' or filename[0] == '.': dir = ''
-    try:
-        if isinstance(filename, str):        
-            dataset = iris.load_cube(dir + filename, callback=sort_time)
-        else:
-            dataset = iris.load_cube(dir + filename[0], filename[1], callback=sort_time)
-    except:
-        try:
-            dataset = iris.load_cube(dir + filename)
-        except:
-            print("==============\nERROR!")
-            print("can't open data.")
-            print("Check directory (''" + dir + "''), filename (''" + filename + \
+   
+    dir = dir.split('||')
+    i = 0
+    dataset = None
+    
+    while i <= len(dir) and dataset is None:
+        dataset = read_variable_from_netcdf_from_dir(dir[i], filename, find_no_files,
+                                                     ens_no = ens_no)
+        i += 1
+    
+    if dataset is None:
+        print("==============\nERROR!")
+        print("can't open data.")
+        print("Check directory (''" + dir + "''), filename (''" + filename + \
               "'') or file format")
-            print("==============")
-            set_trace()
+        print("==============")
+        set_trace()
+    if find_no_files: return dataset
     coord_names = [coord.name() for coord in dataset.coords()]
-    if dataset is None: return None
     if time_points is not None:     
         if 'time' in coord_names:
             dataset = dataset.interpolate([('time', time_points)], iris.analysis.Linear())
@@ -66,6 +106,10 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
             dataset_time = [addTime(time_point) for time_point in time_points]
             dataset = iris.cube.CubeList(dataset_time).merge_cube()
             dataset0 = dataset.copy()
+    if extent is not None:
+        dataset = dataset.regrid(extent, iris.analysis.Linear())
+        dataset0 = dataset.copy()
+    
     if units is not None: dataset.units = units
     if subset_function is not None:
         if isinstance(subset_function, list):
@@ -79,6 +123,8 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
             dataset = subset_function(dataset, **subset_function_args) 
     if return_time_points: time_points = dataset.coord('time').points 
     
+    if return_extent:
+        extent = dataset[0]
     
     if make_flat: 
         if time_series is not None: years = dataset.coord('year').points
@@ -94,15 +140,20 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
             if not years[-1] == time_series[1]:
                 dataset = np.append(dataset, np.repeat(np.nan, time_series[1]-years[-1]))
             if return_time_points: set_trace()
-        
+     
     if return_time_points: dataset = (dataset, time_points)
+    if return_extent:  dataset += (extent,)
     
     return dataset
 
-def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None, add_1s_columne = False, 
+def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None, 
+                              add_1s_columne = False, 
                               y_threshold = None, x_normalise01 = False, scalers = None,
                               check_mask = True, frac_random_sample = 1.0, 
-                              min_data_points_for_sample = None, *args, **kw):
+                              min_data_points_for_sample = None,
+                              x_find_mode = 'single', 
+                              dir_driving_data = None, *args, **kw):
+
                               
     """Read data from netCDF files 
         
@@ -128,78 +179,124 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None, a
         Y - a numpy array of the target variable
         X - an n-D numpy array of the feature variables 
     """
-    Y, time_points = read_variable_from_netcdf(y_filename, make_flat = True, *args, return_time_points = True, **kw)
+    
+    Y, time_points, extent = read_variable_from_netcdf(y_filename, make_flat = True, *args, 
+                                    return_time_points = True, return_extent = True, **kw)
     
     if CA_filename is not None:
         CA = read_variable_from_netcdf(CA_filename, make_flat = True, 
-                                       time_points = time_points, *args, **kw)
+                                       time_points = time_points, extent = extent, *args, **kw)
    
     # Create a new categorical variable based on the threshold
     if y_threshold is not None:
         Y = np.where(Y >= y_threshold, 0, 1)
         #count number of 0 and 1 
         counts = np.bincount(Y)
-        #print(f"Number of 0's: {counts[0]}, Number of 1's: {counts[1]}")
+        #print(f"Number of 0's: {counts[0]}, Number of 1's: {counts[1]}")   
     
-    n=len(Y)
-    m=len(x_filename_list)
+    def open_ensemble_member(ens_no, Y, scalers, frac_random_sample,
+                             cells_we_want = None):
+        n=len(Y)
+        m=len(x_filename_list)
     
-    X = np.zeros([n,m])
+        X = np.zeros([n,m])
+        for i, filename in enumerate(x_filename_list):
+            X[:, i] = read_variable_from_netcdf(filename, make_flat = True, 
+                                                time_points = time_points,
+                                                extent = extent, ens_no = ens_no,
+                                                *args, **kw)
+   
+        if add_1s_columne: 
+            X = np.column_stack((X, np.ones(len(X)))) # add a column of ones to X 
     
-    for i, filename in enumerate(x_filename_list):
-        X[:, i]=read_variable_from_netcdf(filename, make_flat = True, time_points = time_points,
-                                          *args, **kw)
+        if check_mask:
+            if CA_filename is not None:
+                if cells_we_want is None:
+                    cells_we_want = np.array([np.all(rw > -9e9) and np.all(rw < 9e9) 
+                                             for rw in np.column_stack((X, Y, CA))])
+                CA = CA[cells_we_want]
+            else:
+                # Apply conditions separately to X and Y
+                X_mask = np.all((X > -9e9) & (X < 9e9), axis=1)  # Check all columns in X
+                Y_mask = (Y > -9e9) & (Y < 9e9)  # Apply directly to Y
+        
+                # Combine the two masks
+                if cells_we_want is None: cells_we_want = X_mask & Y_mask
+                
+            Y = Y[cells_we_want]
+            X = X[cells_we_want, :]
+            
+        if x_normalise01 and scalers is None: 
+            try:
+                scalers = np.array([np.min(X, axis=0), np.max(X, axis=0)])
+            except:
+                set_trace()
+            squidge = (scalers[1,:]-scalers[0,:])/(X.shape[0])
+            scalers[0,:] = scalers[0,:] - squidge
+            scalers[1,:] = scalers[1,:] + squidge
+            
+            test = scalers[1,:] == scalers[0,:]
+            scalers[0,test] = 0.0
+            scalers[1,test] = 1.0
+        
     
-    if add_1s_columne: 
-        X = np.column_stack((X, np.ones(len(X)))) # add a column of ones to X 
-    
-    if check_mask:
-        if CA_filename is not None:
-            cells_we_want = np.array([np.all(rw > -9e9) and np.all(rw < 9e9) for rw in np.column_stack((X, Y, CA))])
-            CA = CA[cells_we_want]
+        if frac_random_sample is None: 
+            frac_random_sample = 1000
         else:
-            cells_we_want = np.array([np.all(rw > -9e9) and np.all(rw < 9e9) for rw in np.column_stack((X,Y))])
-        Y = Y[cells_we_want]
-        X = X[cells_we_want, :]
-        
-    if x_normalise01: 
-        try:
-            scalers = np.array([np.min(X, axis=0), np.max(X, axis=0)])
-        except:
-            set_trace()
-        squidge = (scalers[1,:]-scalers[0,:])/(X.shape[0])
-        scalers[0,:] = scalers[0,:] - squidge
-        scalers[1,:] = scalers[1,:] + squidge
-        
-        test = scalers[1,:] == scalers[0,:]
-        scalers[0,test] = 0.0
-        scalers[1,test] = 1.0
+            if min_data_points_for_sample is not None:
+                min_data_frac = min_data_points_for_sample/len(Y)
+                if min_data_frac > frac_random_sample: frac_random_sample = min_data_frac
     
+        if frac_random_sample < 1:
+            M = X.shape[0]
+            selected_rows = np.random.choice(M, size = int(M * frac_random_sample), 
+                                             replace=False)
+            Y = Y[selected_rows]
+            X = X[selected_rows, :]
+            if CA_filename is not None:
+                CA = CA[selected_rows]
+        
+        if scalers is not None:
+            X = (X-scalers[0, :]) / (scalers[1, :] - scalers[0, :])
+            if check_mask: 
+                if CA_filename is not None: return Y, X, CA, cells_we_want, scalers
+            return Y, X, cells_we_want, scalers
+            
+        if check_mask or frac_random_sample: 
+            if CA_filename is not None:  return Y, X, CA, cells_we_want
+        return Y, X, cells_we_want
+        
+        if CA_filename is not None: return Y, X, CA
 
-    if frac_random_sample is None: 
-        frac_random_sample = 1000
+        return Y, X
+
+    
+    if x_find_mode == 'ensemble-single':
+        nfs = [read_variable_from_netcdf(filename, find_no_files = True, *args, **kw)    
+               for  filename in x_filename_list]
+        nfs = np.array(nfs)
+        nfs = np.unique(nfs[nfs >1])
+        if len(nfs) == 0:
+            output = open_ensemble_member(None, Y, scalers, frac_random_sample)
+        elif len(nfs) == 1:
+            xOut = []
+            cells_we_want = None
+            for i in range(nfs[0]): 
+                print(i)
+                out_file = dir_driving_data + 'ens_no-' + str(i) + '.npy'
+                if not os.path.isfile(out_file) or i == 0:
+                    output = open_ensemble_member(i, Y, scalers, frac_random_sample,
+                                                  cells_we_want = cells_we_want)
+                    if i == 0: cells_we_want = output[2]
+                    np.save(out_file, output[1])
+                
+                xOut = xOut + [out_file]
+            
+            y = list(output)
+            y[1] = xOut
+            output = tuple(y)         
+        else:
+            set_trace()
     else:
-        if min_data_points_for_sample is not None:
-            min_data_frac = min_data_points_for_sample/len(Y)
-            if min_data_frac > frac_random_sample: frac_random_sample = min_data_frac
-    
-    if frac_random_sample < 1:
-        M = X.shape[0]
-        selected_rows = np.random.choice(M, size = int(M * frac_random_sample), replace=False)
-        Y = Y[selected_rows]
-        X = X[selected_rows, :]
-        if CA_filename is not None:
-            CA = CA[selected_rows]
-    
-    if scalers is not None:
-        X = (X-scalers[0, :]) / (scalers[1, :] - scalers[0, :])
-        if check_mask: 
-            if CA_filename is not None: return Y, X, CA, cells_we_want, scalers
-        return Y, X, cells_we_want, scalers
-        
-    if check_mask or frac_random_sample: 
-        if CA_filename is not None: return Y, X, CA, cells_we_want
-    return Y, X, cells_we_want
-    
-    if CA_filename is not None: return Y, X, CA
-    return Y, X 
+        output = open_ensemble_member(None, Y, scalers, frac_random_sample)
+    return output

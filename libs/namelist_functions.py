@@ -1,7 +1,16 @@
 import json
 import sys
 sys.path.append('libs/')
+sys.path.append('fire_model/')
+sys.path.append('link_distribution/')
+
 from constrain_cubes_standard import *
+from FLAME import FLAME
+from ConFire import ConFire
+from MaxEnt import MaxEnt
+from zero_inflated_logit import zero_inflated_logit
+from zero_inflated_logit_global_normal import zero_inflated_logit_global_normal
+from normal_ import normal_
 
 from pdb import set_trace
 
@@ -71,28 +80,35 @@ def read_variables_from_namelist(file_name):
                 variable_value = parts[1].strip()
                 if callable(variable_value):
                     # If the variable is a function, save its name
-                    variables[variable_name] = variable_value
+                    variable_value_set = variable_value
                 elif variable_value.startswith('"') and variable_value.endswith('"'):
                     # If the variable is a string, remove the quotes
-                    variables[variable_name] = variable_value[1:-1]
+                    variable_value_set = variable_value[1:-1]
                 elif variable_value.startswith('[') and variable_value.endswith(']'):
                     # If the variable is a list, parse it
                     try:        
-                        variables[variable_name] = eval(variable_value)
+                        variable_value_set = eval(variable_value)
                     except:
                         functions = variable_value.split(', ')
                         def define_function(fun):
                             return eval(fun.split('function ')[1].split(' at ')[0])
-                        variables[variable_name] = [define_function(fun) for fun in functions]
+                        variable_value_set = [define_function(fun) for fun in functions]
                 else:
                     try:
                         # Try to parse the variable as a dictionary
-                        variables[variable_name] = eval(variable_value)
+                        variable_value_set = eval(variable_value)
                     except (SyntaxError, NameError):
                         # If parsing fails, assume it's a non-string, non-list variable
-                        variables[variable_name] = variable_value
-                    
-        
+                        variable_value_set = variable_value
+                #set_trace()
+                if variable_name in variables:
+                    if type(variables[variable_name]) is list:
+                        variables[variable_name].append(variable_value_set)
+                    else:
+                        variables[variable_name] = [variables[variable_name], 
+                                                    variable_value_set]
+                else:
+                    variables[variable_name] = variable_value_set
     return variables
 
 

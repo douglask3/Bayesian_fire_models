@@ -1,0 +1,38 @@
+## input data paths and filenames
+model_title::  'simple_example_model-customPriors'
+dir_training:: "../ConFIRE_attribute/isimip3a/driving_data/GSWP3-W5E5-20yrs/Brazil/AllConFire_2000_2009/"
+y_filen:: "GFED4.1s_Burned_Fraction.nc"
+CA_filen:: None
+x_filen_list:: ["Forest.nc", "consec_dry_mean.nc", "tas_max.nc", "crop.nc", "pas.nc", "cveg.nc"]
+
+## Model info
+priors:: {'pname': "q",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "lin_beta_constant",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 100}
+priors:: {'pname': "lin_betas",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 100}
+priors:: {'pname': "lin_betas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 20}
+priors:: {'pname': "lin_betas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 20}
+priors:: {'pname': "lin_betas",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 100}
+priors:: {'pname': "lin_betas",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 100}
+priors:: {'pname': "lin_betas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 20}
+priors:: {'pname': "pow_betas",'np': 'nvars', 'dist': 'Normal', 'mu': 0.0, 'sigma': 100}
+priors:: {'pname': "pow_power",'np': 'nvars', 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1}
+
+### optimization info
+niterations:: 100
+cores:: 1
+fraction_data_for_sample:: 0.005
+subset_function:: sub_year_months
+subset_function_args:: {'months_of_year': [7]}
+grab_old_trace:: False # set to True till you get the code running. 
+                          # Then set to False when you start adding in new response curves
+### output info
+dir_outputs:: 'outputs/'
+
+## evaluation info
+sample_for_plot:: 200
+levels:: [0, 0.1, 1, 2, 5, 10, 20, 50, 100] 
+dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
+cmap:: 'OrRd'
+dcmap:: 'RdBu_r'
+dir_projecting:: "../ConFIRE_attribute/isimip3a/driving_data/GSWP3-W5E5-20yrs/Brazil/AllConFire_2000_2009/"
+

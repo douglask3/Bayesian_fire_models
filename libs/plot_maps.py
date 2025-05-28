@@ -1,3 +1,6 @@
+
+
+
 import iris
 import numpy as np
 import cartopy.crs as ccrs
@@ -8,28 +11,46 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import BoundaryNorm
 from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from libs.to_precision import *
+
 from pdb import set_trace as browser
 from numpy import inf
 import math
 
-from libs import git_info
+import sys
+sys.path.append('../../libs/')
+sys.path.append('libs/')
+import git_info
+from to_precision import *
 from pdb import set_trace
 
 def plot_BayesModel_maps(Sim, levels, cmap, ylab = '', Obs = None, 
                          Nrows = 1, Ncols = 2, plot0 = 0, collapse_dim = 'realization',
-                         scale = 100, figure_filename = None, set_traceT = False,
+                         scale = 1, figure_filename = None, set_traceT = False,
                          *args, **kw):
     try:
-        if collapse_dim != 'time': Sim = Sim.collapsed('time', iris.analysis.MEAN) 
+        if collapse_dim != 'time': Obs = Obs.collapsed('time', iris.analysis.MEAN) 
+        
     except:
         pass
     try:
-        Sim = Sim.collapsed(collapse_dim, iris.analysis.PERCENTILE, percent=[10, 90])
+        if collapse_dim != 'time': Obs = Obs.collapsed('time', iris.analysis.MEAN) 
+        
+    except:
+        pass
+    try:
+        Sim = Sim.collapsed(collapse_dim, iris.analysis.PERCENTILE, percent=[5, 95])
     except:
         set_trace()
-    
+    Sim.data[Sim.data <0] = 0.0
+    #levels = hist_limits(cube*scale, nlims = 7, symmetrical = False)[0]
+    #levels = np.sort(np.append([0], levels[levels > 0.00001]))
+    if levels is None:
+        levels = np.append(hist_limits(Obs*scale, nlims = 6, symmetrical = False)[0], 
+                           hist_limits(Sim*scale, nlims = 6, symmetrical = False)[0])
+        levels = np.sort(np.append([0], levels[levels > 0.00001]))
+    #set_trace()   
     def plot_map(cube, plot_name, plot_n, **kw2):
+        levels = hist_limits(cube*scale, nlims = 6, symmetrical = False)[0]
         plot_annual_mean(cube, levels, cmap, plot_name = plot_name, scale = scale, 
                      Nrows = Nrows, Ncols = Ncols, plot_n = plot_n + plot0, *args, **kw, **kw2)
         
@@ -48,8 +69,11 @@ def plot_BayesModel_maps(Sim, levels, cmap, ylab = '', Obs = None,
         plot_map(Obs, "Observations", 1, figure_filename = set_fig_fname('obs'))
         plot_n = 2
     
-    plot_map(Sim[0,:], "Simulation - 10%", plot_n, figure_filename = set_fig_fname('-sim10pc'))
-    plot_map(Sim[1,:], "Simulation - 90%", plot_n+1, figure_filename = set_fig_fname('-sim90pc'))
+    plot_map(Sim[0,:], "Simulation -  5%", plot_n, figure_filename = set_fig_fname('-sim05pc'))
+    plot_map(Sim[1,:], "Simulation - 95%", plot_n+1, figure_filename = set_fig_fname('-sim95pc'))
+    #plot_map(Sim[2,:], "Simulation - 95%", plot_n+2, figure_filename = set_fig_fname('-sim95pc'))
+    
+    return levels
     
    
 def plot_annual_mean(cube, levels, cmap, plot_name = None, scale = None, 
@@ -76,7 +100,8 @@ def plot_lonely_cube(cube, N = None, M = None, n = None, levels = [0], extend = 
     
 def addColorbar(cf, ticks, *args, **kw):
     cb = plt.colorbar(cf, orientation='horizontal', ticks = ticks, *args, **kw)
-    cb.ax.set_xticklabels(ticks)
+    #formatted_ticks = [f'{tick:.2f}' for tick in ticks]
+    #cb.ax.set_xticklabels(formatted_ticks)
     return cb
 
 def plot_cube(cube, N, M, n, cmap, levels = None, extend = 'neither', 
@@ -176,7 +201,10 @@ def hist_limits(dat, lims = None, nlims = 5, symmetrical = True):
         nlims0 = nlims
         for p in range(0,100 - nlims0):
             nlims = nlims0 + p
-            lims  = np.percentile(dat.data[~np.isnan(dat.data)], range(0, 100, int(100/nlims)))
+            try:
+                lims  = np.percentile(dat.data[~np.isnan(dat.data)].data, range(0, 100, int(100/nlims)))
+            except:
+                set_trace()
             
             if (lims[0]==-inf): lims.pop(0)
             
@@ -188,8 +216,9 @@ def hist_limits(dat, lims = None, nlims = 5, symmetrical = True):
     if (lims is None):
         for prec in range(1,5):
             lims = select_lims(prec, nlims)
-            if len(lims) > 3: break
-
+            print(lims)
+            if len(lims) > nlims: break
+        
         new_lims = True
     else:
         new_lims = False

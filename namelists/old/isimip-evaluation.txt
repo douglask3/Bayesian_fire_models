@@ -1,0 +1,50 @@
+## model info
+regions:: ['Greece', 'Canada', 'NW_Amazon']
+model_title::  'ConFire_<<region>>-isimip-evaluation1'
+
+## input data paths and filenames
+dir_training:: "data/data/driving_data/<<region>>/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019/"
+y_filen:: "burnt_area-2000-2019.nc"
+CA_filen:: None
+#x_filen_list:: ["consec_dry_mean.nc", "nonetree_cover_jules-es.nc", "tree_cover_jules-es.nc", "pr_mean.nc", "tas_max.nc", "tas_mean.nc", "dry_days.nc", "vpd_max.nc", "vpd_mean.nc", "lightning.nc", "pasture_jules-es.nc", "crop_jules-es.nc", "urban_jules-es.nc", "filled_debiased_vegCover_jules-es.nc", "filled_debiased_tree_cover_jules-es.nc"]
+x_filen_list:: ["consec_dry_mean.nc", "filled_debiased_vegCover_jules-es.nc", "filled_debiased_tree_cover_jules-es.nc", "pr_mean.nc", "tas_max.nc", "tas_mean.nc", "dry_days.nc", "vpd_max.nc", "vpd_mean.nc", "lightning.nc", "pasture_jules-es.nc", "crop_jules-es.nc", "urban_jules-es.nc"]
+
+## Model info
+model_class:: ConFire
+priors:: {'pname': "link-sigma",'np': 1, 'dist': 'HalfNormal', 'sigma': 0.5}
+priors:: {'pname': "link-p0",'np': 1, 'dist': 'Uniform', 'lower': 0.0, 'upper': 1.0}
+priors:: {'pname': "link-p1",'np': 1, 'dist': 'LogNormal', 'mu': -1.0, 'sigma': 1.0}
+priors:: {'pname': "controlID", 'value': [[1, 2], [0, 2, 3, 4, 5, 7, 8], [9, 10, 11, 12], [10, 11, 12]]}
+priors:: {'pname': "control_Direction", 'value': [1, -1, 1, -1]}
+priors:: {'pname': "driver_Direction", 'value': [[1, 1], [-1, 1, 1, -1, -1, -1, -1], [1, 1, 1, 1], [1, 1, 1]]}
+priors:: {'pname': "x0",'np': 4, 'dist': 'Normal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "betas",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "betas",'np': 7, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "betas",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+
+### optimization info
+link_func_class:: zero_inflated_logit
+niterations:: 20
+cores:: 50
+fraction_data_for_sample:: 0.5
+subset_function:: sub_year_months
+subset_function:: sub_year_range
+subset_function_args:: {'months_of_year': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]}
+region_months:: {'NW_Amazon': [7, 8, 9], 'Canada': [4,5,6], 'Greece': [6,7,8]}
+grab_old_trace:: True # set to True till you get the code running. 
+                      # Then set to False when you start adding in new response curves
+subset_function_args:: {'year_range': [2003, 2012]}
+subset_function_args_eval:: {'year_range': [2014, 2023]}
+### output info
+dir_outputs:: 'outputs/'
+
+## evaluation info
+sample_for_plot:: 50
+control_names:: ['Fuel', 'Moisture', 'Ignition', 'Suppression']
+levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
+dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
+cmap:: 'OrRd'
+dcmap:: 'RdBu_r'
+dir_projecting:: "data/data/driving_data/<<region>>/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019//"
+

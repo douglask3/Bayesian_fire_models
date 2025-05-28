@@ -1,0 +1,53 @@
+## model info
+regions:: ['Greece', 'Canada', 'NW_Amazon']
+model_title::  'ConFire_<<region>>-nrt-final'
+
+## input data paths and filenames
+dir_training:: "data/data/driving_data/<<region>>/nrt/period_2013_2023/"
+y_filen:: "burnt_area.nc"
+CA_filen:: None
+x_filen_list:: ["VOD-12monthMax.nc", "VOD-12Annual.nc", "Fuel-Moisture-Live.nc", "Fuel-Moisture-Live-Deficity.nc", "t2m.nc", "d2m.nc", "tp.nc", "cropland.nc", "pasture.nc", "population_density.nc", "lightn.nc", "snowCover.nc"]
+## Model info
+model_class:: ConFire
+priors:: {'pname': "link-sigma",'np': 1, 'dist': 'HalfNormal', 'sigma': 0.5}
+priors:: {'pname': "link-p0",'np': 1, 'dist': 'Uniform', 'lower': 0.0, 'upper': 1.0}
+priors:: {'pname': "link-p1",'np': 1, 'dist': 'LogNormal', 'mu': -1.0, 'sigma': 1.0}
+priors:: {'pname': "controlID", 'value': [[0, 1], [2, 3], [4, 5, 6], [7, 8, 9], [7, 8, 9, 10], [11]]}
+priors:: {'pname': "control_Direction", 'value': [1, -1, 1, -1, 1, -1]}
+priors:: {'pname': "driver_Direction", 'value': [[1, 1], [1, 1], [1, 1, -1], [1, 1, 1], [1, 1, 1, 1], [1]]}
+priors:: {'pname': "Fmax",'np': 1, 'dist': 'Uniform', 'lower': 0.00001, 'upper': 0.9999}
+priors:: {'pname': "x0",'np': 6, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
+priors:: {'pname': "betas",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "betas",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "betas",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "betas",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "betas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+
+### optimization info
+link_func_class:: zero_inflated_logit
+niterations:: 20
+cores:: 100
+fraction_data_for_sample:: 0.5
+subset_function:: sub_year_months
+subset_function_args:: {'months_of_year': [ 4, 5, 6, 7, 8]}
+subset_function_args_eval:: {'months_of_year': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]}
+
+grab_old_trace:: True # set to True till you get the code running. 
+                      # Then set to False when you start adding in new response curves
+### output info
+dir_outputs:: 'outputs/'
+
+## evaluation info
+sample_for_plot:: 100
+control_names:: ['Fuel', 'Moisture', 'Weather', 'Ignition', 'Suppression', 'Snow']
+levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
+dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
+cmap:: 'OrRd'
+dcmap:: 'RdBu_r'
+
+
+
+
+
+
