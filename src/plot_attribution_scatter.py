@@ -52,8 +52,7 @@ dir = dir1 + region + dir2 + '/'
 factual = pd.read_csv(dir + "factual-/" + metric + "/points-Evaluate.csv")
 counterfactual = pd.read_csv(dir + "counterfactual-/" + metric + "/points-Evaluate.csv")
 
-
-# Flatten the arrays to 1D
+# Extra years and flatten the arrays to 1D
 factual_flat = extract_years(factual, years, mnths) + 0.000000001
 counterfactual_flat = extract_years(counterfactual, years, mnths) + 0.000000001
 set_trace()
