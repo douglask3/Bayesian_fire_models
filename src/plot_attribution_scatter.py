@@ -34,99 +34,147 @@ def plot_kde(x, y, xlab, ylab, cmap_name = "gradient_hues_extended", *args, **kw
     sns.kdeplot(data=df, x=xlab, y=ylab, fill=True, 
                 cmap=SoW_cmap[cmap_name], *args, **kw)
 
+def plot_fact_vs_counter(factual_flat, counterfactual_flat, obs, ax = False): 
+    # Scatter plot 1: Factual vs Counterfactual 
+    x = np.linspace(0, 1, 20)
+    log_levels = x**(8)  # try 3, 5, 7 for increasingly strong bias
+    plot_kde(factual_flat, counterfactual_flat, "factual", "counterfactual",
+             levels=log_levels, log_scale = True, thresh=1e-4, axes = ax)
 
-dir1 = "outputs/outputs/ConFire_nrt4"
-dir2 = "-2425-fuel2/time_series/_19-frac_points_0.5/"
-metric = "mean"
-region = "Amazon"
-mnths = ['01', '02', '03']
-years = [2024]
+    plt.plot([0.0000000001, 100], [0.0000000001, 100], 'k--', label='1:1 Line')
+    plt.ylabel("Counterfactual Burned Area")
+    plt.xlabel("Factual Burned Area")
+    plt.title("Factual vs Counterfactual Burned Area")
+    
+    plt.axvline(obs, color='red', linestyle='--', label='Observed Burned Area')
+    plt.ahvline(obs, color='red', linestyle='--', label='Observed Burned Area')
+    
+    plt.grid(True)
 
-obs_dir = 'data/data/driving_data2425//'
-obs_file = 'burnt_area_data.csv'
-# Load the data
+def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = None):
+    # Scatter plot 2: Factual vs Factual/Counterfactual
+    effect_ratio = (factual_flat - counterfactual_flat)*100
+    test = effect_ratio>0
+    effect_ratio[test] = effect_ratio[test]/factual_flat[test]
+    test = ~test
+    effect_ratio[test] = effect_ratio[test]/counterfactual_flat[test]
 
-dir = dir1 + region + dir2 + '/'
-factual = pd.read_csv(dir + "factual-/" + metric + "/points-Evaluate.csv")
-counterfactual = pd.read_csv(dir + "counterfactual-/" + metric + "/points-Evaluate.csv")
-obs = pd.read_csv(obs_dir + '/' + region + '/' + obs_file)
+    x = np.linspace(0, 1, 20)
+    log_levels = x**(5)  # try 3, 5, 7 for increasingly strong bias
+    
+    xmin = factual_flat.max()/100
+    test = factual_flat > xmin
+    
+    plot_kde(factual_flat[test], effect_ratio[test], "factual", "effect ratio",bw_adjust = 1,
+             levels=log_levels, thresh=1e-4, clip=((0.0,factual_flat.max()), (-100, 100)),
+             ax = ax) 
+    
+    plot_kde(factual_flat[test], effect_ratio[test], "factual", "effect ratio",bw_adjust = 1,
+             levels=log_levels, thresh=1e-4, clip=((obs,factual_flat.max()), (-100, 100)),
+             ax = ax)
+    ax.axhline(0, color='k', linestyle='--')#, label='No Change (Ratio = 1)')
 
+    ax.axvline(obs, color='red', linestyle='--', label='Observed Burned Area')
+    
+    mask = factual_flat > obs
+    percentile = [10, 50, 90]
+    cc_effect = np.percentile(effect_ratio[mask], percentile)/100.0
+    cc_effect = np.round(1.0+cc_effect/(1.0-cc_effect), 2)
+    pv = np.mean(effect_ratio[mask]>0)
+    pv = np.round(pv, 2)
+    if (pv > 0.99):
+        pv = str("> 0.99")
+    rr = np.sum(factual_flat>obs)/np.sum(counterfactual_flat > obs)
+    rr = np.round(rr, 2)
+    percentile_text = [str(pc) + "%:\n" + str(cc) for pc, cc in zip(percentile, cc_effect)]
 
-# Extra years and flatten the arrays to 1D
-factual_flat = extract_years(factual, years, mnths) + 0.000000001
-counterfactual_flat = extract_years(counterfactual, years, mnths) + 0.000000001
-obs = extract_years(obs.set_index('time').T, years, mnths, '-15')[0]
+    #ax = plt.gca()
+    ax.text(0.42, 0.35, "Climate change impact (pvalue: " + str(pv) + ")", 
+              transform=ax.transAxes, axes = ax)
+    
+    for i in range(len(percentile_text)):
+        ax.text(0.42 + i*0.18, 0.2, percentile_text[i], transform=ax.transAxes)
+    ax.text(0.42, 0.09, "Risk Ratio:", transform=ax.transAxes)
+    ax.text(0.42, 0.02, rr, transform=ax.transAxes)
+    #ax.set_xlabel("Factual burned area (%)")
+    #ax.set_ylabel("Relative difference in burned area (%)")
+    ax.set_xlabel(" ")
+    ax.set_ylabel(plot_name)
+    ax.grid(True, which='both', linestyle='--', linewidth=0.5)
 
-# Scatter plot 1: Factual vs Counterfactual
-plt.figure(figsize=(6, 6))
-
-#log_levels = np.geomspace(1e-10, 1.0, 500)
-# More bias to lower densities (power < 1)
-x = np.linspace(0, 1, 20)
-log_levels = x**(8)  # try 3, 5, 7 for increasingly strong bias
-plot_kde(factual_flat, counterfactual_flat, "factual", "counterfactual",
-         levels=log_levels, log_scale = True, thresh=1e-4)
-
-plt.plot([0.0000000000001, 100], [0.0000000000001, 100], 'k--', label='1:1 Line')
-plt.ylabel("Counterfactual Burned Area")
-plt.xlabel("Factual Burned Area")
-plt.title("Factual vs Counterfactual Burned Area")
-plt.legend()
-plt.grid(True)
-plt.tight_layout()
-
-# Avoid division by zero
-counterfactual_flat_safe = counterfactual_flat.copy()
-
-# Scatter plot 2: Factual vs Factual/Counterfactual
-effect_ratio = (factual_flat - counterfactual_flat)*100
-effect_ratio[effect_ratio>0] = effect_ratio[effect_ratio>0]/factual_flat[effect_ratio>0]
-effect_ratio[effect_ratio<0] = effect_ratio[effect_ratio<0]/counterfactual_flat[effect_ratio<0]
-
-plt.figure(figsize=(6, 6))
-x = np.linspace(0, 1, 20)
-log_levels = x**(5)  # try 3, 5, 7 for increasingly strong bias
-#log_levels = np.append(log_levels, np.array([0.5, 1.0]))
-xmin = factual_flat.max()/100
-test = factual_flat > xmin
-#plot_kde(factual_flat, effect_ratio, "factual", "effect ratio",
-#         levels=log_levels, thresh=1e-4, bw_adjust = 2, 
-#         clip=((0, jfm_mean_value), (-100, 100))) #, log_scale = True
-plot_kde(factual_flat[test], effect_ratio[test], "factual", "effect ratio",bw_adjust = 1,
-         levels=log_levels, thresh=1e-4, clip=((0.0,factual_flat.max()*1.3), (-100, 100))) #,  = True
-set_trace()
-plot_kde(factual_flat[test], effect_ratio[test], "factual", "effect ratio",bw_adjust = 1,
-         levels=log_levels, thresh=1e-4, clip=((obs,factual_flat.max()*1.3), (-100, 100)))
-plt.axhline(0, color='k', linestyle='--')#, label='No Change (Ratio = 1)')
-
+    return effect_ratio[mask]
 
 
-plt.axvline(obs, color='red', linestyle='--', label='Observed Burned Area')
 
-mask = factual_flat > obs
-percentile = [10, 50, 90]
-cc_effect = np.percentile(effect_ratio[mask], percentile)/100.0
-cc_effect = np.round(1.0+cc_effect/(1.0-cc_effect), 2)
-pv = np.mean(effect_ratio[mask]>0)
-pv = np.round(pv, 2)
-if (pv > 0.99):
-    pv = str("> 0.99")
+def plot_for_region(region, mnths, years, metric, plot_FUN, 
+                    dir1, dir2, obs_dir, obs_file, add_legend = False,
+                    *args, **kw):
+    # Load the data
+    dir = dir1 + region + dir2 + '/'
+    factual = pd.read_csv(dir + "factual-/" + metric + "/points-Evaluate.csv")
+    counterfactual = pd.read_csv(dir + "counterfactual-/" + metric + "/points-Evaluate.csv")
+    obs = pd.read_csv(obs_dir + '/' + region + '/' + obs_file)
 
-rr = np.sum(factual_flat>obs)/np.sum(counterfactual_flat > obs
-)
-percentile_text = [str(pc) + "%:\n" + str(cc) for pc, cc in zip(percentile, cc_effect)]
+    # Extra years and flatten the arrays to 1D
+    factual_flat = extract_years(factual, years, mnths) + 0.000000001
+    counterfactual_flat = extract_years(counterfactual, years, mnths) + 0.000000001
+    
+    obs = extract_years(obs.set_index('time').T, years, mnths, '-15')
+    if metric == 'mean':
+        obs = obs[0]
+        plot_name = region
+    else:
+        obs = obs[1]
+        factual_flat = factual_flat * 100.0
+        counterfactual_flat = counterfactual_flat * 100.0
+        plot_name = ""
+    
+    out = plot_FUN(factual_flat, counterfactual_flat, obs, plot_name = plot_name, *args, **kw)
+    
+    if add_legend:
+        plt.legend()
 
-ax = plt.gca()
-plt.text(0.55, 0.23, "Climate change impact (pvalue: " + str(pv) + ")", transform=ax.transAxes)
-for i in range(len(percentile_text)): plt.text(0.55 + i*0.10, 0.13, percentile_text[i], transform=ax.transAxes)
-plt.text(0.55, 0.09, "Risk Ratio:", transform=ax.transAxes)
-plt.text(0.55, 0.05, rr, transform=ax.transAxes)
+    return out
 
-plt.xlabel("Factual Burned Area")
-plt.ylabel("Factual / Counterfactual Ratio")
-plt.title("Factual vs Climate Change Effect on Burned Area")
-plt.grid(True, which='both', linestyle='--', linewidth=0.5)
-plt.legend()
-plt.tight_layout()
-plt.show()
+def plot_attribution_scatter(regions, mnths, years, figname, *args, **kw):
+    metrics = ["mean", 'pc-95.0']
+    fig, axes = plt.subplots(len(regions), 2, figsize=(len(regions) * 7.2, 7.2))
+    out = []
+    for i, metric in  enumerate(metrics):
+        outi = []
+        for j, region, mnth, yrs in zip (range(len(regions)), regions, mnths, years):
+            ax = axes[j, i]
+            print(region)
+            outi.append(plot_for_region(region, mnth, yrs, metric, plot_fact_vs_ratio, ax = ax, 
+                            *args, **kw))
+        out.append(outi)
+    
+    fig.text(0.05, 0.5, "Relative difference in burned area (%)", ha='right', va='center', fontsize=12, rotation=90)
+    fig.text(0.23, 0.95, "Entire region", ha='center', va='bottom', fontsize=14)
+    fig.text(0.73, 0.95, "High burnt areas", ha='center', va='bottom', fontsize=14)
+    fig.text(0.5, 0.05, "Factual burned area (%)", ha='center', va='top', fontsize=12)
+     #ax.set_xlabel("Factual burned area (%)")
+    #ax.set_ylabel("Relative difference in burned area (%)")
+    plt.savefig('figs/' + figname + ".png")
+    return out
+
+if __name__=="__main__":
+    dir1 = "outputs/outputs/ConFLAME_nrt"
+    dir2 = "-2425/time_series/_19-frac_points_0.5/"
+
+    regions = ["Pantanal", "Congo"]#, "Amazon"]
+    mnths = [['01'], ['07']]
+    years = [[2024], [2024]]
+    
+    obs_dir = 'data/data/driving_data2425//'
+    obs_file = 'burnt_area_data.csv'
+
+    outs = plot_attribution_scatter(regions, mnths, years, "attribution_scatter_2425",
+                             dir1 = dir1, dir2 = dir2,
+                             obs_dir = obs_dir, obs_file = obs_file) 
+
+
+
+
+
 
