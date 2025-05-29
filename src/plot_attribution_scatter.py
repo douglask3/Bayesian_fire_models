@@ -11,22 +11,51 @@ sys.path.append('src/')
 from state_of_wildfires_colours  import SoW_cmap
 
 # Load the data
+dir1 = "outputs/outputs/ConFire_nrt4"
+dir2 = "-2425-fuel2/time_series/_19-frac_points_0.5/"
+metric = "mean"
+region = "Amazon"
+mnths = ['01', '02', '03']
+years = [2024]
+
+def flatten(xss):
+    return [x for xs in xss for x in xs]
 
 def plot_kde(x, y, xlab, ylab, cmap_name = "gradient_hues_extended", *args, **kw):
     df = pd.DataFrame({xlab: x, ylab: y})
     sns.kdeplot(data=df, x=xlab, y=ylab, fill=True, 
                 cmap=SoW_cmap[cmap_name], *args, **kw)
 
+dir = dir1 + region + dir2 + '/'
+factual = pd.read_csv(dir + "factual-/" + metric + "/points-Evaluate.csv")
+counterfactual = pd.read_csv(dir + "counterfactual-/" + metric + "/points-Evaluate.csv")
 
+def extract_years(df, years, mnths):
+    target_cols = [
+        f"{year}-{month}-01T00:00:00" 
+        for year in years 
+        for month in mnths
+        if f"{year}-{month}-01T00:00:00" in df.columns
+    ]
+    
+    # Reshape: group columns by year
+    avg_per_year = []
+    for year in years:
+        cols_this_year = [
+            f"{year}-{month}-01T00:00:00" 
+            for month in mnths 
+            if f"{year}-{month}-01T00:00:00" in df.columns
+        ]
+        avg_per_year.append(df[cols_this_year].mean(axis=1))
 
-factual = pd.read_csv("outputs/outputs/ConFire_nrt4Amazon-2425-fuel2/time_series/_19-frac_points_0.5/baseline-/mean/points-Evaluate.csv")
+    # Convert to final DataFrame
+    #set_trace()
+    return np.array(avg_per_year).flatten()
 
-counterfactual = pd.read_csv("outputs/outputs/ConFire_nrt4Amazon-2425-fuel2/time_series/_19-frac_points_0.5/counterfactual-/mean/points-Evaluate.csv")
-ix = [i for i in range(factual.shape[1]) if i % 12 in [1, 2, 3]]
 # Flatten the arrays to 1D
-factual_flat = factual.values[:,ix].flatten() + 0.000000001
-counterfactual_flat = counterfactual.values[:,ix].flatten() + 0.000000001 #[:,12:]
-
+factual_flat = extract_years(factual, years, mnths) + 0.000000001
+counterfactual_flat = extract_years(counterfactual, years, mnths) + 0.000000001
+set_trace()
 # Scatter plot 1: Factual vs Counterfactual
 plt.figure(figsize=(6, 6))
 
