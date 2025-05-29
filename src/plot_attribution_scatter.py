@@ -18,18 +18,6 @@ region = "Amazon"
 mnths = ['01', '02', '03']
 years = [2024]
 
-def flatten(xss):
-    return [x for xs in xss for x in xs]
-
-def plot_kde(x, y, xlab, ylab, cmap_name = "gradient_hues_extended", *args, **kw):
-    df = pd.DataFrame({xlab: x, ylab: y})
-    sns.kdeplot(data=df, x=xlab, y=ylab, fill=True, 
-                cmap=SoW_cmap[cmap_name], *args, **kw)
-
-dir = dir1 + region + dir2 + '/'
-factual = pd.read_csv(dir + "factual-/" + metric + "/points-Evaluate.csv")
-counterfactual = pd.read_csv(dir + "counterfactual-/" + metric + "/points-Evaluate.csv")
-
 def extract_years(df, years, mnths):
     target_cols = [
         f"{year}-{month}-01T00:00:00" 
@@ -51,6 +39,20 @@ def extract_years(df, years, mnths):
     # Convert to final DataFrame
     #set_trace()
     return np.array(avg_per_year).flatten()
+
+
+def flatten(xss):
+    return [x for xs in xss for x in xs]
+
+def plot_kde(x, y, xlab, ylab, cmap_name = "gradient_hues_extended", *args, **kw):
+    df = pd.DataFrame({xlab: x, ylab: y})
+    sns.kdeplot(data=df, x=xlab, y=ylab, fill=True, 
+                cmap=SoW_cmap[cmap_name], *args, **kw)
+
+dir = dir1 + region + dir2 + '/'
+factual = pd.read_csv(dir + "factual-/" + metric + "/points-Evaluate.csv")
+counterfactual = pd.read_csv(dir + "counterfactual-/" + metric + "/points-Evaluate.csv")
+
 
 # Flatten the arrays to 1D
 factual_flat = extract_years(factual, years, mnths) + 0.000000001
