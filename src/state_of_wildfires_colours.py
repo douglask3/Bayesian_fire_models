@@ -25,5 +25,5 @@ SoW_cmap = {"gradient_hues": ["#cfe9ff", "#fc6", "#f68373", "#c7384e", "#862976"
 
 
 for item in SoW_cmap.keys():
-    SoW_cmap[item] = [LinearSegmentedColormap.from_list(item, SoW_cmap[item])]
+    SoW_cmap[item] = LinearSegmentedColormap.from_list(item, SoW_cmap[item])
 
