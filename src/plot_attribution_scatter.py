@@ -10,22 +10,13 @@ sys.path.append('.')
 sys.path.append('src/')
 from state_of_wildfires_colours  import SoW_cmap
 
-# Load the data
-dir1 = "outputs/outputs/ConFire_nrt4"
-dir2 = "-2425-fuel2/time_series/_19-frac_points_0.5/"
-metric = "mean"
-region = "Amazon"
-mnths = ['01', '02', '03']
-years = [2024]
-
 def extract_years(df, years, mnths):
     target_cols = [
         f"{year}-{month}-01T00:00:00" 
         for year in years 
         for month in mnths
         if f"{year}-{month}-01T00:00:00" in df.columns
-    ]
-    
+    ]    
     # Reshape: group columns by year
     avg_per_year = []
     for year in years:
@@ -40,7 +31,6 @@ def extract_years(df, years, mnths):
     #set_trace()
     return np.array(avg_per_year).flatten()
 
-
 def flatten(xss):
     return [x for xs in xss for x in xs]
 
@@ -48,6 +38,15 @@ def plot_kde(x, y, xlab, ylab, cmap_name = "gradient_hues_extended", *args, **kw
     df = pd.DataFrame({xlab: x, ylab: y})
     sns.kdeplot(data=df, x=xlab, y=ylab, fill=True, 
                 cmap=SoW_cmap[cmap_name], *args, **kw)
+
+
+dir1 = "outputs/outputs/ConFire_nrt4"
+dir2 = "-2425-fuel2/time_series/_19-frac_points_0.5/"
+metric = "mean"
+region = "Amazon"
+mnths = ['01', '02', '03']
+years = [2024]
+# Load the data
 
 dir = dir1 + region + dir2 + '/'
 factual = pd.read_csv(dir + "factual-/" + metric + "/points-Evaluate.csv")
