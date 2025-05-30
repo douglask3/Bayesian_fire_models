@@ -5,25 +5,26 @@ import numpy as np
 import matplotlib.pyplot as plt
 import state_of_wildfires_colours
 import seaborn as sns
+import fnmatch
 import sys
 sys.path.append('.')
 sys.path.append('src/')
 from state_of_wildfires_colours  import SoW_cmap
 
 def extract_years(df, years, mnths, ext = "-01T00:00:00"):
-       
+    if years is None:
+        years = np.unique([col[0:4] for col in df.columns[1:]])
     # Reshape: group columns by year
     avg_per_year = []
     for year in years:
         cols_this_year = [
-            f"{year}-{month}" + ext 
-            for month in mnths 
-            if f"{year}-{month}" + ext in df.columns
+            col for col in df.columns
+            for month in mnths
+            if fnmatch.fnmatch(col, f"{year}-{month}*")
         ]
+    
         avg_per_year.append(df[cols_this_year].mean(axis=1))
-
-    # Convert to final DataFrame
-    #set_trace()
+    
     return np.array(avg_per_year).flatten()
 
 def flatten(xss):
@@ -78,7 +79,10 @@ def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = N
     
     mask = factual_flat > obs
     percentile = [10, 50, 90]
-    cc_effect = np.percentile(effect_ratio[mask], percentile)/100.0
+    try:
+        cc_effect = np.percentile(effect_ratio[mask], percentile)/100.0
+    except:
+        set_trace()
     cc_effect = np.round(1.0+cc_effect/(1.0-cc_effect), 2)
     pv = np.mean(effect_ratio[mask]>0)
     pv = np.round(pv, 2)
@@ -89,13 +93,13 @@ def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = N
     percentile_text = [str(pc) + "%:\n" + str(cc) for pc, cc in zip(percentile, cc_effect)]
 
     #ax = plt.gca()
-    ax.text(0.42, 0.35, "Climate change impact (pvalue: " + str(pv) + ")", 
+    ax.text(0.3, 0.35, "Climate change impact (pvalue: " + str(pv) + ")", 
               transform=ax.transAxes, axes = ax)
     
     for i in range(len(percentile_text)):
-        ax.text(0.42 + i*0.18, 0.2, percentile_text[i], transform=ax.transAxes)
-    ax.text(0.42, 0.09, "Risk Ratio:", transform=ax.transAxes)
-    ax.text(0.42, 0.02, rr, transform=ax.transAxes)
+        ax.text(0.3 + i*0.18, 0.2, percentile_text[i], transform=ax.transAxes)
+    ax.text(0.3, 0.09, "Risk Ratio:", transform=ax.transAxes)
+    ax.text(0.3, 0.02, rr, transform=ax.transAxes)
     #ax.set_xlabel("Factual burned area (%)")
     #ax.set_ylabel("Relative difference in burned area (%)")
     ax.set_xlabel(" ")
@@ -107,7 +111,8 @@ def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = N
 
 
 def plot_for_region(region, mnths, years, metric, plot_FUN, 
-                    dir1, dir2, obs_dir, obs_file, add_legend = False,
+                    dir1, dir2, obs_dir, obs_file, 
+                    all_mod_years = False, add_legend = False,
                     *args, **kw):
     # Load the data
     dir = dir1 + region + dir2 + '/'
@@ -116,8 +121,12 @@ def plot_for_region(region, mnths, years, metric, plot_FUN,
     obs = pd.read_csv(obs_dir + '/' + region + '/' + obs_file)
 
     # Extra years and flatten the arrays to 1D
-    factual_flat = extract_years(factual, years, mnths) + 0.000000001
-    counterfactual_flat = extract_years(counterfactual, years, mnths) + 0.000000001
+    if all_mod_years:
+        mod_years = None
+    else:
+        mod_years = years
+    factual_flat = extract_years(factual, mod_years, mnths) + 0.000000001
+    counterfactual_flat = extract_years(counterfactual, mod_years, mnths) + 0.000000001
     
     obs = extract_years(obs.set_index('time').T, years, mnths, '-15')
     if metric == 'mean':
@@ -128,7 +137,9 @@ def plot_for_region(region, mnths, years, metric, plot_FUN,
         factual_flat = factual_flat * 100.0
         counterfactual_flat = counterfactual_flat * 100.0
         plot_name = ""
-    
+    if obs > factual_flat.max():
+        factual_flat = factual_flat * 100
+        counterfactual_flat = counterfactual_flat * 100
     out = plot_FUN(factual_flat, counterfactual_flat, obs, plot_name = plot_name, *args, **kw)
     
     if add_legend:
@@ -138,7 +149,7 @@ def plot_for_region(region, mnths, years, metric, plot_FUN,
 
 def plot_attribution_scatter(regions, mnths, years, figname, *args, **kw):
     metrics = ["mean", 'pc-95.0']
-    fig, axes = plt.subplots(len(regions), 2, figsize=(len(regions) * 7.2, 7.2))
+    fig, axes = plt.subplots(len(regions), 2, figsize=(12, len(regions)*3.5))
     out = []
     for i, metric in  enumerate(metrics):
         outi = []
@@ -162,19 +173,28 @@ if __name__=="__main__":
     dir1 = "outputs/outputs/ConFLAME_nrt"
     dir2 = "-2425/time_series/_19-frac_points_0.5/"
 
-    regions = ["Pantanal", "Congo"]#, "Amazon"]
-    mnths = [['01'], ['07']]
-    years = [[2024], [2024]]
+    regions = ["Amazon", "Pantanal", "Congo"]
+    mnths = [['01', '02', '03'], ['01'], ['07']]
+    years = [[2024], [2024], [2024]]
     
     obs_dir = 'data/data/driving_data2425//'
     obs_file = 'burnt_area_data.csv'
-
-    outs = plot_attribution_scatter(regions, mnths, years, "attribution_scatter_2425",
+    
+    outs_era5 = plot_attribution_scatter(regions, mnths, years, "attribution_scatter_era5_2425",
                              dir1 = dir1, dir2 = dir2,
                              obs_dir = obs_dir, obs_file = obs_file) 
+    
+    dir1 = "outputs/outputs/ConFLAME_"
+    dir2 = "-2425-attempt12/time_series/_15-frac_points_0.5/"
 
+    outs_isimip = plot_attribution_scatter(regions, mnths, years, 
+                             "attribution_scatter_isimip_2425",
+                             dir1 = dir1, dir2 = dir2,
+                             obs_dir = obs_dir, obs_file = obs_file, all_mod_years = True) 
 
+    outs_isimip = plot_attribution_scatter(regions, mnths, years, 
+                             "attribution_scatter_isimip_2425",
+                             dir1 = dir1, dir2 = dir2,
+                             obs_dir = obs_dir, obs_file = obs_file, all_mod_years = True) 
 
-
-
-
+    set_trace()
