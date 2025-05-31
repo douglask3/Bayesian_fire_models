@@ -7,6 +7,7 @@ import state_of_wildfires_colours
 import seaborn as sns
 import fnmatch
 import sys
+import pickle
 sys.path.append('.')
 sys.path.append('src/')
 from state_of_wildfires_colours  import SoW_cmap
@@ -112,12 +113,14 @@ def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = N
 
 def plot_for_region(region, mnths, years, metric, plot_FUN, 
                     dir1, dir2, obs_dir, obs_file, 
+                    factual_name = "factual", counterfactual_name = "counterfactual",
                     all_mod_years = False, add_legend = False,
                     *args, **kw):
     # Load the data
     dir = dir1 + region + dir2 + '/'
-    factual = pd.read_csv(dir + "factual-/" + metric + "/points-Evaluate.csv")
-    counterfactual = pd.read_csv(dir + "counterfactual-/" + metric + "/points-Evaluate.csv")
+    factual = pd.read_csv(dir + factual_name + "-/" + metric + "/points-Evaluate.csv")
+    counterfactual = pd.read_csv(dir + counterfactual_name + \
+                                 "-/" + metric + "/points-Evaluate.csv")
     obs = pd.read_csv(obs_dir + '/' + region + '/' + obs_file)
 
     # Extra years and flatten the arrays to 1D
@@ -170,6 +173,7 @@ def plot_attribution_scatter(regions, mnths, years, figname, *args, **kw):
     return out
 
 if __name__=="__main__":
+    
     dir1 = "outputs/outputs/ConFLAME_nrt"
     dir2 = "-2425/time_series/_19-frac_points_0.5/"
 
@@ -179,7 +183,7 @@ if __name__=="__main__":
     
     obs_dir = 'data/data/driving_data2425//'
     obs_file = 'burnt_area_data.csv'
-    
+    '''
     outs_era5 = plot_attribution_scatter(regions, mnths, years, "attribution_scatter_era5_2425",
                              dir1 = dir1, dir2 = dir2,
                              obs_dir = obs_dir, obs_file = obs_file) 
@@ -192,9 +196,78 @@ if __name__=="__main__":
                              dir1 = dir1, dir2 = dir2,
                              obs_dir = obs_dir, obs_file = obs_file, all_mod_years = True) 
 
-    outs_isimip = plot_attribution_scatter(regions, mnths, years, 
-                             "attribution_scatter_isimip_2425",
+    outs_human = plot_attribution_scatter(regions, mnths, years, 
+                             "attribution_scatter_isimip_human_2425",
                              dir1 = dir1, dir2 = dir2,
-                             obs_dir = obs_dir, obs_file = obs_file, all_mod_years = True) 
+                             obs_dir = obs_dir, obs_file = obs_file, 
+                             factual_name = "counterfactual", 
+                             counterfactual_name = "early_industrial",
+                             all_mod_years = True) 
 
+    outs_combined = []
+    for ii in range(len(outs_era5)):
+        outi = []
+        for jj in range(len(outs_era5[ii])):
+            outi.append(np.random.choice(outs_era5[ii][jj], 1000) + np.random.choice(outs_isimip[ii][jj], 1000)/2.0)
+        outs_combined.append(outi)#set_trace()
+
+    
+    f = open('temp/store.pckl', 'wb')
+    pickle.dump([outs_era5, outs_isimip, outs_combined, outs_human], f)
+    f.close()
+    '''
+    f = open('temp/store.pckl', 'rb')
+    outs_era5, outs_isimip, outs_combined, outs_human = pickle.load(f)
+    f.close()
+
+    # Example labels for the sources
+    sources = ['Climate (HadGEM+ERA5)', 'Climate (ISIMIP3a)', 'Climate (Combined)', 'Human']
+
+    # Group data
+    all_sources = [outs_era5, outs_isimip, outs_combined, outs_human]
+
+    # Flatten into long-form dataframe for seaborn
+    records = []
+    for region_idx, region in enumerate(regions):
+        for source_idx, source_name in enumerate(sources):
+            for kind_idx, kind in enumerate(["Mean", "Extreme"]):  # 0 = mean, 1 = extreme
+                samples = all_sources[source_idx][kind_idx][region_idx]
+                for val in samples:
+                    records.append({
+                        'Region': region,
+                        'Source': source_name,
+                        'Impact Type': kind,
+                        'Relative Change (%)': val
+                    })
+    
+    df = pd.DataFrame.from_records(records)
+    
+    # Set up the plot
+    sns.set(style="whitegrid")
+    fig, axes = plt.subplots(2, 1, figsize=(14, 10), sharex=True)
+    
+    # Top: Mean
+    sns.violinplot(
+        data=df[df["Impact Type"] == "Mean"],
+        x="Region", y="Relative Change (%)", hue="Source",
+        split=False, inner="quartile", palette="Set2", ax=axes[0]
+    )
+    axes[0].set_title("Mean Burnt Area Impact")
+    axes[0].axhline(0, color="gray", linestyle="--", linewidth=1)
+    axes[0].legend(loc="lower left")
+    axes[0].axhline(0, color='k', linestyle='--')
+    # Bottom: Extreme
+    sns.violinplot(
+        data=df[df["Impact Type"] == "Extreme"],
+        x="Region", y="Relative Change (%)", hue="Source",
+        split=False, inner="quartile", palette="Set2", ax=axes[1]
+    )
+    axes[1].set_title("Extreme Burnt Area Impact")
+    axes[1].axhline(0, color="gray", linestyle="--", linewidth=1)
+    axes[1].legend(loc="lower left")
+    axes[0].axhline(0, color='k', linestyle='--')
+
+    # Tidy up
+    plt.tight_layout()
+    plt.show()
     set_trace()
