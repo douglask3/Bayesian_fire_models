@@ -14,6 +14,34 @@ from state_of_wildfires_colours  import SoW_cmap
 from state_of_wildfires_region_info  import get_region_info
 
 def extract_years(df, years, mnths, ext = "-01T00:00:00"):
+    """
+    Extracts and averages values from a DataFrame across specified months and years.
+
+    Parameters:
+    ----------
+    df : pandas.DataFrame
+        A DataFrame with columns labeled by timestamp strings (e.g., '2023-01-01T00:00:00') 
+        and rows representing ensemble members or samples.
+    years : list of str or int, or None
+        The years to include (e.g., [2023, 2024]). If None, all years found in column names are used.
+    mnths : list of str
+        The months to average over (e.g., ['01', '02', '03'] for January–March).
+    ext : str, optional
+        A string pattern representing the suffix to match in column names (default is '-01T00:00:00'), 
+        though it's overridden in favor of a wildcard match.
+
+    Returns:
+    -------
+    np.ndarray
+        A 1D numpy array with the average value for each row (e.g., ensemble member), 
+        computed across the selected months for each year. The result is flattened to combine years.
+    
+    Notes:
+    -----
+    - Column matching uses wildcards via `fnmatch` to allow flexibility in timestamp formats.
+    - Designed for use in ensemble climate/fire datasets where time is encoded in column headers.
+    - Useful for computing seasonal means (e.g., JFM) per year, per ensemble member.
+    """
     if years is None:
         years = np.unique([col[0:4] for col in df.columns[1:]])
     # Reshape: group columns by year
@@ -30,15 +58,79 @@ def extract_years(df, years, mnths, ext = "-01T00:00:00"):
     return np.array(avg_per_year).flatten()
 
 def flatten(xss):
+    """
+    Flattens a nested list (list of lists) into a single list.
+
+    Parameters:
+    ----------
+    xss : list of lists
+        A list where each element is itself a list.
+
+    Returns:
+    -------
+    list
+        A single flattened list containing all elements from the sublists, in order.
+    """
     return [x for xs in xss for x in xs]
 
-def plot_kde(x, y, xlab, ylab, cmap_name = "gradient_hues_extended", *args, **kw):
+def plot_kde(x, y, xlab, ylab, cmap_name = "gradient_hues_extended", *args, **kw): 
+    """
+    Creates a filled 2D kernel density estimate (KDE) plot for two input variables.
+
+    Parameters:
+    ----------
+    x : array-like
+        Values for the x-axis.
+    y : array-like
+        Values for the y-axis.
+    xlab : str
+        Label for the x-axis and corresponding DataFrame column.
+    ylab : str
+        Label for the y-axis and corresponding DataFrame column.
+    cmap_name : str, optional
+        Name of the colormap to use from the SoW_cmap dictionary. Default is "gradient_hues_extended".
+    *args, **kw : additional arguments
+        Additional arguments passed to `sns.kdeplot`.
+
+    Notes:
+    -----
+    - Assumes a dictionary `SoW_cmap` is available in the global scope, with named colormaps.
+    - Produces a filled density plot using seaborn’s `kdeplot`.
+
+    Example:
+    -------
+    #>>> plot_kde(x_values, y_values, "Factual", "Counterfactual", cmap_name="SoW_gradient")
+    """
     df = pd.DataFrame({xlab: x, ylab: y})
     sns.kdeplot(data=df, x=xlab, y=ylab, fill=True, 
                 cmap=SoW_cmap[cmap_name], *args, **kw)
 
 def plot_fact_vs_counter(factual_flat, counterfactual_flat, obs, ax = False): 
-    # Scatter plot 1: Factual vs Counterfactual 
+
+    """
+    Plots a 2D KDE of Factual vs. Counterfactual burned area values, along with a 1:1 reference line 
+    and an observed value marker.
+
+    Parameters:
+    ----------
+    factual_flat : array-like
+        Flattened array of burned area values under factual conditions.
+    counterfactual_flat : array-like
+        Flattened array of burned area values under counterfactual
+        (no-climate-change) conditions.
+    obs : float
+        Observed burned area value to highlight on the plot.
+    ax : matplotlib.axes.Axes, optional
+        Optional axis object to plot on. If False, uses the default current axis.
+
+    Notes:
+    -----
+    - Uses a highly skewed KDE level distribution to emphasize differences at low burned area.
+    - Applies logarithmic KDE scaling to better distinguish dense low-value regions.
+    - Adds a 1:1 line to visualize agreement between factual and counterfactual conditions.
+    - Draws vertical and horizontal red dashed lines at the observed value.
+    """
+
     x = np.linspace(0, 1, 20)
     log_levels = x**(8)  # try 3, 5, 7 for increasingly strong bias
     plot_kde(factual_flat, counterfactual_flat, "factual", "counterfactual",
@@ -50,12 +142,50 @@ def plot_fact_vs_counter(factual_flat, counterfactual_flat, obs, ax = False):
     plt.title("Factual vs Counterfactual Burned Area")
     
     plt.axvline(obs, color='red', linestyle='--', label='Observed Burned Area')
-    plt.ahvline(obs, color='red', linestyle='--', label='Observed Burned Area')
+    plt.axhline(obs, color='red', linestyle='--', label='Observed Burned Area')
     
     plt.grid(True)
 
 def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = None):
-    # Scatter plot 2: Factual vs Factual/Counterfactual
+   """
+    Plots a 2D KDE of Factual Burned Area vs. Relative Effect Ratio, quantifying the 
+    percentage change in burned area due to climate change or other factors.
+
+    The effect ratio is defined as:
+        100 * (factual - counterfactual) / max(factual, counterfactual),
+    and is clipped between -100 and 100, where 0 indicates no change.
+
+    Parameters:
+    ----------
+    factual_flat : array-like
+        Flattened array of burned area values under factual (actual) conditions.
+    counterfactual_flat : array-like
+        Flattened array of burned area values under counterfactual (e.g., no-climate-change) conditions.
+    obs : float
+        Observed burned area value used to define thresholds and draw reference lines.
+    plot_name : str
+        Label for the y-axis of the plot, indicating what effect is being shown.
+    ax : matplotlib.axes.Axes, optional
+        Axis object to plot on. If None, the current axis is used.
+
+    Returns:
+    -------
+    numpy.ndarray
+        Array of effect ratio values for cases where factual > observed, used for further statistical analysis.
+
+    Notes:
+    -----
+    - Uses a KDE with logarithmic contour levels to visualize the joint distribution.
+    - Draws vertical and horizontal lines to mark the observed value and neutral (zero) effect.
+    - Annotates the plot with key percentiles of the estimated climate change effect, 
+      p-value for positive change, and the risk ratio (how much more frequently extreme fire occurs).
+    - Applies clipping to avoid spurious ratios in very small values.
+    - Replots with clipping on high observed values for visual emphasis.
+
+    Example:
+    --------
+    #>>> plot_fact_vs_ratio(factual, counterfactual, obs_value, "Relative Change", ax=ax)
+    """
     effect_ratio = (factual_flat - counterfactual_flat)*100
     test = effect_ratio>0
     effect_ratio[test] = effect_ratio[test]/factual_flat[test]
@@ -81,21 +211,20 @@ def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = N
     
     mask = factual_flat > obs
     percentile = [10, 50, 90]
-    try:
-        cc_effect = np.percentile(effect_ratio[mask], percentile)/100.0
-    except:
-        set_trace()
+    if np.sum(mask) == 0: 
+        return
+    cc_effect = np.percentile(effect_ratio[mask], percentile)/100.0
+    
     cc_effect = np.round(1.0+cc_effect/(1.0-cc_effect), 2)
     pv = np.mean(effect_ratio[mask]>0)
     pv = np.round(pv, 2)
     if (pv > 0.99):
         pv = str("> 0.99")
     rr = np.sum(factual_flat>obs)/np.sum(counterfactual_flat > obs)
-    set_trace()
+    
     rr = np.round(rr, 2)
     percentile_text = [str(pc) + "%:\n" + str(cc) for pc, cc in zip(percentile, cc_effect)]
-
-    #ax = plt.gca()
+    
     ax.text(0.3, 0.35, "Climate change impact (pvalue: " + str(pv) + ")", 
               transform=ax.transAxes, axes = ax)
     
@@ -103,8 +232,7 @@ def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = N
         ax.text(0.3 + i*0.18, 0.2, percentile_text[i], transform=ax.transAxes)
     ax.text(0.3, 0.09, "Risk Ratio:", transform=ax.transAxes)
     ax.text(0.3, 0.02, rr, transform=ax.transAxes)
-    #ax.set_xlabel("Factual burned area (%)")
-    #ax.set_ylabel("Relative difference in burned area (%)")
+    
     ax.set_xlabel(" ")
     ax.set_ylabel(plot_name)
     ax.grid(True, which='both', linestyle='--', linewidth=0.5)
@@ -162,6 +290,58 @@ def plot_for_region(region, metric, plot_FUN,
     return out
 
 def plot_attribution_scatter(regions, figname, *args, **kw):
+    """
+    Loads and prepares burned area data for a specified region and metric, then
+    calls a user-defined plotting function to visualize the comparison between 
+    factual and counterfactual scenarios.
+
+    Parameters:
+    ----------
+    region : str
+        Name of the region to plot.
+    metric : str
+        Metric to visualize, e.g., 'mean' or 'extreme'. Affects observation indexing and unit scaling.
+    plot_FUN : callable
+        A plotting function to be applied to the flattened factual and counterfactual data,
+        typically something like `plot_fact_vs_ratio` or `plot_fact_vs_counter`.
+    dir1 : str
+        Path prefix to the directory containing model outputs.
+    dir2 : str
+        Path suffix after the region name to complete the directory path.
+    obs_dir : str
+        Directory containing observational data.
+    obs_file : str
+        Name of the observational data file (within region subfolder).
+    factual_name : str, default="factual"
+        Subdirectory or file prefix for the factual scenario data.
+    counterfactual_name : str, default="counterfactual"
+        Subdirectory or file prefix for the counterfactual scenario data.
+    all_mod_years : bool, default=False
+        If True, use all years from the model data instead of region-specific years.
+    add_legend : bool, default=False
+        If True, adds a legend to the resulting plot.
+    *args, **kw :
+        Additional arguments passed to the plotting function.
+
+    Returns:
+    -------
+    Any
+        Output of the plotting function, typically a numpy array of calculated effects.
+
+    Notes:
+    -----
+    - Automatically handles unit adjustments if max values are small (< 1) by scaling to percentages.
+    - Adjusts observed values if they are larger than the model values, to ensure visual comparability.
+    - Uses metadata (months and years) defined in `get_region_info(region)`.
+    - Loads model data and observations using pandas, and flattens multi-year monthly time series.
+    - If `metric` is not 'mean', it assumes it's an extreme value and processes the second observation entry.
+
+    Example:
+    --------
+    #>>> plot_for_region("Amazon", "mean", plot_fact_vs_ratio, 
+                         dir1="/data/", dir2="/outputs", 
+                         obs_dir="/obs", obs_file="obs.csv")
+    """
     metrics = ["mean", 'pc-95.0']
     fig, axes = plt.subplots(len(regions), 2, figsize=(12, len(regions)*3.5))
     out = []
@@ -178,8 +358,7 @@ def plot_attribution_scatter(regions, figname, *args, **kw):
     fig.text(0.23, 0.95, "Entire region", ha='center', va='bottom', fontsize=14)
     fig.text(0.73, 0.95, "High burnt areas", ha='center', va='bottom', fontsize=14)
     fig.text(0.5, 0.05, "Factual burned area (%)", ha='center', va='top', fontsize=12)
-     #ax.set_xlabel("Factual burned area (%)")
-    #ax.set_ylabel("Relative difference in burned area (%)")
+    
     plt.savefig('figs/' + figname + ".png")
     return out
 
