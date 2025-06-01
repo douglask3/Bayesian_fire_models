@@ -35,18 +35,17 @@ def standard_curve_experiment(Sim, Xi, col_to_keep, name, trace, sample_for_plot
     #set_trace()
     Sim2 = runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, 
                              name + "/all_but_to_0", *args, **kw)
-
-    
     return Sim, Sim2
 
 def potential_curve_experiment(Sim, Xi, col_to_go, name, trace, sample_for_plot, 
                               eg_cube, lmask, *args, **kw):
     X = Xi.copy()
-    X[:, col_to_go] = 0.0
-    #X[:, col_to_go] = np.mean(X[:, col_to_go])
+
+    X[:, col_to_go] = np.median(X[:, col_to_go], axis = 0)
     
     Sim2 = runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, 
-                             name + "/to_0", *args, **kw)
+                             name + "/to_mean", *args, **kw)
+
     return Sim, Sim2
 
 
@@ -81,20 +80,6 @@ def sensitivity_curve_experiment(Sim, Xi, col, name, trace, sample_for_plot,
             out = tuple([out[0], out[1:]])
     
     return out
-   
-    X[:, col] -= dx/2.0  # Subtract 0.1 of all values for the current column
-    
-    Sim1 = runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, 
-                             name + "/subtract_" + str(dx/2.0), *args, **kw)
-        
-    X = Xi.copy() #restore values
-    X[:, col] += dx/2.0 #add 0.1 to all values for the current column
-     
-    Sim2 = runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, 
-                             name + "/add_" + str(dx/2.0), *args, **kw)
-
-    
-    return Sim1, Sim2
 
                                  
 
@@ -103,27 +88,33 @@ def response_curve(Sim, curve_type, trace, sample_for_plot, X, eg_cube, lmask,
                    class_object, link_func_class,
                    x_filen_list, 
                    levels, cmap, dlevels, dcmap, scalers = None, 
-                   response_grouping = None, *args, **kw):  
+                   response_grouping = None, plot_map = True, *args, **kw):  
     
     figure_filename = fig_dir + curve_type + '-response'
     figure_dir = combine_path_and_make_dir(figure_filename + '-maps/') 
     
     print("Plotting response curve: " + curve_type)
+
+
+    if lmask is None:
+        def extract_data(x): return x
+    else:
+        extract_data = non_masked_data
     
     map_type = 1
-    if curve_type == "initial":
+    if "initial" in curve_type:
         response_FUN = initial_curve_experiment
         map_type = 0
-    elif curve_type == "standard":
+    elif "standard" in curve_type:
         response_FUN = standard_curve_experiment
-    elif curve_type == "potential":
+    elif "potential" in curve_type:
         response_FUN = potential_curve_experiment
-    elif curve_type == "sensitivity":
+    elif "sensitivity" in curve_type:
         response_FUN = sensitivity_curve_experiment
         map_type = 2
     else:
         set_trace()
-
+    if not plot_map: map_type = -9
     fig_curve = plt.figure()
     fig_map = plt.figure()
 
@@ -153,11 +144,14 @@ def response_curve(Sim, curve_type, trace, sample_for_plot, X, eg_cube, lmask,
                               extra_params = extra_params, class_object = class_object, 
                               link_func_class = link_func_class)
         Sim2 = Sim2i[0] if isinstance(Sim2i, list) else Sim2i
+        diff = Sim2.copy() - Sim1.data if Sim1 is not None else Sim2
+
         plotN = Ncol * (group_index + 1)
+
         if map_type >= 0:
             plotFun(Sim2, varname, plotN)
             plotNi = 0
-            diff = Sim2.copy() - Sim1.data if Sim1 is not None else Sim2
+
         if map_type == 2:
             
             plotFun(Sim1, '', plotN + 2, figure_filename=figure_dir + varname + '-absolute')
@@ -167,16 +161,16 @@ def response_curve(Sim, curve_type, trace, sample_for_plot, X, eg_cube, lmask,
             if type(g_index) == type(1) or len(g_index) == 1:
                 diff.data = diff.data - Sim1.data if Sim1 is not None else Sim2
             else:
+                if not isinstance(Sim2i, list): Sim2i = [Sim2i]
                 diff.data = np.sqrt(Sim1.data**2 + np.sum([i.data**2 for i in Sim2i], axis = 0))
-        
-        diffP = diff.collapsed('time', iris.analysis.MEAN)
-        
-         
-        plotFun(diffP, '', plotN + 2 + plotNi, dlevels, dcmap, 
-                figure_filename=figure_dir + varname + '-difference')  
 
-        
         if map_type >= 0:
+            diffP = diff.collapsed('time', iris.analysis.MEAN)
+        
+            plotFun(diffP, '', plotN + 2 + plotNi, dlevels, dcmap, 
+                    figure_filename=figure_dir + varname + '-difference')  
+
+                
             agree = diffP.copy()
             agree.data = agree.data < 0
             agree = agree.collapsed('realization', iris.analysis.MEAN)
@@ -203,7 +197,7 @@ def response_curve(Sim, curve_type, trace, sample_for_plot, X, eg_cube, lmask,
                     values_in_bin = []
     
                     for rw in range(Sim2.shape[0]):
-                        values_in_bin.append(non_masked_data(diff[rw])[mask])
+                        values_in_bin.append(extract_data(diff[rw])[mask])
                     values_in_bin = np.array(values_in_bin).flatten()    
     
                     median_values.append(np.median(values_in_bin))
@@ -223,17 +217,17 @@ def response_curve(Sim, curve_type, trace, sample_for_plot, X, eg_cube, lmask,
         else:
             y = X[:, g_index[1]]
             x = X[:, g_index[0]]
-            z = non_masked_data(diff[0])
+            z = extract_data(diff[0])
             z = z[:,None]
         
             for rw in range(1, Sim2.shape[0]):
-                z = np.concatenate((z, non_masked_data(diff[rw])[:, None]), axis = 1)
+                z = np.concatenate((z, extract_data(diff[rw])[:, None]), axis = 1)
             z = np.transpose(np.percentile(z, [10, 50, 90], axis=1))
+            if scalers is not None:
+                x = x*(scalers[1, g_index[0]] - scalers[0, g_index[0]]) + scalers[0, g_index[0]]
+                y = y*(scalers[1, g_index[1]] - scalers[0, g_index[1]]) + scalers[0, g_index[1]]
 
             output_array = np.column_stack((x, y, z))
-            
-            x = x*(scalers[1, 0] - scalers[0, 0]) + scalers[0, 0]
-            y = y*(scalers[1, 1] - scalers[0, 1]) + scalers[0, 1]
             np.savetxt(figure_dir + varname + '-response_surface.csv', 
                              output_array, delimiter=',', 
                              header = "x,y,p10%,p50%,p90%")
