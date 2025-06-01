@@ -1,6 +1,6 @@
 ## model info
 regions:: ['LA', 'Congo', 'Pantanal', 'Amazon', 'NEIndia', 'Alberta']
-model_title::  'ConFLAME_nrt<<region>>-2425'
+model_title::  'ConFLAME_nrt<<region>>-2425-small'
 
 ## input data paths and filenames
 
@@ -36,10 +36,10 @@ priors:: {'pname': "powers",'np': 6, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.
 ### optimization info
 inference_step_type:: "metropolis"
 link_func_class:: MaxEnt
-niterations:: 1000
+niterations:: 100
 cores:: 10
-fraction_data_for_sample:: 0.5
-min_data_points_for_sample:: 4000
+fraction_data_for_sample:: 0.05
+min_data_points_for_sample:: 400
 subset_function:: sub_year_months
 subset_function_args:: {'months_of_year': [0, 1, 2, 3, 11]}
 region_months:: {'LA': [0], 'Pantanal': [5, 6, 7, 8], 'Amazon': [0,1,2, 3], 'Congo': [5,6,7], 'NWIndia': [3], 'Alberta': [6]}
@@ -50,7 +50,7 @@ dir_outputs:: 'outputs/outputs/'
 
 ## evaluation info
 #y_filen_eval:: 'burnt_area.nc'
-sample_for_plot:: 1000
+sample_for_plot:: 10
 control_names:: ['Moisture', 'Wind', 'Ignition', 'Suppression']
 levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
 dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
