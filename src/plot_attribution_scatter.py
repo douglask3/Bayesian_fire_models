@@ -3,14 +3,15 @@ from pdb import set_trace
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import state_of_wildfires_colours
 import seaborn as sns
 import fnmatch
 import sys
 import pickle
 sys.path.append('.')
 sys.path.append('src/')
+sys.path.append('SoW_info/')
 from state_of_wildfires_colours  import SoW_cmap
+from state_of_wildfires_region_info  import get_region_info
 
 def extract_years(df, years, mnths, ext = "-01T00:00:00"):
     if years is None:
@@ -90,6 +91,7 @@ def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = N
     if (pv > 0.99):
         pv = str("> 0.99")
     rr = np.sum(factual_flat>obs)/np.sum(counterfactual_flat > obs)
+    set_trace()
     rr = np.round(rr, 2)
     percentile_text = [str(pc) + "%:\n" + str(cc) for pc, cc in zip(percentile, cc_effect)]
 
@@ -111,11 +113,15 @@ def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = N
 
 
 
-def plot_for_region(region, mnths, years, metric, plot_FUN, 
+def plot_for_region(region, metric, plot_FUN, 
                     dir1, dir2, obs_dir, obs_file, 
                     factual_name = "factual", counterfactual_name = "counterfactual",
                     all_mod_years = False, add_legend = False,
                     *args, **kw):
+    region_info = get_region_info(region)[region]
+    
+    years = region_info['years']
+    mnths = region_info['mnths']
     # Load the data
     dir = dir1 + region + dir2 + '/'
     factual = pd.read_csv(dir + factual_name + "-/" + metric + "/points-Evaluate.csv")
@@ -132,34 +138,39 @@ def plot_for_region(region, mnths, years, metric, plot_FUN,
     counterfactual_flat = extract_years(counterfactual, mod_years, mnths) + 0.000000001
     
     obs = extract_years(obs.set_index('time').T, years, mnths, '-15')
+    factual_flat0 = factual_flat.copy()
     if metric == 'mean':
         obs = obs[0]
-        plot_name = region
+        plot_name = region_info['shortname']
     else:
         obs = obs[1]
-        factual_flat = factual_flat * 100.0
-        counterfactual_flat = counterfactual_flat * 100.0
+        if factual_flat.max() < 1:
+            factual_flat = factual_flat * 100.0
+            counterfactual_flat = counterfactual_flat * 100.0
         plot_name = ""
-    if obs > factual_flat.max():
+    if obs > factual_flat.max() and factual_flat.max() < 1:
         factual_flat = factual_flat * 100
         counterfactual_flat = counterfactual_flat * 100
-    out = plot_FUN(factual_flat, counterfactual_flat, obs, plot_name = plot_name, *args, **kw)
-    
+
+    if obs > factual_flat.max():
+        obs = obs * 0.67
+
+    out = plot_FUN(factual_flat, counterfactual_flat, obs, plot_name = plot_name, *args, **kw)    
     if add_legend:
         plt.legend()
 
     return out
 
-def plot_attribution_scatter(regions, mnths, years, figname, *args, **kw):
+def plot_attribution_scatter(regions, figname, *args, **kw):
     metrics = ["mean", 'pc-95.0']
     fig, axes = plt.subplots(len(regions), 2, figsize=(12, len(regions)*3.5))
     out = []
-    for i, metric in  enumerate(metrics):
+    for i, metric in enumerate(metrics):
         outi = []
-        for j, region, mnth, yrs in zip (range(len(regions)), regions, mnths, years):
+        for j, region in enumerate(regions):
             ax = axes[j, i]
             print(region)
-            outi.append(plot_for_region(region, mnth, yrs, metric, plot_fact_vs_ratio, ax = ax, 
+            outi.append(plot_for_region(region, metric, plot_fact_vs_ratio, ax = ax, 
                             *args, **kw))
         out.append(outi)
     
@@ -174,29 +185,29 @@ def plot_attribution_scatter(regions, mnths, years, figname, *args, **kw):
 
 if __name__=="__main__":
     
-    dir1 = "outputs/outputs/ConFLAME_nrt"
-    dir2 = "-2425/time_series/_19-frac_points_0.5/"
+    dir1 = "outputs/outputs_scratch/ConFLAME_nrt-attribution//"
+    dir2 = "-2425/time_series/_18-frac_points_0.5/"
 
-    regions = ["Amazon", "Pantanal", "Congo"]
-    mnths = [['01', '02', '03'], ['01'], ['07']]
-    years = [[2024], [2024], [2024]]
-    
+
+
+    regions = ["Amazon", "Congo", "Pantanal"]
+    #retgions = {key: regions_info[key] for key in region_names if key in regions_info}
     obs_dir = 'data/data/driving_data2425//'
     obs_file = 'burnt_area_data.csv'
-    '''
-    outs_era5 = plot_attribution_scatter(regions, mnths, years, "attribution_scatter_era5_2425",
+    
+    outs_era5 = plot_attribution_scatter(regions, "attribution_scatter_era5_2425",
                              dir1 = dir1, dir2 = dir2,
                              obs_dir = obs_dir, obs_file = obs_file) 
     
     dir1 = "outputs/outputs/ConFLAME_"
     dir2 = "-2425-attempt12/time_series/_15-frac_points_0.5/"
 
-    outs_isimip = plot_attribution_scatter(regions, mnths, years, 
+    outs_isimip = plot_attribution_scatter(regions, 
                              "attribution_scatter_isimip_2425",
                              dir1 = dir1, dir2 = dir2,
                              obs_dir = obs_dir, obs_file = obs_file, all_mod_years = True) 
 
-    outs_human = plot_attribution_scatter(regions, mnths, years, 
+    outs_human = plot_attribution_scatter(regions, 
                              "attribution_scatter_isimip_human_2425",
                              dir1 = dir1, dir2 = dir2,
                              obs_dir = obs_dir, obs_file = obs_file, 
@@ -208,14 +219,15 @@ if __name__=="__main__":
     for ii in range(len(outs_era5)):
         outi = []
         for jj in range(len(outs_era5[ii])):
-            outi.append(np.random.choice(outs_era5[ii][jj], 1000) + np.random.choice(outs_isimip[ii][jj], 1000)/2.0)
+            outi.append(np.random.choice(outs_era5[ii][jj], 1000) + \
+                np.random.choice(outs_isimip[ii][jj], 1000)/2.0)
         outs_combined.append(outi)#set_trace()
 
     
     f = open('temp/store.pckl', 'wb')
     pickle.dump([outs_era5, outs_isimip, outs_combined, outs_human], f)
     f.close()
-    '''
+    
     f = open('temp/store.pckl', 'rb')
     outs_era5, outs_isimip, outs_combined, outs_human = pickle.load(f)
     f.close()
