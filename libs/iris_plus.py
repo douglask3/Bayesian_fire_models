@@ -99,7 +99,7 @@ def insert_data_into_cube(x, eg_cube, mask = None):
              Should have same shape of eg_cube, or same length as eg_cube or length equal to Trues in mask
 	eg_cube -- The cube we want to insert data into
 	mask -- Boolean array of shape or length x.
-                Where True, will inster data. Defaulk of None which means True for all points 
+                Where True, will inster data. Default of None which means True for all points 
                 in eg_cube.
     Returns:
         eg_cube with data replaced by x
@@ -112,7 +112,7 @@ def insert_data_into_cube(x, eg_cube, mask = None):
         pred[:] = x
     else:
         pred[mask] = x
-
+    
     Pred.data = pred.reshape(Pred.data.shape)
     return(Pred)
 
