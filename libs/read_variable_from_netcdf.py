@@ -87,51 +87,7 @@ def convert_time_to_standard(time_coord, calendar = 'proleptic_gregorian'):
     time_coord.points = new_units.date2num(datetimes)
     return time_coord
 
-def interpolate_time(dataset, time_points):
-    
-    '''
-    import cf_units
-
-    # Get dataset's time units
-    dataset_time = dataset.coord('time')
-    
-    # Get the origin date string from the original time_points
-    origin = time_points.units.origin
-
-    # Create a new Unit object with the same origin but matching the dataset's calendar
-    new_units = cf_units.Unit(f"days since {origin}", calendar=dataset_time.units.calendar)
-
-    # Apply the new units to a copy of time_points
-    target_time = time_points.copy()
-    target_time.units = new_units
-
-    # Convert to dataset's units (they now have matching calendars)
-    target_time.convert_units(dataset_time.units)
-
-    # Interpolate
-    dataset_interp = dataset.interpolate([('time', target_time)], iris.analysis.Linear())
-
-    return dataset_interp
-    '''
-    '''
-    # Get dataset's time units
-    dataset_time = dataset.coord('time')
-
-    # Make a copy of the target time points
-    target_time = time_points.copy()
-
-    # Manually set calendar to match dataset's calendar
-    set_trace()
-    target_time.units = target_time.units(calendar=dataset_time.units.calendar)
-
-    # Now convert units
-    target_time.convert_units(dataset_time.units)
-
-    # Then interpolate
-    dataset_interp = dataset.interpolate([('time', target_time)], iris.analysis.Linear())
-    return dataset_interp
-    '''
-    
+def interpolate_time(dataset, time_points):    
     # Make a copy of your target time points
     target_time = time_points.copy()
     
