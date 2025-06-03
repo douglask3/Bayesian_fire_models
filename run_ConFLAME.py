@@ -248,9 +248,9 @@ def run_ConFire(namelist):
                 else:
                     ssa['months_of_year'] = run_info['region_months'][region]
                 return ssa
-            
-            set_region_months(subset_function_args)
-            set_region_months(subset_function_args_eval)
+            if select_from_info('region_mnths') is not None:
+                set_region_months(subset_function_args)
+                set_region_months(subset_function_args_eval)
         model_title = run_info['model_title'].replace('<<region>>', region)
         dir_training = run_info['dir_training'].replace('<<region>>', region)
         dir_projecting = run_info['dir_projecting'].replace('<<region>>', region)
@@ -324,7 +324,7 @@ def run_ConFire(namelist):
                          )
                     for name, dir, expt, yfile in zip(names_all, dirs_all, exp_type, y_filen)
                 ]
-        args_list.reverse()
+        #args_list.reverse()
         if len(args_list) > 1 and select_from_info('parallelize', True): 
             try:
                 with get_context("spawn").Pool(processes=4) as pool:
