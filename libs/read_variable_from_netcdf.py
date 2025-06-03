@@ -9,6 +9,7 @@ from constrain_cubes_standard import *
 from scipy.interpolate import RegularGridInterpolator
 import datetime
 
+from cf_units import Unit
 
 def find_most_likely_cube(filename):    
     cubes = iris.load(filename)
@@ -58,18 +59,14 @@ def read_variable_from_netcdf_from_dir(dir, filename, find_no_files = False, ens
         except:
             try:
                 dataset = find_most_likely_cube(dir + filename)
-                #set_trace()
+                
                 print("WARNING!: mutliple cubes in file.")
                 print("\t returning first with lats and lons")
                 
             except:
                 dataset = None
-    #if filename == "cg_strokes.nc":
-    #    set_trace()
     return dataset
 
-
-from cf_units import Unit
 def convert_time_to_standard(time_coord, calendar = 'proleptic_gregorian'):
     # Get the origin from the existing time coord
     origin = time_coord.units.origin  # e.g. 'days since 1850-01-01'
@@ -95,7 +92,7 @@ def interpolate_time(dataset, time_points):
         if target_time.units.calendar != dataset.coord('time').units.calendar:
             target_time = convert_time_to_standard(target_time, 
                                                    dataset.coord('time').units.calendar)
-        #set_trace()
+        
         # Get the time coordinate from the dataset
         dataset_time = dataset.coord('time')
     
@@ -144,10 +141,8 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
     while i < len(dir) and dataset is None:
         dataset = read_variable_from_netcdf_from_dir(dir[i], filename, find_no_files,
                                                      ens_no = ens_no)
-        #if filename == "cg_strokes.nc":
-        #    set_trace()
         i += 1
-        dataset00 = dataset.copy()
+
     if dataset is None:
         set_trace()
         print("==============\nERROR!")
@@ -160,8 +155,6 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
     if time_points is not None:     
         if 'time' in coord_names:
             dataset = interpolate_time(dataset, time_points)
-            #set_trace() 
-            #dataset = dataset.interpolate([('time', time_points)], iris.analysis.Linear())
         else:   
             def addTime(time_point):
                 time = iris.coords.DimCoord(np.array([time_point.points]), standard_name='time',
@@ -172,10 +165,8 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
 
             dataset_time = [addTime(time_point) for time_point in time_points.points]
             dataset = iris.cube.CubeList(dataset_time).merge_cube()
-            dataset0 = dataset.copy()
     if extent is not None:
         dataset = dataset.regrid(extent, iris.analysis.Linear())
-        dataset0 = dataset.copy()
     
     if units is not None: dataset.units = units
     if subset_function is not None:
