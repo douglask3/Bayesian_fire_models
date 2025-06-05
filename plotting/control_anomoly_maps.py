@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
+import pickle
 import sys
 sys.path.append('SoW_info/')
 from state_of_wildfires_colours  import SoW_cmap
@@ -15,7 +16,7 @@ from state_of_wildfires_region_info  import get_region_info
 sys.path.append('libs/')
 from  constrain_cubes_standard import *
 from bilinear_interpolate_cube import *
-
+import os.path
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from pdb import set_trace
 
@@ -94,24 +95,6 @@ def plot_map(cube, title='', contour_obs=None, cmap='RdBu_r',
         qplt.contour(contour_obs, levels=[0], colors='k', linewidths=1, axes=ax)
 
 
-levels = [-10, -5, -2, -1, -0.5, 0, 0.5, 1, 2, 5, 10]  # example anomaly levels
-
-# Load observed anomaly
-obs = iris.load_cube("data/data/driving_data2425/Congo/burnt_area.nc")
-obs_anomaly = get_jun_jul_anomaly(obs)
-
-# Load control and each perturbed scenario
-base_path = "outputs/outputs_scratch/ConFLAME_nrt-drivers2/Congo-2425/samples/_21-frac_points_0.5/baseline-"
-mod_p10, mod_p90 = load_ensemble_summary(f"{base_path}/Evaluate")
-
-anom_p90, anom_p10 = [], []
-
-for i in range(6):
-    out_p10, out_p90 = load_ensemble_summary(f"{base_path}/Standard_{i}")
-    
-    anom_p90.append(out_p90)
-    anom_p10.append(out_p10)
-
 def get_positive_count_layer(anom_list, threshold=0):
     count_cube = anom_list[0].copy()
     data = np.zeros(count_cube.shape, dtype=int)
@@ -122,48 +105,73 @@ def get_positive_count_layer(anom_list, threshold=0):
     count_cube.data = data
     return count_cube
 
-count = get_positive_count_layer(anom_p10)
+def open_mod_data(base_path, temp_path):
+
+    if os.path.isfile(temp_path):
+        mod_p10, mod_p90, anom_p10, anom_p90, count = pickle.load(open(temp_path,"rb"))
+    else:
+        mod_p10, mod_p90 = load_ensemble_summary(f"{base_path}/Evaluate")
+
+        anom_p90, anom_p10 = [], []
+        
+        for i in range(6):
+            out_p10, out_p90 = load_ensemble_summary(f"{base_path}/Standard_{i}")
+        
+            anom_p90.append(out_p90)
+            anom_p10.append(out_p10)
+    
+        count = get_positive_count_layer(anom_p10)
+        pickle.dump([mod_p10, mod_p90, anom_p10, anom_p90, count], open(temp_path, "wb"))
+    return mod_p10, mod_p90, anom_p10, anom_p90, count
 
 
-# Define grid shape
-n_rows, n_cols = 4, 2
-fig, axes = plt.subplots(n_rows, n_cols, figsize=(16, 8),
-                        subplot_kw={'projection': ccrs.PlateCarree()})
 
-# Flatten axes for easy indexing
-axes = axes.flatten()
+def run_for_region(region = "Congo", 
+                   levels_obs = [-10, -5, -2, -1, -0.5, 0, 0.5, 1, 2, 5, 10],
+                   levels_mod = [-1, -0.3, -0.1, -0.01, 0.01, 0.1, 0.3, 1]):
+    # Load observed anomaly
+    obs = iris.load_cube("data/data/driving_data2425/" + region + "/burnt_area.nc")
+    obs_anomaly = get_jun_jul_anomaly(obs)
 
-from scipy.ndimage import gaussian_filter
+    # Load control and each perturbed scenario
+    base_path = "outputs/outputs_scratch/ConFLAME_nrt-drivers2/" + \
+                region + "-2425/samples/_21-frac_points_0.5/baseline-"
 
-def smooth_cube(cube, sigma=1):
-    smoothed = cube.copy()
-    smoothed.data = gaussian_filter(smoothed.data, sigma=sigma)
-    return smoothed
+    temp_path = "temp2/control_anom_maps/"
+    os.makedirs(temp_path, exist_ok=True)
+    temp_path = temp_path + region + '.pckl'
+    mod_p10, mod_p90, anom_p10, anom_p90, count = open_mod_data(base_path,  temp_path)
+    # Define grid shape
+    n_rows, n_cols = 4, 2
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(16, 8),
+                             subplot_kw={'projection': ccrs.PlateCarree()})
 
-smoothed_obs = smooth_cube(obs_anomaly, sigma=2)
+    # Flatten axes for easy indexing
+    axes = axes.flatten()
+
+    smoothed_obs = smooth_cube(obs_anomaly, sigma=2)
+
+    img1 = plot_map(count, "Count", contour_obs=smoothed_obs, levels = range(7), 
+                    cmap=SoW_cmap['gradient_hues'], extend = 'max', ax = axes[0])
 
 
+    img0 = plot_map(obs_anomaly, "Observed Burned Area Anomaly (Jun-Jul)", 
+                    cmap=SoW_cmap['diverging_TealOrange'], levels=levels_obs, 
+                    ax=axes[1])
 
-img1 = plot_map(count, "Count", contour_obs=smoothed_obs, levels = range(7), 
-                cmap=SoW_cmap['gradient_hues'], extend = 'max', ax = axes[0])
+    img2 = plot_map(mod_p10, "Simulated (10th percentile)", 
+                    cmap=SoW_cmap['diverging_TealOrange'], levels=levels_mod, 
+                    ax=axes[2])
 
-levels = [-10, -5, -2, -1, -0.5, 0, 0.5, 1, 2, 5, 10]
-img0 = plot_map(obs_anomaly, "Observed Burned Area Anomaly (Jun-Jul)", 
-                cmap=SoW_cmap['diverging_TealOrange'], levels=levels, 
-                ax=axes[1])
-levels = [-1, -0.3, -0.1, -0.01, 0.01, 0.1, 0.3, 1]
-img2 = plot_map(mod_p10, "Simulated (10th percentile)", 
-                cmap=SoW_cmap['diverging_TealOrange'], levels=levels, 
-                ax=axes[2])
-
-img3 = plot_map(mod_p90, "Simulated (90th percentile)", 
-                cmap=SoW_cmap['diverging_TealOrange'], levels=levels, 
-                ax=axes[3])
+    img3 = plot_map(mod_p90, "Simulated (90th percentile)", 
+                    cmap=SoW_cmap['diverging_TealOrange'], levels=levels_mod, 
+                    ax=axes[3])
+    set_trace()
 #fig.colorbar(img3, ax=axes[2:3], orientation='horizontal', fraction=0.05, pad=0.05)
-
+run_for_region()
 
 
 #img4 = plot_map(mod_p10[0], "Fuel Control Anomaly (90th percentile)", contour_obs=smoothed_obs, ax=axes[4])
 
-set_trace()
+
 

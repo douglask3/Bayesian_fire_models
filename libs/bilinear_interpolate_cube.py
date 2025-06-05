@@ -4,7 +4,13 @@ from scipy.interpolate import RegularGridInterpolator
 import iris
 import iris.coords as icoords
 import iris.cube as icube
+from scipy.ndimage import gaussian_filter
 
+
+def smooth_cube(cube, sigma=1):
+    smoothed = cube.copy()
+    smoothed.data = gaussian_filter(smoothed.data, sigma=sigma)
+    return smoothed
 
 def bilinear_interpolate_cube(cube, factor=10):
     """
