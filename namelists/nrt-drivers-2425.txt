@@ -1,6 +1,6 @@
 ## model info
-regions:: ['LA', 'Amazon', 'Pantanal', 'Alberta', 'NEIndia', 'Congo']
-model_title::  'ConFLAME_nrt-drivers2/<<region>>-2425'
+regions:: ['LA', 'Amazon', 'Congo', 'Pantanal', 'Alberta', 'NEIndia']
+model_title::  'ConFLAME_nrt-drivers3/<<region>>-2425'
 
 ## input data paths and filenames
 dir_training:: "data/data/driving_data2425/<<region>>/nrt/era5_monthly/"
