@@ -43,7 +43,7 @@ for_region <- function(rname, sname) {
     out_file_hires  = gsub('<<REGION>>', rname, out_file_hires )
     out_file_nrt    = gsub('<<REGION>>', rname, out_file_nrt   )
     out_file_isimip = gsub('<<REGION>>', rname, out_file_isimip)
-
+    
     shp_rgn = shp[grep(sname, shp$name, ignore.case = TRUE), ]
     extent = ext(shp_rgn)
     extent[3:4] =  -extent[4:3]
@@ -72,7 +72,8 @@ for_region <- function(rname, sname) {
     dat_nrt = mask(dat_nrt, eg_raster_nrt[[1]])
     
     yr_range = range(as.numeric(substr(time(eg_raster_nrt), 1, 4)))
-    test_years = years > yr_range[1] & years < yr_range[2]
+    test_years = years > yr_range[1] & years <= yr_range[2]
+    
     write_out(dat_nrt[[test_years]], out_file_nrt, test_years)
 
     dat = terra::resample(dat, eg_raster[[1]])
