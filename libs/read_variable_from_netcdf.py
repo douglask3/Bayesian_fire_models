@@ -144,7 +144,6 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
         i += 1
 
     if dataset is None:
-        set_trace()
         print("==============\nERROR!")
         print("can't open data.")
         print("Check directory (''" + dir0 + "''), filename (''" + filename + \
