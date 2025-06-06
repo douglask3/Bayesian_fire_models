@@ -48,10 +48,10 @@ def get_season_anomaly(obs_cube, year = 2024, mnths = ['06' ,'07']):
     return anomaly
 
 
-def load_ensemble_summary(path, year  = 2024, mnths = ['06' , '07'], percentile=(5, 95)):
+def load_ensemble_summary(path, year  = 2024, mnths = ['06' , '07'], percentile=(10, 90)):
     files = [os.path.join(path, f) for f in os.listdir(path) \
                     if f.endswith('.nc') and 'sample-pred' in f]
-    #files = files[0:len(files):round(len(files)/10)]
+    #files = files[0:len(files):round(len(files)/100)]
     
     cubes = iris.cube.CubeList([iris.load_cube(f) for f in sorted(files)])
 
@@ -93,8 +93,9 @@ def get_positive_count_layer(anom_list, threshold=0):
 
 def open_mod_data(base_path, temp_path, *args, **kw):
     #set_trace()
-    if os.path.isfile(temp_path) and False:
-        mod_p10, mod_p90, anom_p10, anom_p90, count = pickle.load(open(temp_path,"rb"))
+    if os.path.isfile(temp_path):
+        mod_p10, mod_p90, anom_p10, anom_p90, count_pos, count_neg \
+            = pickle.load(open(temp_path,"rb"))
     else:
         mod_p10, mod_p90 = load_ensemble_summary(f"{base_path}/Evaluate", *args, **kw)
 
@@ -106,9 +107,11 @@ def open_mod_data(base_path, temp_path, *args, **kw):
             anom_p90.append(out_p90)
             anom_p10.append(out_p10)
     
-        count = get_positive_count_layer(anom_p10)
-        pickle.dump([mod_p10, mod_p90, anom_p10, anom_p90, count], open(temp_path, "wb"))
-    return mod_p10, mod_p90, anom_p10, anom_p90, count
+        count_pos = get_positive_count_layer(anom_p10)
+        count_neg = get_positive_count_layer(anom_p90)
+        count_neg.data = len(anom_p90) - count_neg.data
+        pickle.dump([mod_p10, mod_p90, anom_p10, anom_p90, count_pos, count_neg], open(temp_path, "wb"))
+    return mod_p10, mod_p90, anom_p10, anom_p90, count_pos, count_neg
 
 
 def plot_map(cube, title='', contour_obs=None, cmap='RdBu_r', 
@@ -157,12 +160,13 @@ def plot_map(cube, title='', contour_obs=None, cmap='RdBu_r',
     return img
 
 def run_for_region(region_info, 
-                   levels_obs = [-10, -5, -2, -1, -0.5, -0.1, 0.1, 0.5, 1, 2, 5, 10],
-                   levels_mod = [-1, -0.1, -0.01, -0.001, 0.001, 0.01, 0.1, 1]):
+                   levels_mod = [-1, -0.1, -0.01, -0.001, 0.001, 0.01, 0.1, 1],
+                   levels_controls = [-50, -20, -10, -5, -2, -1, 0, 1, 2, 5, 10, 20, 50]):
     # Load observed anomaly
     rdir = region_info['dir']
     year = region_info['years'][0]
     mnths = region_info['mnths']
+
     obs = iris.load_cube("data/data/driving_data2425/" + rdir + "/burnt_area.nc")
     obs_anomaly = get_season_anomaly(obs, year, mnths)
     
@@ -173,12 +177,12 @@ def run_for_region(region_info,
     temp_path = "temp2/control_anom_maps/"
     os.makedirs(temp_path, exist_ok=True)
     temp_path = temp_path + rdir + '.pckl'
-    mod_p10, mod_p90, anom_p10, anom_p90, count = open_mod_data(base_path, temp_path,
-                                                                year, mnths)
+    mod_p10, mod_p90, anom_p10, anom_p90, \
+        count_pos, count_neg = open_mod_data(base_path, temp_path, year, mnths)
     
     # Define grid shape
-    n_rows, n_cols = 4, 4
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(16, 12), 
+    n_rows, n_cols = 5, 4
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(16, 16), 
                              subplot_kw={'projection': ccrs.PlateCarree()})
 
     extent = get_cube_extent(mod_p10)
@@ -197,16 +201,17 @@ def run_for_region(region_info,
     img = []
    
     img.append(plot_map(obs_anomaly, "Observed Burned Area", 
-                    cmap=SoW_cmap['diverging_TealOrange'], levels=levels_obs, 
+                    cmap=SoW_cmap['diverging_TealOrange'], 
+                    levels=region_info['Anomoly_levels'], 
                     ax=axes[0], cbar_label = "Burned Area Anomaly (%)"))
 
     img.append(plot_map(mod_p10, "Simulated Burned Area (10th percentile)", 
                     cmap=SoW_cmap['diverging_TealOrange'], levels=levels_mod, 
-                    ax=axes[1]))
+                    ax=axes[4]))
 
     img.append(plot_map(mod_p90, "Simulated Burned Area (90th percentile)", 
                     cmap=SoW_cmap['diverging_TealOrange'], levels=levels_mod, 
-                    ax=axes[2]))
+                    ax=axes[5]))
     
     #fig.colorbar(
     #    img[2],# Use last image from that row — assumes all share cmap/norm
@@ -214,9 +219,12 @@ def run_for_region(region_info,
     #    orientation='horizontal',
     #    fraction=1.0, pad=-2  # Adjust spacing as needed
     #)
-    img.append(plot_map(count, "No. anonomlous controls", 
-                        levels = range( count.data.max() + 2), 
-                        cmap=SoW_cmap['gradient_hues'], extend = 'neither', ax = axes[3]))
+    img.append(plot_map(count_pos, "No. anonomlously high controls", 
+                        levels = range( count_pos.data.max() + 2), 
+                        cmap=SoW_cmap['gradient_hues'], extend = 'neither', ax = axes[6]))
+    img.append(plot_map(count_neg, "No. anonomlously low controls", 
+                        levels = range( count_neg.data.max() + 2), 
+                        cmap=SoW_cmap['gradient_reversed_hues'], extend = 'neither', ax = axes[7]))
 
     control_names = ['Fuel', 'Moisture', 'Weather', 'Wind', 'Ignitions', 'Suppression']
     cmaps = [SoW_cmap['diverging_GreenPink'].reversed(), 
@@ -224,20 +232,20 @@ def run_for_region(region_info,
             SoW_cmap['diverging_BlueRed'], 
             SoW_cmap['diverging_BlueRed'], 
             SoW_cmap['diverging_GreenPurple'], SoW_cmap['diverging_GreenPurple']]
-    levels_controls = levels_mod#[] 
+    #levels_controls = levels_mod#[] 
     for i in range(len(anom_p10)):
         img.append(plot_map(anom_p10[i], control_names[i] + " (10th percentile)", 
                     cmap=cmaps[i], levels=levels_controls, 
-                    ax=axes[2*i+4]))
+                    ax=axes[2*i+8]))
 
         img.append(plot_map(anom_p90[i], control_names[i] + " (90th percentile)", 
                     cmap=cmaps[i], levels=levels_controls, 
-                    ax=axes[2*i+5]))
+                    ax=axes[2*i+9]))
 
     plt.tight_layout()
     plt.savefig("figs/control_maps_for" + rdir + ".png")
 
-    fig, axes = plt.subplots(1, 2, figsize=(6, 4), 
+    fig, axes = plt.subplots(1, 3, figsize=(9, 4), 
                              subplot_kw={'projection': ccrs.PlateCarree()})
 
     for ax in axes.flat:
@@ -245,21 +253,27 @@ def run_for_region(region_info,
 
     img.append(plot_map(obs_anomaly, "Burned Area", 
                     cmap=SoW_cmap['diverging_TealOrange'], 
-                    levels=[-10, -5, -2, -1, 1, 2, 5, 10], 
+                    levels=region_info['Anomoly_levels'], 
                     ax=axes[0], cbar_label = "Burned Area Anomaly (%)"))
 
-    img.append(plot_map(count, "Number of fire indicators", 
-                        contour_obs = smoothed_obs,
-                        levels = range( count.data.max() + 2), 
+
+    img.append(plot_map(count_pos, "Number of positive fire indicators", 
+                        #contour_obs = smoothed_obs,
+                        levels = range( count_pos.data.max() + 2), 
                         cmap=SoW_cmap['gradient_hues'], extend = 'neither', ax = axes[1]))
+
+    img.append(plot_map(count_neg, "Number of negative fire indicators", 
+                       # contour_obs = smoothed_obs,
+                        levels = range( count_neg.data.max() + 2), 
+                        cmap=SoW_cmap['gradient_reversed_hues'], extend = 'neither', ax = axes[2]))
 
     plt.tight_layout()
     plt.savefig("figs/burning_indicators_for" + rdir + "-2.png")
-    set_trace()
+    
 
 from state_of_wildfires_region_info  import get_region_info
 
-regions = ["Amazon", "Congo"]
+regions = ["Congo", "Amazon", "Pantanal", "LA"]
 regions_info = get_region_info(regions)
 [run_for_region(regions_info[region]) for region in regions]
 set_trace()
