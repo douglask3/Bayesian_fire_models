@@ -62,6 +62,6 @@ dir_projecting:: "data/data/driving_data2425/<<region>>/nrt/era5_monthly/"
 parallelize:: False
 
 ## experiment info
-limitation_types:: ['standard']
+limitation_types:: ['standard', 'potential']
 controls_to_plot:: [0, 1, 2, 3, 4, 5]
 time_series_percentiles:: [0.0, 95.0]
