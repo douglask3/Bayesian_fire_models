@@ -79,6 +79,36 @@ def load_ensemble_summary(path, percentile=(5, 95), year  = 2024):
     p90.data *= 100
     return p10, p90
 
+def get_positive_count_layer(anom_list, threshold=0):
+    count_cube = anom_list[0].copy()
+    data = np.zeros(count_cube.shape, dtype=int)
+
+    for cube in anom_list:
+        data += (cube.data > threshold).astype(int)
+    
+    count_cube.data = np.ma.masked_array(data, mask=cube.data.mask)
+    return count_cube
+
+def open_mod_data(base_path, temp_path):
+    #set_trace()
+    if os.path.isfile(temp_path) and False:
+        mod_p10, mod_p90, anom_p10, anom_p90, count = pickle.load(open(temp_path,"rb"))
+    else:
+        mod_p10, mod_p90 = load_ensemble_summary(f"{base_path}/Evaluate")
+
+        anom_p90, anom_p10 = [], []
+        
+        for i in range(6):
+            out_p10, out_p90 = load_ensemble_summary(f"{base_path}/Standard_{i}")
+        
+            anom_p90.append(out_p90)
+            anom_p10.append(out_p10)
+    
+        count = get_positive_count_layer(anom_p10)
+        pickle.dump([mod_p10, mod_p90, anom_p10, anom_p90, count], open(temp_path, "wb"))
+    return mod_p10, mod_p90, anom_p10, anom_p90, count
+
+
 def plot_map(cube, title='', contour_obs=None, cmap='RdBu_r', 
              levels = [-2, -1, -0.5, 0, 0.5, 1, 2], extend = 'both', ax=None,
              cbar_label = ''):
@@ -109,9 +139,6 @@ def plot_map(cube, title='', contour_obs=None, cmap='RdBu_r',
         cbar = plt.colorbar(img, ax=ax, ticks=levels, orientation='horizontal')
     cbar.set_label(cbar_label, labelpad=10, loc='center')
     cbar.ax.xaxis.set_label_position('top')
-    #    set_trace()
-    #else:
-    #    plt.colorbar(img, orientation='horizontal')
      
     # Add boundaries
     ax.add_feature(cfeature.BORDERS, linewidth=0.5)
@@ -126,36 +153,6 @@ def plot_map(cube, title='', contour_obs=None, cmap='RdBu_r',
     print(title)
     ax.set_title(title)
     return img
-
-def get_positive_count_layer(anom_list, threshold=0):
-    count_cube = anom_list[0].copy()
-    data = np.zeros(count_cube.shape, dtype=int)
-
-    for cube in anom_list:
-        data += (cube.data > threshold).astype(int)
-    
-    count_cube.data = np.ma.masked_array(data, mask=cube.data.mask)
-    return count_cube
-
-def open_mod_data(base_path, temp_path):
-    #set_trace()
-    if os.path.isfile(temp_path) and False:
-        mod_p10, mod_p90, anom_p10, anom_p90, count = pickle.load(open(temp_path,"rb"))
-    else:
-        mod_p10, mod_p90 = load_ensemble_summary(f"{base_path}/Evaluate")
-
-        anom_p90, anom_p10 = [], []
-        
-        for i in range(6):
-            out_p10, out_p90 = load_ensemble_summary(f"{base_path}/Standard_{i}")
-        
-            anom_p90.append(out_p90)
-            anom_p10.append(out_p10)
-    
-        count = get_positive_count_layer(anom_p10)
-        pickle.dump([mod_p10, mod_p90, anom_p10, anom_p90, count], open(temp_path, "wb"))
-    return mod_p10, mod_p90, anom_p10, anom_p90, count
-
 
 
 def run_for_region(region = "Congo", 
