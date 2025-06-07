@@ -30,7 +30,7 @@ def get_cube_extent(cube):
     return [lon_min, lon_max, lat_min, lat_max]
 
 
-def get_season_anomaly(obs_cube, year = 2024, mnths = ['06' ,'07']):
+def get_season_anomaly(obs_cube, year = 2024, mnths = ['06' ,'07'], ratio = False):
     iris.coord_categorisation.add_month(obs_cube, 'time', name='month')
     iris.coord_categorisation.add_year(obs_cube, 'time', name='year')
 
@@ -44,14 +44,22 @@ def get_season_anomaly(obs_cube, year = 2024, mnths = ['06' ,'07']):
     clim_mean = season.collapsed('time', iris.analysis.MEAN)
 
     # Anomaly
-    anomaly = season_year - clim_mean
+    if ratio:
+        anomaly = season_year / clim_mean
+        anomaly.data[clim_mean.data == 0.0] = 0.0
+        anomaly.data.mask = clim_mean.data.mask
+    else:
+        anomaly = season_year - clim_mean
     return anomaly
 
 
-def load_ensemble_summary(path, year  = 2024, mnths = ['06' , '07'], percentile=(10, 90)):
+def load_ensemble_summary(path, year  = 2024, mnths = ['06' , '07'], ratio = False,
+                          nensemble = 0,
+                          percentile=(10, 90)):
     files = [os.path.join(path, f) for f in os.listdir(path) \
                     if f.endswith('.nc') and 'sample-pred' in f]
-    #files = files[0:len(files):round(len(files)/100)]
+    if nensemble > 0:
+        files = files[0:len(files):round(len(files)/nensemble)]
     
     cubes = iris.cube.CubeList([iris.load_cube(f) for f in sorted(files)])
 
@@ -70,10 +78,11 @@ def load_ensemble_summary(path, year  = 2024, mnths = ['06' , '07'], percentile=
      
     season_year = sub_year_range(season, [year, year])
     clim_mean = season.collapsed('time', iris.analysis.MEAN)
-    try:
+    
+    if ratio:
+        season_year = season_year / clim_mean
+    else:
         season_year = season_year - clim_mean
-    except:
-        season_year.data = season_year.data - clim_mean.data
     
     p10 = season_year.collapsed('realization', iris.analysis.PERCENTILE, percent=percentile[0])
     p90 = season_year.collapsed('realization', iris.analysis.PERCENTILE, percent=percentile[1])
@@ -91,27 +100,51 @@ def get_positive_count_layer(anom_list, threshold=0):
     count_cube.data = np.ma.masked_array(data, mask=cube.data.mask)
     return count_cube
 
-def open_mod_data(base_path, temp_path, *args, **kw):
+def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 10, ratio = False, *args, **kw):
+
+    rdir = region_info['dir']
+    year = region_info['years'][0]
+    mnths = region_info['mnths']
+
+    obs = iris.load_cube("data/data/driving_data2425/" + rdir + "/burnt_area.nc")
+    obs_anomaly = get_season_anomaly(obs, year, mnths, ratio = ratio)
+    
+    # Load control and each perturbed scenario
+    base_path = f"outputs/outputs_scratch/ConFLAME_nrt-drivers3/" + \
+                rdir + "-2425/samples/_21-frac_points_0.5/baseline-"
+
+    temp_path = "temp2/control_anom_maps/"
+    os.makedirs(temp_path, exist_ok=True)
+    extra_path = rdir + limitation_type + str(nensemble) + \
+                 str(year) + '_'.join(mnths) + str(ratio)
+    temp_path = temp_path + extra_path + '.pckl'
     #set_trace()
-    if os.path.isfile(temp_path):
-        mod_p10, mod_p90, anom_p10, anom_p90, count_pos, count_neg \
+    if os.path.isfile(temp_path) and False:
+        obs_anomaly, mod_p10, mod_p90, anom_p10, anom_p90, count_pos, count_neg \
             = pickle.load(open(temp_path,"rb"))
     else:
-        mod_p10, mod_p90 = load_ensemble_summary(f"{base_path}/Evaluate", *args, **kw)
+        mod_p10, mod_p90 = load_ensemble_summary(f"{base_path}/Evaluate", 
+                                                 year, mnths, ratio, nensemble,
+                                                 *args, **kw)
 
         anom_p90, anom_p10 = [], []
         
         for i in range(6):
-            out_p10, out_p90 = load_ensemble_summary(f"{base_path}/Standard_{i}", *args, **kw)
+            out_p10, out_p90 = load_ensemble_summary(f"{base_path}/{limitation_type}{i}", 
+                                                     year, mnths, ratio, nensemble,
+                                                     *args, **kw)
         
             anom_p90.append(out_p90)
             anom_p10.append(out_p10)
-    
-        count_pos = get_positive_count_layer(anom_p10)
-        count_neg = get_positive_count_layer(anom_p90)
+        if ratio:
+            threshold = 1.0
+        else:
+            threshold = 0.0
+        count_pos = get_positive_count_layer(anom_p10, threshold)
+        count_neg = get_positive_count_layer(anom_p90, threshold)
         count_neg.data = len(anom_p90) - count_neg.data
-        pickle.dump([mod_p10, mod_p90, anom_p10, anom_p90, count_pos, count_neg], open(temp_path, "wb"))
-    return mod_p10, mod_p90, anom_p10, anom_p90, count_pos, count_neg
+        pickle.dump([obs_anomaly, mod_p10, mod_p90, anom_p10, anom_p90, count_pos, count_neg], open(temp_path, "wb"))
+    return obs_anomaly, mod_p10, mod_p90, anom_p10, anom_p90, count_pos, count_neg, extra_path
 
 
 def plot_map(cube, title='', contour_obs=None, cmap='RdBu_r', 
@@ -161,24 +194,11 @@ def plot_map(cube, title='', contour_obs=None, cmap='RdBu_r',
 
 def run_for_region(region_info, 
                    levels_mod = [-1, -0.1, -0.01, -0.001, 0.001, 0.01, 0.1, 1],
-                   levels_controls = [-50, -20, -10, -5, -2, -1, 0, 1, 2, 5, 10, 20, 50]):
-    # Load observed anomaly
-    rdir = region_info['dir']
-    year = region_info['years'][0]
-    mnths = region_info['mnths']
-
-    obs = iris.load_cube("data/data/driving_data2425/" + rdir + "/burnt_area.nc")
-    obs_anomaly = get_season_anomaly(obs, year, mnths)
+                   levels_controls = [-50, -20, -10, -5, -2, -1, 0, 1, 2, 5, 10, 20, 50],
+                   *args, **kw):
     
-    # Load control and each perturbed scenario
-    base_path = "outputs/outputs_scratch/ConFLAME_nrt-drivers3/" + \
-                rdir + "-2425/samples/_21-frac_points_0.5/baseline-"
-
-    temp_path = "temp2/control_anom_maps/"
-    os.makedirs(temp_path, exist_ok=True)
-    temp_path = temp_path + rdir + '.pckl'
-    mod_p10, mod_p90, anom_p10, anom_p90, \
-        count_pos, count_neg = open_mod_data(base_path, temp_path, year, mnths)
+    obs_anomaly, mod_p10, mod_p90, anom_p10, anom_p90, \
+        count_pos, count_neg, extra_path= open_mod_data(region_info, *args, **kw)
     
     # Define grid shape
     n_rows, n_cols = 5, 4
@@ -243,7 +263,7 @@ def run_for_region(region_info,
                     ax=axes[2*i+9]))
 
     plt.tight_layout()
-    plt.savefig("figs/control_maps_for" + rdir + ".png")
+    plt.savefig("figs/control_maps_for" + extra_path + ".png")
 
     fig, axes = plt.subplots(1, 3, figsize=(9, 4), 
                              subplot_kw={'projection': ccrs.PlateCarree()})
@@ -268,14 +288,19 @@ def run_for_region(region_info,
                         cmap=SoW_cmap['gradient_reversed_hues'], extend = 'neither', ax = axes[2]))
 
     plt.tight_layout()
-    plt.savefig("figs/burning_indicators_for" + rdir + "-2.png")
+    plt.savefig("figs/burning_indicators_for" + extra_path + "-2.png")
     
 
 from state_of_wildfires_region_info  import get_region_info
 
 regions = ["Congo", "Amazon", "Pantanal", "LA"]
 regions_info = get_region_info(regions)
-[run_for_region(regions_info[region]) for region in regions]
+
+for ratio in [True, False]:
+    for type in ["Standard_", "Potential"]:
+        for region in regions:
+            run_for_region(regions_info[region], limitation_type = type, ratio = ratio)
+
 set_trace()
 #fig.colorbar(img3, ax=axes[2:3], orientation='horizontal', fraction=0.05, pad=0.05)
 #run_for_region()
