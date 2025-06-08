@@ -270,7 +270,7 @@ def concat_cube_data(cubes):
     return np.concatenate(data_list)
 
 
-def auto_pretty_levels(data, n_levels=3, log_ok=True, ratio = False):
+def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = False):
     """
     Generate 'pretty' contour levels that break the data into roughly equal-sized areas.
 
