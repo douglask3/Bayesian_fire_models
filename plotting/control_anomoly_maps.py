@@ -19,6 +19,7 @@ from plot_maps import *
 from  constrain_cubes_standard import *
 from bilinear_interpolate_cube import *
 import os.path
+from pathlib import Path
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from pdb import set_trace
 
@@ -30,8 +31,7 @@ def get_cube_extent(cube):
     lat_max = cube.coord('latitude').points.max()
     return [lon_min, lon_max, lat_min, lat_max]
 
-
-def get_season_anomaly(obs_cube, year = 2024, mnths = ['06' ,'07'], ratio = False):
+def get_season_anomaly(obs_cube, year = 2024, mnths = ['06' ,'07'], diff_type = 'anomoly'):
     iris.coord_categorisation.add_month(obs_cube, 'time', name='month')
     iris.coord_categorisation.add_year(obs_cube, 'time', name='year')
 
@@ -45,16 +45,19 @@ def get_season_anomaly(obs_cube, year = 2024, mnths = ['06' ,'07'], ratio = Fals
     clim_mean = season.collapsed('time', iris.analysis.MEAN)
 
     # Anomaly
-    if ratio:
+    
+    if diff_type == 'ratio':
         anomaly = season_year / clim_mean
         anomaly.data[clim_mean.data == 0.0] = 0.0
         anomaly.data.mask = clim_mean.data.mask
-    else:
+    elif diff_type == 'anomoly':
         anomaly = season_year - clim_mean
+    else:
+        anomaly = season_year
     return anomaly
 
 
-def load_ensemble_summary(path, year  = 2024, mnths = ['06' , '07'], ratio = False,
+def load_ensemble_summary(path, year  = 2024, mnths = ['06' , '07'], diff_type = 'anomoly',
                           nensemble = 0,
                           percentile=(10, 90)):
     files = [os.path.join(path, f) for f in os.listdir(path) \
@@ -80,15 +83,18 @@ def load_ensemble_summary(path, year  = 2024, mnths = ['06' , '07'], ratio = Fal
     season_year = sub_year_range(season, [year, year])
     clim_mean = season.collapsed('time', iris.analysis.MEAN)
     
-    if ratio:
-        season_year = season_year / clim_mean
+    if diff_type == 'ratio':
+        anomaly = season_year / clim_mean
+    elif diff_type == 'anomoly':
+        anomaly = season_year - clim_mean
     else:
-        season_year = season_year - clim_mean
-    
-    p10 = season_year.collapsed('realization', iris.analysis.PERCENTILE, percent=percentile[0])
-    p90 = season_year.collapsed('realization', iris.analysis.PERCENTILE, percent=percentile[1])
+        anomaly = season_year
+    #
+    p10 = anomaly.collapsed('realization', iris.analysis.PERCENTILE, percent=percentile[0])
+    p90 = anomaly.collapsed('realization', iris.analysis.PERCENTILE, percent=percentile[1])
     p10.data *= 100
     p90.data *= 100
+    
     return p10, p90
 
 def get_positive_count_layer(anom_list, threshold=0):
@@ -101,14 +107,15 @@ def get_positive_count_layer(anom_list, threshold=0):
     count_cube.data = np.ma.masked_array(data, mask=cube.data.mask)
     return count_cube
 
-def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 10, ratio = False, *args, **kw):
+def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 10, 
+                  diff_type = 'anomoly', *args, **kw):
 
     rdir = region_info['dir']
     year = region_info['years'][0]
     mnths = region_info['mnths']
-
+    
     obs = iris.load_cube("data/data/driving_data2425/" + rdir + "/burnt_area.nc")
-    obs_anomaly = get_season_anomaly(obs, year, mnths, ratio = ratio)
+    obs_anomaly = get_season_anomaly(obs, year, mnths, diff_type = diff_type)
     
     # Load control and each perturbed scenario
     base_path = f"outputs/outputs_scratch/ConFLAME_nrt-drivers3/" + \
@@ -116,31 +123,39 @@ def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 10, ra
 
     temp_path = "temp2/control_anom_maps/"
     os.makedirs(temp_path, exist_ok=True)
-    extra_path = rdir + limitation_type + str(nensemble) + \
-                 str(year) + '_'.join(mnths) + str(ratio)
+    
+    extra_path = rdir + '/' + limitation_type + '/' + str(diff_type) + '/'
+
+    os.makedirs(temp_path + extra_path, exist_ok=True) 
+    extra_path = extra_path  + "ensemble_no_" + \
+                 str(nensemble) + '_year' + \
+                 str(year) + '_months'.join(mnths) 
+    
     temp_path = temp_path + extra_path + '.pckl'
     #set_trace()
-    if os.path.isfile(temp_path):
+    if os.path.isfile(temp_path) and False:
         obs_anomaly, mod_p10, mod_p90, anom_p10, anom_p90, count_pos, count_neg \
             = pickle.load(open(temp_path,"rb"))
     else:
         mod_p10, mod_p90 = load_ensemble_summary(f"{base_path}/Evaluate", 
-                                                 year, mnths, ratio, nensemble,
+                                                 year, mnths, diff_type, nensemble,
                                                  *args, **kw)
 
         anom_p90, anom_p10 = [], []
         
         for i in range(6):
             out_p10, out_p90 = load_ensemble_summary(f"{base_path}/{limitation_type}{i}", 
-                                                     year, mnths, ratio, nensemble,
+                                                     year, mnths, diff_type, nensemble,
                                                      *args, **kw)
-        
             anom_p90.append(out_p90)
             anom_p10.append(out_p10)
-        if ratio:
+
+        if diff_type == 'ratio':
             threshold = 100.0
-        else:
+        elif diff_type == 'anomoly':
             threshold = 0.0
+        elif diff_type == 'absolute':
+            threshold = 50
         count_pos = get_positive_count_layer(anom_p10, threshold)
         count_neg = get_positive_count_layer(anom_p90, threshold)
         count_neg.data = len(anom_p90) - count_neg.data
@@ -193,14 +208,15 @@ def plot_map(cube, title='', contour_obs=None, cmap='RdBu_r',
     ax.set_title(title)
     return img
 
-def run_for_region(region_info, ratio = False,
+def run_for_region(region_info, diff_type = "anomoly",
                    levels_mod = [-1, -0.1, -0.01, -0.001, 0.001, 0.01, 0.1, 1],
                    levels_controls = None, # [-50, -20, -10, -5, -2, -1, 0, 1, 2, 5, 10, 20, 50]
                    *args, **kw):
     
     obs_anomaly, mod_p10, mod_p90, anom_p10, anom_p90, \
-        count_pos, count_neg, extra_path= open_mod_data(region_info, ratio = ratio, *args, **kw)
-    
+        count_pos, count_neg, extra_path= open_mod_data(region_info, diff_type = diff_type, 
+                                                        *args, **kw)
+     
     # Define grid shape
     n_rows, n_cols = 5, 4
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(16, 16), 
@@ -225,7 +241,7 @@ def run_for_region(region_info, ratio = False,
                     cmap=SoW_cmap['diverging_TealOrange'], 
                     levels=region_info['Anomoly_levels'], 
                     ax=axes[0], cbar_label = "Burned Area Anomaly (%)"))
-
+    
     img.append(plot_map(mod_p10, "Simulated Burned Area (10th percentile)", 
                     cmap=SoW_cmap['diverging_TealOrange'], levels=levels_mod, 
                     ax=axes[4]))
@@ -249,12 +265,12 @@ def run_for_region(region_info, ratio = False,
             SoW_cmap['diverging_GreenPurple'], SoW_cmap['diverging_GreenPurple']]
     
     if levels_controls is None:
-        if ratio:
+        if diff_type == "ratio":
             rt = 100.0
         else:
             rt = None
         levels_controls = auto_pretty_levels(anom_p10 + anom_p90, ratio = rt)
-         
+    
     for i in range(len(anom_p10)):
         img.append(plot_map(anom_p10[i], control_names[i] + " (10th percentile)", 
                     cmap=cmaps[i], levels=levels_controls, 
@@ -265,7 +281,10 @@ def run_for_region(region_info, ratio = False,
                     ax=axes[2*i+9]))
 
     plt.tight_layout()
-    plt.savefig("figs/control_maps_for" + extra_path + ".png")
+    fname = "figs/control_maps_for/" + extra_path  + ".png"
+    path = Path(fname).parent.mkdir(parents=True, exist_ok=True)
+    
+    plt.savefig(fname)
 
     fig, axes = plt.subplots(1, 3, figsize=(9, 4), 
                              subplot_kw={'projection': ccrs.PlateCarree()})
@@ -288,7 +307,9 @@ def run_for_region(region_info, ratio = False,
                         cmap=SoW_cmap['gradient_reversed_hues'], extend = 'neither', ax = axes[2]))
 
     plt.tight_layout()
-    plt.savefig("figs/burning_indicators_for" + extra_path + "-2.png")
+    
+    fname = "figs/control_maps_for/" + extra_path  + "-summer.png"
+    plt.savefig(fname)
     
 
 from state_of_wildfires_region_info  import get_region_info
@@ -296,10 +317,10 @@ from state_of_wildfires_region_info  import get_region_info
 regions = ["Congo", "Amazon", "Pantanal", "LA"]
 regions_info = get_region_info(regions)
 
-for ratio in [True, False]:
+for diff_type in ['anomoly', 'absolute', 'ratio']:
     for type in ["Standard_", "Potential"]:
         for region in regions:
-            run_for_region(regions_info[region], ratio = ratio, limitation_type = type)
+            run_for_region(regions_info[region], diff_type = diff_type, limitation_type = type)
 
 set_trace()
 
