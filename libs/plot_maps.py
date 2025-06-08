@@ -250,4 +250,76 @@ def hist_limits(dat, lims = None, nlims = 5, symmetrical = True):
     
     return (lims, extend)
 
+import numpy as np
+
+def concat_cube_data(cubes):
+    """
+    Concatenate data from a list of Iris cubes into one flat NumPy array,
+    skipping any masked/invalid data.
+    """
+    data_list = []
+
+    for cube in cubes:
+        data = np.ma.masked_invalid(cube.data)
+        if np.ma.is_masked(data):
+            valid_data = data.compressed()  # only unmasked values
+        else:
+            valid_data = data.ravel()
+        data_list.append(valid_data)
+
+    return np.concatenate(data_list)
+
+
+def auto_pretty_levels(data, n_levels=7, log_ok=True):
+    """
+    Generate 'pretty' contour levels that break the data into roughly equal-sized areas.
+
+    Parameters:
+    - data: array-like or Iris cube (flattened automatically)
+    - n_levels: desired number of contour bins (not including endpoints)
+    - log_ok: allow log scaling if data is skewed and positive
+
+    Returns:
+    - levels: list of nicely rounded level values
+    """
+    try:
+        data = concat_cube_data(data)
+    except:
+        pass
+    # Flatten data and mask NaNs
+    data = np.ma.masked_invalid(np.ravel(data))
+    if data.mask.all():
+        raise ValueError("No valid data found to calculate levels.")
+
+    # Try log-scale if distribution is strongly right-skewed and positive
+    if log_ok and np.all(data > 0) and (np.percentile(data, 90) / np.percentile(data, 10)) > 50:
+        log_data = np.log10(data)
+        percentiles = np.linspace(0, 100, n_levels + 1)
+        levels_raw = np.power(10, np.percentile(log_data, percentiles))
+    else:
+        percentiles = np.linspace(0, 100, n_levels + 1)
+        levels_raw = np.percentile(data, percentiles)
+
+    # Round levels to 'nice' numbers
+    def nice_round(x):
+        if x == 0:
+            return 0
+        magnitude = 10 ** np.floor(np.log10(abs(x)))
+        mantissa = round(x / magnitude, 1)
+        return mantissa * magnitude
+
+    levels_rounded = sorted(set([nice_round(lv) for lv in levels_raw]))
+
+    # Ensure levels are strictly increasing and unique
+    while len(levels_rounded) <= 2 and n_levels < 20:
+        n_levels += 2  # try with more bins if too few unique rounded levels
+        return auto_pretty_levels(data, n_levels=n_levels, log_ok=log_ok)
+
+    levels_rounded = np.array(levels_rounded)
+    if (any(levels_rounded) < 0 and any(data) > 0) or \
+            (any(levels_rounded) > 0 and any(data) < 0):
+        levels_rounded = np.sort(np.unique(np.append(levels_rounded, - levels_rounded)))
+    
+    return levels_rounded
+
 
