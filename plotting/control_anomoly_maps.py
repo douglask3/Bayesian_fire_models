@@ -15,6 +15,7 @@ from state_of_wildfires_colours  import SoW_cmap
 from state_of_wildfires_region_info  import get_region_info
 
 sys.path.append('libs/')
+from plot_maps import *
 from  constrain_cubes_standard import *
 from bilinear_interpolate_cube import *
 import os.path
@@ -137,7 +138,7 @@ def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 10, ra
             anom_p90.append(out_p90)
             anom_p10.append(out_p10)
         if ratio:
-            threshold = 1.0
+            threshold = 100.0
         else:
             threshold = 0.0
         count_pos = get_positive_count_layer(anom_p10, threshold)
@@ -166,8 +167,7 @@ def plot_map(cube, title='', contour_obs=None, cmap='RdBu_r',
         
     img = iplt.contourf(cube, levels=levels, cmap=cmap, axes=ax, extend = extend, 
                         norm = norm)
-    #else:
-    #    img = iplt.pcolormesh(cube, cmap=cmap, axes=ax)
+    
     if is_catigorical:
         tick_positions = np.array(levels) + 0.5
         tick_labels = [str(level) for level in levels]
@@ -193,13 +193,13 @@ def plot_map(cube, title='', contour_obs=None, cmap='RdBu_r',
     ax.set_title(title)
     return img
 
-def run_for_region(region_info, 
+def run_for_region(region_info, ratio = False,
                    levels_mod = [-1, -0.1, -0.01, -0.001, 0.001, 0.01, 0.1, 1],
-                   levels_controls = [-50, -20, -10, -5, -2, -1, 0, 1, 2, 5, 10, 20, 50],
+                   levels_controls = None, # [-50, -20, -10, -5, -2, -1, 0, 1, 2, 5, 10, 20, 50]
                    *args, **kw):
     
     obs_anomaly, mod_p10, mod_p90, anom_p10, anom_p90, \
-        count_pos, count_neg, extra_path= open_mod_data(region_info, *args, **kw)
+        count_pos, count_neg, extra_path= open_mod_data(region_info, ratio = ratio, *args, **kw)
     
     # Define grid shape
     n_rows, n_cols = 5, 4
@@ -234,12 +234,6 @@ def run_for_region(region_info,
                     cmap=SoW_cmap['diverging_TealOrange'], levels=levels_mod, 
                     ax=axes[5]))
     
-    #fig.colorbar(
-    #    img[2],# Use last image from that row — assumes all share cmap/norm
-     #   ax=axes[1:3],    # Both axes in the row
-    #    orientation='horizontal',
-    #    fraction=1.0, pad=-2  # Adjust spacing as needed
-    #)
     img.append(plot_map(count_pos, "No. anonomlously high controls", 
                         levels = range( count_pos.data.max() + 2), 
                         cmap=SoW_cmap['gradient_hues'], extend = 'neither', ax = axes[6]))
@@ -253,11 +247,14 @@ def run_for_region(region_info,
             SoW_cmap['diverging_BlueRed'], 
             SoW_cmap['diverging_BlueRed'], 
             SoW_cmap['diverging_GreenPurple'], SoW_cmap['diverging_GreenPurple']]
-    #levels_controls = levels_mod#[] 
     
-    levels_control = auto_pretty_levels(anom_p10 + anom_p90)
+    if levels_controls is None:
+        if ratio:
+            rt = 100.0
+        else:
+            rt = None
+        levels_controls = auto_pretty_levels(anom_p10 + anom_p90, ratio = rt)
          
-    
     for i in range(len(anom_p10)):
         img.append(plot_map(anom_p10[i], control_names[i] + " (10th percentile)", 
                     cmap=cmaps[i], levels=levels_controls, 
@@ -283,12 +280,10 @@ def run_for_region(region_info,
 
 
     img.append(plot_map(count_pos, "Number of positive fire indicators", 
-                        #contour_obs = smoothed_obs,
                         levels = range( count_pos.data.max() + 2), 
                         cmap=SoW_cmap['gradient_hues'], extend = 'neither', ax = axes[1]))
 
     img.append(plot_map(count_neg, "Number of negative fire indicators", 
-                       # contour_obs = smoothed_obs,
                         levels = range( count_neg.data.max() + 2), 
                         cmap=SoW_cmap['gradient_reversed_hues'], extend = 'neither', ax = axes[2]))
 
@@ -304,14 +299,9 @@ regions_info = get_region_info(regions)
 for ratio in [True, False]:
     for type in ["Standard_", "Potential"]:
         for region in regions:
-            run_for_region(regions_info[region], limitation_type = type, ratio = ratio)
+            run_for_region(regions_info[region], ratio = ratio, limitation_type = type)
 
 set_trace()
-#fig.colorbar(img3, ax=axes[2:3], orientation='horizontal', fraction=0.05, pad=0.05)
-#run_for_region()
-
-
-#img4 = plot_map(mod_p10[0], "Fuel Control Anomaly (90th percentile)", contour_obs=smoothed_obs, ax=axes[4])
 
 
 

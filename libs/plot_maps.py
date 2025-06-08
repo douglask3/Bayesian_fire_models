@@ -270,7 +270,7 @@ def concat_cube_data(cubes):
     return np.concatenate(data_list)
 
 
-def auto_pretty_levels(data, n_levels=7, log_ok=True):
+def auto_pretty_levels(data, n_levels=3, log_ok=True, ratio = False):
     """
     Generate 'pretty' contour levels that break the data into roughly equal-sized areas.
 
@@ -314,12 +314,25 @@ def auto_pretty_levels(data, n_levels=7, log_ok=True):
     while len(levels_rounded) <= 2 and n_levels < 20:
         n_levels += 2  # try with more bins if too few unique rounded levels
         return auto_pretty_levels(data, n_levels=n_levels, log_ok=log_ok)
-
-    levels_rounded = np.array(levels_rounded)
-    if (any(levels_rounded) < 0 and any(data) > 0) or \
-            (any(levels_rounded) > 0 and any(data) < 0):
-        levels_rounded = np.sort(np.unique(np.append(levels_rounded, - levels_rounded)))
     
+    levels_rounded = np.array(levels_rounded)
+    levels_rounded0 = levels_rounded.copy()
+    if ratio is not None:
+        levels_rounded[levels_rounded > 1000] = 1000
+        levels_rounded[levels_rounded < 1/1000.0] = 1/1000.0
+        levels_rounded = np.log(levels_rounded) / ratio
+        data =  np.log(data ) / ratio
+        
+    if (any(levels_rounded < 0) and any(data > 0)) or \
+            (any(levels_rounded > 0) and any(data < 0)):
+        levels_rounded = np.sort(np.unique(np.append(levels_rounded, - levels_rounded)))
+        
+    if ratio is not None:
+        levels_rounded = np.exp(levels_rounded*100)
+        
+        levels_rounded = np.vectorize(nice_round)(levels_rounded)
+        levels_rounded = np.unique(levels_rounded)
+    print(levels_rounded)
     return levels_rounded
 
 
