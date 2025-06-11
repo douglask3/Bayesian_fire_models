@@ -23,12 +23,6 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
 from pdb import set_trace
 
 
-def get_cube_extent(cube):
-    lon_min = cube.coord('longitude').points.min()
-    lon_max = cube.coord('longitude').points.max()
-    lat_min = cube.coord('latitude').points.min()
-    lat_max = cube.coord('latitude').points.max()
-    return [lon_min, lon_max, lat_min, lat_max]
 
 def get_season_anomaly(obs_cube, year = 2024, mnths = ['06' ,'07'], diff_type = 'anomoly'):
     iris.coord_categorisation.add_month(obs_cube, 'time', name='month')
@@ -132,7 +126,7 @@ def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 100,
     
     temp_path = temp_path + extra_path + '.pckl'
     #set_trace()
-    if os.path.isfile(temp_path) and False:
+    if os.path.isfile(temp_path):
         obs_anomaly, mod_p10, mod_p90, anom_p10, anom_p90, count_pos, count_neg \
             = pickle.load(open(temp_path,"rb"))
     else:
@@ -198,7 +192,7 @@ def run_for_region(region_info, diff_type = "anomoly",
                                              ratio = rt)
     
     # Define grid shape
-    set_up_sow_plot_windows(5, 4, mod_p10)
+    fig, axes = set_up_sow_plot_windows(5, 4, mod_p10)
 
     smoothed_obs = smooth_cube(obs_anomaly, sigma=2)
     img = []
@@ -255,11 +249,7 @@ def run_for_region(region_info, diff_type = "anomoly",
     
     plt.savefig(fname, dpi=300)
 
-    fig, axes = plt.subplots(1, 3, figsize=(9, 4), 
-                             subplot_kw={'projection': ccrs.PlateCarree()})
-
-    for ax in axes.flat:
-        ax.set_extent(extent, crs=ccrs.PlateCarree())
+    fig, axes = set_up_sow_plot_windows(1, 3, mod_p10)
 
     img.append(plot_map_sow(obs_anomaly, "Burned Area", 
                     cmap=SoW_cmap['diverging_TealOrange'], 
