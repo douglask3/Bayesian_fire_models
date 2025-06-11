@@ -1,6 +1,3 @@
-
-
-
 import iris
 import numpy as np
 import cartopy.crs as ccrs
@@ -8,19 +5,24 @@ import cartopy.crs as ccrs
 import iris.plot as iplt
 import iris.quickplot as qplt
 import matplotlib.pyplot as plt
+import cartopy.feature as cfeature
 from matplotlib.colors import BoundaryNorm
 from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from pdb import set_trace as browser
 from numpy import inf
+import numpy as np
+import matplotlib.colors as mcolors
 import math
 
 import sys
 sys.path.append('../../libs/')
 sys.path.append('libs/')
+sys.path.append('SoW_info/')
 import git_info
 from to_precision import *
+from state_of_wildfires_colours  import SoW_cmap
 from pdb import set_trace
 
 def plot_BayesModel_maps(Sim, levels, cmap, ylab = '', Obs = None, 
@@ -349,9 +351,66 @@ def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = None, force0 = Fal
     print(levels_rounded)
     return levels_rounded
 
+def add_overlay_value(cube, value, col, ax):
+    '''
+    import matplotlib.colors as mcolors
+    
+    ax.imshow((cube.data == 0), origin='lower', cmap=mcolors.ListedColormap(['none', 'black']), alpha=0.3,
+          extent=[cube.coord('longitude').points.min(), cube.coord('longitude').points.max(),
+                  cube.coord('latitude').points.min(), cube.coord('latitude').points.max()])
+    '''
+    
+
+
+    # --- Create a binary mask for where cube == 0 ---
+    zero_mask = (cube.data == value)
+    
+    # Create a new cube with 1 where data == 0, masked elsewhere
+    import copy
+    highlight_cube = copy.deepcopy(cube)
+    highlight_cube.data = zero_mask.astype(float)
+    highlight_cube.data[~zero_mask] = np.nan  # Mask non-zero
+
+    # --- Define custom colormap: fully transparent except where == 1 ---
+    highlight_cmap = mcolors.ListedColormap(['none', col])  # 'red' can be any color
+    
+    # Make norm so that only 1 maps to red
+    highlight_norm = mcolors.BoundaryNorm([0, 0.5, 1.5], ncolors=2)
+    
+    # --- Overlay the mask ---
+    iplt.contourf(highlight_cube, levels=[0.5, 1.5], cmap=highlight_cmap, norm=highlight_norm, axes=ax, add_colorbar=False)
+
+
+def get_cube_extent(cube):
+    lon_min = cube.coord('longitude').points.min()
+    lon_max = cube.coord('longitude').points.max()
+    lat_min = cube.coord('latitude').points.min()
+    lat_max = cube.coord('latitude').points.max()
+    return [lon_min, lon_max, lat_min, lat_max]
+
+def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, figsize = None):
+    if figsize is None:
+        figsize = (n_rows * 16/5, n_cols*4)
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(16, 16), 
+                             subplot_kw={'projection': ccrs.PlateCarree()})
+
+    extent = get_cube_extent(eg_cube)
+    extent[0] -= (extent[1] - extent[0])*0.1
+    extent[1] += (extent[1] - extent[0])*0.1
+    extent[2] -= (extent[3] - extent[2])*0.1
+    extent[3] += (extent[3] - extent[2])*0.1
+    
+    for ax in axes.flat:
+        ax.set_extent(extent, crs=ccrs.PlateCarree())
+
+    # Flatten axes for easy indexing
+    axes = axes.flatten()
+    return axes
+    
+
 def plot_map_sow(cube, title='', contour_obs=None, cmap='RdBu_r', 
              levels = None, extend = 'both', ax=None,
-             cbar_label = ''):
+             cbar_label = '', overlay_value = None, overlay_col = "#cfe9ff"):
     
     cube.long_name = title
     cube.rename(title)
@@ -365,10 +424,13 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap='RdBu_r',
         norm = BoundaryNorm(boundaries=np.array(levels) + 0.5, ncolors=cmap.N)
     else:   
         norm = BoundaryNorm(boundaries=levels,  ncolors=cmap.N, extend = extend)
-        
+    
+    
     img = iplt.contourf(cube, levels=levels, cmap=cmap, axes=ax, extend = extend, 
                         norm = norm)
-    
+    if overlay_value is not None:
+        add_overlay_value(cube, overlay_value, overlay_col, ax)
+
     if is_catigorical:
         tick_positions = np.array(levels) + 0.5
         tick_labels = [str(level) for level in levels]

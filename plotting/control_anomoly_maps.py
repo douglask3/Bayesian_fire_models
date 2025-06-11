@@ -6,7 +6,6 @@ import iris.quickplot as qplt
 import iris.plot as iplt
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
-import cartopy.feature as cfeature
 
 import pickle
 import sys
@@ -199,21 +198,7 @@ def run_for_region(region_info, diff_type = "anomoly",
                                              ratio = rt)
     
     # Define grid shape
-    n_rows, n_cols = 5, 4
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(16, 16), 
-                             subplot_kw={'projection': ccrs.PlateCarree()})
-
-    extent = get_cube_extent(mod_p10)
-    extent[0] -= (extent[1] - extent[0])*0.1
-    extent[1] += (extent[1] - extent[0])*0.1
-    extent[2] -= (extent[3] - extent[2])*0.1
-    extent[3] += (extent[3] - extent[2])*0.1
-    
-    for ax in axes.flat:
-        ax.set_extent(extent, crs=ccrs.PlateCarree())
-
-    # Flatten axes for easy indexing
-    axes = axes.flatten()
+    set_up_sow_plot_windows(5, 4, mod_p10)
 
     smoothed_obs = smooth_cube(obs_anomaly, sigma=2)
     img = []
