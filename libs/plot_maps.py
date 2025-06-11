@@ -349,4 +349,48 @@ def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = None, force0 = Fal
     print(levels_rounded)
     return levels_rounded
 
+def plot_map_sow(cube, title='', contour_obs=None, cmap='RdBu_r', 
+             levels = None, extend = 'both', ax=None,
+             cbar_label = ''):
+    
+    cube.long_name = title
+    cube.rename(title)
+    is_catigorical =  np.issubdtype(cube.core_data().dtype, np.integer)
+    if ax is None:
+        fig, ax = plt.subplots(subplot_kw={'projection': ccrs.PlateCarree()}, figsize=(10, 6))
+    # Main filled contour
+    if levels is  None:
+        levels = auto_pretty_levels(cube.data)
+    if is_catigorical:
+        norm = BoundaryNorm(boundaries=np.array(levels) + 0.5, ncolors=cmap.N)
+    else:   
+        norm = BoundaryNorm(boundaries=levels,  ncolors=cmap.N, extend = extend)
+        
+    img = iplt.contourf(cube, levels=levels, cmap=cmap, axes=ax, extend = extend, 
+                        norm = norm)
+    
+    if is_catigorical:
+        tick_positions = np.array(levels) + 0.5
+        tick_labels = [str(level) for level in levels]
+        cbar = plt.colorbar(img, ax=ax, orientation='horizontal',
+                            ticks=tick_positions)
+        cbar.ax.set_xticklabels(tick_labels) 
+    else:
+        cbar = plt.colorbar(img, ax=ax, ticks=levels, orientation='horizontal')
+    cbar.set_label(cbar_label, labelpad=10, loc='center')
+    cbar.ax.xaxis.set_label_position('top')
+     
+    # Add boundaries
+    ax.add_feature(cfeature.COASTLINE, linewidth=0.5)
+    ax.add_feature(cfeature.RIVERS, linewidth=0.5)
+    ax.add_feature(cfeature.BORDERS, linewidth=0.5)
+    ax.add_feature(cfeature.LAND, facecolor='lightgray')
+
+    # Optional observed burned area anomaly contour
+    if contour_obs is not None:
+        qplt.contour(contour_obs, levels=[0], colors='#8a3b00', linewidths=1, axes=ax)
+
+    print(title)
+    ax.set_title(title)
+    return img
 

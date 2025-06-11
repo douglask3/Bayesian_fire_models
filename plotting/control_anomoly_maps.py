@@ -163,51 +163,6 @@ def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 100,
     return obs_anomaly, mod_p10, mod_p90, anom_p10, anom_p90, count_pos, count_neg, extra_path
 
 
-def plot_map(cube, title='', contour_obs=None, cmap='RdBu_r', 
-             levels = None, extend = 'both', ax=None,
-             cbar_label = ''):
-    
-    cube.long_name = title
-    cube.rename(title)
-    is_catigorical =  np.issubdtype(cube.core_data().dtype, np.integer)
-    if ax is None:
-        fig, ax = plt.subplots(subplot_kw={'projection': ccrs.PlateCarree()}, figsize=(10, 6))
-    # Main filled contour
-    if levels is  None:
-        levels = auto_pretty_levels(cube.data)
-    if is_catigorical:
-        norm = BoundaryNorm(boundaries=np.array(levels) + 0.5, ncolors=cmap.N)
-    else:   
-        norm = BoundaryNorm(boundaries=levels,  ncolors=cmap.N, extend = extend)
-        
-    img = iplt.contourf(cube, levels=levels, cmap=cmap, axes=ax, extend = extend, 
-                        norm = norm)
-    
-    if is_catigorical:
-        tick_positions = np.array(levels) + 0.5
-        tick_labels = [str(level) for level in levels]
-        cbar = plt.colorbar(img, ax=ax, orientation='horizontal',
-                            ticks=tick_positions)
-        cbar.ax.set_xticklabels(tick_labels) 
-    else:
-        cbar = plt.colorbar(img, ax=ax, ticks=levels, orientation='horizontal')
-    cbar.set_label(cbar_label, labelpad=10, loc='center')
-    cbar.ax.xaxis.set_label_position('top')
-     
-    # Add boundaries
-    ax.add_feature(cfeature.BORDERS, linewidth=0.5)
-    ax.add_feature(cfeature.COASTLINE, linewidth=0.5)
-    ax.add_feature(cfeature.RIVERS, linewidth=0.5)
-    ax.add_feature(cfeature.LAND, facecolor='lightgray')
-
-    # Optional observed burned area anomaly contour
-    if contour_obs is not None:
-        qplt.contour(contour_obs, levels=[0], colors='#8a3b00', linewidths=1, axes=ax)
-
-    print(title)
-    ax.set_title(title)
-    return img
-
 def run_for_region(region_info, diff_type = "anomoly",
                    levels_mod = [-1, -0.1, -0.01, -0.001, 0.001, 0.01, 0.1, 1],
                    levels_controls = None, 
@@ -263,23 +218,23 @@ def run_for_region(region_info, diff_type = "anomoly",
     smoothed_obs = smooth_cube(obs_anomaly, sigma=2)
     img = []
    
-    img.append(plot_map(obs_anomaly, "Observed Burned Area", 
+    img.append(plot_map_sow(obs_anomaly, "Observed Burned Area", 
                     cmap=SoW_cmap['diverging_TealOrange'], 
                     levels=levels_BA_obs,#region_info['Anomoly_levels'], 
                     ax=axes[0], cbar_label = "Burned Area Anomaly (%)"))
     
-    img.append(plot_map(mod_p10, "Simulated Burned Area (10th percentile)", 
+    img.append(plot_map_sow(mod_p10, "Simulated Burned Area (10th percentile)", 
                     cmap=SoW_cmap['diverging_TealOrange'], levels=levels_BA,#levels_mod, 
                     ax=axes[4]))
 
-    img.append(plot_map(mod_p90, "Simulated Burned Area (90th percentile)",     
+    img.append(plot_map_sow(mod_p90, "Simulated Burned Area (90th percentile)",     
                     cmap=SoW_cmap['diverging_TealOrange'], levels=levels_BA,#levels_mod, 
                     ax=axes[5]))
     
-    img.append(plot_map(count_pos, "No. anonomlously high controls", 
+    img.append(plot_map_sow(count_pos, "No. anonomlously high controls", 
                         levels = range( count_pos.data.max() + 2), 
                         cmap=SoW_cmap['gradient_hues'], extend = 'neither', ax = axes[6]))
-    img.append(plot_map(count_neg, "No. anonomlously low controls", 
+    img.append(plot_map_sow(count_neg, "No. anonomlously low controls", 
                         levels = range( count_neg.data.max() + 2), 
                         cmap=SoW_cmap['gradient_reversed_hues'], extend = 'neither', ax = axes[7]))
 
@@ -296,14 +251,14 @@ def run_for_region(region_info, diff_type = "anomoly",
         if not consistent: 
             levels_controls = auto_pretty_levels(anom_p10[i].data, n_levels = n_levels+1, 
                                                     ratio = rt, force0 = force0)
-        img.append(plot_map(anom_p10[i], control_names[i] + " (10th percentile)", 
+        img.append(plot_map_sow(anom_p10[i], control_names[i] + " (10th percentile)", 
                     cmap=cmaps[i], levels=levels_controls, 
                     ax=axes[2*i+8]))
         if not consistent: 
             levels_controls = auto_pretty_levels(anom_p90[i].data, n_levels = n_levels+1, 
                                                     ratio = rt, force0 = force0)
 
-        img.append(plot_map(anom_p90[i], control_names[i] + " (90th percentile)", 
+        img.append(plot_map_sow(anom_p90[i], control_names[i] + " (90th percentile)", 
                     cmap=cmaps[i], levels=levels_controls, 
                     ax=axes[2*i+9]))
 
@@ -321,17 +276,17 @@ def run_for_region(region_info, diff_type = "anomoly",
     for ax in axes.flat:
         ax.set_extent(extent, crs=ccrs.PlateCarree())
 
-    img.append(plot_map(obs_anomaly, "Burned Area", 
+    img.append(plot_map_sow(obs_anomaly, "Burned Area", 
                     cmap=SoW_cmap['diverging_TealOrange'], 
                     levels=levels_BA_obs, 
                     ax=axes[0], cbar_label = "Burned Area Anomaly (%)"))
 
 
-    img.append(plot_map(count_pos, "Number of positive fire indicators", 
+    img.append(plot_map_sow(count_pos, "Number of positive fire indicators", 
                         levels = range( count_pos.data.max() + 2), 
                         cmap=SoW_cmap['gradient_hues'], extend = 'neither', ax = axes[1]))
 
-    img.append(plot_map(count_neg, "Number of negative fire indicators", 
+    img.append(plot_map_sow(count_neg, "Number of negative fire indicators", 
                         levels = range( count_neg.data.max() + 2), 
                         cmap=SoW_cmap['gradient_reversed_hues'], extend = 'neither', ax = axes[2]))
 
