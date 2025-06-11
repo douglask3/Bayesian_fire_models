@@ -270,7 +270,7 @@ def concat_cube_data(cubes):
     return np.concatenate(data_list)
 
 
-def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = False):
+def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = None, force0 = False):
     """
     Generate 'pretty' contour levels that break the data into roughly equal-sized areas.
 
@@ -282,16 +282,27 @@ def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = False):
     Returns:
     - levels: list of nicely rounded level values
     """
+    print(ratio)
     try:
         data = concat_cube_data(data)
     except:
-        pass
+        try:
+            data = data.data
+        except:
+            pass
     # Flatten data and mask NaNs
-    data = np.ma.masked_invalid(np.ravel(data))
+    try:
+        data = np.ma.masked_invalid(np.ravel(data))
+    except:
+        set_trace()
     if data.mask.all():
         raise ValueError("No valid data found to calculate levels.")
 
     # Try log-scale if distribution is strongly right-skewed and positive
+    try:
+        yay = log_ok and np.all(data > 0) and (np.percentile(data, 90) / np.percentile(data, 10)) > 50
+    except:
+        set_trace()
     if log_ok and np.all(data > 0) and (np.percentile(data, 90) / np.percentile(data, 10)) > 50:
         log_data = np.log10(data)
         percentiles = np.linspace(0, 100, n_levels + 1)
@@ -323,14 +334,17 @@ def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = False):
         levels_rounded = np.log(levels_rounded) / ratio
         data =  np.log(data ) / ratio
         
-    if (any(levels_rounded < 0) and any(data > 0)) or \
+    if force0 or (any(levels_rounded < 0) and any(data > 0)) or \
             (any(levels_rounded > 0) and any(data < 0)):
         levels_rounded = np.sort(np.unique(np.append(levels_rounded, - levels_rounded)))
         
     if ratio is not None:
         levels_rounded = np.exp(levels_rounded*100)
         
-        levels_rounded = np.vectorize(nice_round)(levels_rounded)
+        try:
+            levels_rounded = np.vectorize(nice_round)(levels_rounded)
+        except:
+            set_trace()
         levels_rounded = np.unique(levels_rounded)
     print(levels_rounded)
     return levels_rounded

@@ -48,7 +48,7 @@ def get_season_anomaly(obs_cube, year = 2024, mnths = ['06' ,'07'], diff_type = 
     
     if diff_type == 'ratio':
         anomaly = season_year / clim_mean
-        anomaly.data[clim_mean.data == 0.0] = 0.0
+        anomaly.data[clim_mean.data == 0.0] = 1.0
         anomaly.data.mask = clim_mean.data.mask
     elif diff_type == 'anomoly':
         anomaly = season_year - clim_mean
@@ -107,7 +107,7 @@ def get_positive_count_layer(anom_list, threshold=0):
     count_cube.data = np.ma.masked_array(data, mask=cube.data.mask)
     return count_cube
 
-def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 10, 
+def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 100, 
                   diff_type = 'anomoly', *args, **kw):
 
     rdir = region_info['dir']
@@ -210,13 +210,39 @@ def plot_map(cube, title='', contour_obs=None, cmap='RdBu_r',
 
 def run_for_region(region_info, diff_type = "anomoly",
                    levels_mod = [-1, -0.1, -0.01, -0.001, 0.001, 0.01, 0.1, 1],
-                   levels_controls = None, # [-50, -20, -10, -5, -2, -1, 0, 1, 2, 5, 10, 20, 50]
+                   levels_controls = None, 
+                   consistent = True, # [-50, -20, -10, -5, -2, -1, 0, 1, 2, 5, 10, 20, 50]
                    *args, **kw):
-    
+    #set_trace()
     obs_anomaly, mod_p10, mod_p90, anom_p10, anom_p90, \
-        count_pos, count_neg, extra_path= open_mod_data(region_info, diff_type = diff_type, 
-                                                        *args, **kw)
-     
+        count_pos, count_neg, extra_path = open_mod_data(region_info, diff_type = diff_type,                                                    *args, **kw)
+    
+    rt = None
+    n_levels = 5
+    force0 = True
+    levels_BA_obs = None
+    if diff_type == "ratio":
+        rt = 100.0
+        levels_BA_obs = region_info['Ratio_levels']
+        mod_p10 = mod_p10/100.0
+        mod_p90 = mod_p90/100
+    if diff_type == "absolute":
+        n_levels = 7
+        force0 = False
+    if diff_type == "anomoly":
+        levels_BA_obs = region_info['Anomoly_levels']
+    
+    if consistent:
+        levels_BA = auto_pretty_levels([obs_anomaly, mod_p10, mod_p90], n_levels = n_levels + 3,
+                                   ratio = rt) 
+        levels_BA_obs = levels_BA
+    else:
+        levels_BA = levels_BA_obs
+
+    if levels_controls is None:
+        levels_controls = auto_pretty_levels(anom_p10 + anom_p90, n_levels = n_levels, 
+                                             ratio = rt)
+    
     # Define grid shape
     n_rows, n_cols = 5, 4
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(16, 16), 
@@ -239,15 +265,15 @@ def run_for_region(region_info, diff_type = "anomoly",
    
     img.append(plot_map(obs_anomaly, "Observed Burned Area", 
                     cmap=SoW_cmap['diverging_TealOrange'], 
-                    levels=region_info['Anomoly_levels'], 
+                    levels=levels_BA_obs,#region_info['Anomoly_levels'], 
                     ax=axes[0], cbar_label = "Burned Area Anomaly (%)"))
     
     img.append(plot_map(mod_p10, "Simulated Burned Area (10th percentile)", 
-                    cmap=SoW_cmap['diverging_TealOrange'], levels=levels_mod, 
+                    cmap=SoW_cmap['diverging_TealOrange'], levels=levels_BA,#levels_mod, 
                     ax=axes[4]))
 
-    img.append(plot_map(mod_p90, "Simulated Burned Area (90th percentile)", 
-                    cmap=SoW_cmap['diverging_TealOrange'], levels=levels_mod, 
+    img.append(plot_map(mod_p90, "Simulated Burned Area (90th percentile)",     
+                    cmap=SoW_cmap['diverging_TealOrange'], levels=levels_BA,#levels_mod, 
                     ax=axes[5]))
     
     img.append(plot_map(count_pos, "No. anonomlously high controls", 
@@ -264,27 +290,30 @@ def run_for_region(region_info, diff_type = "anomoly",
             SoW_cmap['diverging_BlueRed'], 
             SoW_cmap['diverging_GreenPurple'], SoW_cmap['diverging_GreenPurple']]
     
-    if levels_controls is None:
-        if diff_type == "ratio":
-            rt = 100.0
-        else:
-            rt = None
-        levels_controls = auto_pretty_levels(anom_p10 + anom_p90, ratio = rt)
+    
     
     for i in range(len(anom_p10)):
+        if not consistent: 
+            levels_controls = auto_pretty_levels(anom_p10[i].data, n_levels = n_levels+1, 
+                                                    ratio = rt, force0 = force0)
         img.append(plot_map(anom_p10[i], control_names[i] + " (10th percentile)", 
                     cmap=cmaps[i], levels=levels_controls, 
                     ax=axes[2*i+8]))
+        if not consistent: 
+            levels_controls = auto_pretty_levels(anom_p90[i].data, n_levels = n_levels+1, 
+                                                    ratio = rt, force0 = force0)
 
         img.append(plot_map(anom_p90[i], control_names[i] + " (90th percentile)", 
                     cmap=cmaps[i], levels=levels_controls, 
                     ax=axes[2*i+9]))
 
     plt.tight_layout()
-    fname = "figs/control_maps_for/" + extra_path  + ".png"
+    if not consistent:
+        extra_path = extra_path + 'own_levels'
+    fname = "figs/control_maps_for/" + extra_path + ".png"
     path = Path(fname).parent.mkdir(parents=True, exist_ok=True)
     
-    plt.savefig(fname)
+    plt.savefig(fname, dpi=300)
 
     fig, axes = plt.subplots(1, 3, figsize=(9, 4), 
                              subplot_kw={'projection': ccrs.PlateCarree()})
@@ -294,7 +323,7 @@ def run_for_region(region_info, diff_type = "anomoly",
 
     img.append(plot_map(obs_anomaly, "Burned Area", 
                     cmap=SoW_cmap['diverging_TealOrange'], 
-                    levels=region_info['Anomoly_levels'], 
+                    levels=levels_BA_obs, 
                     ax=axes[0], cbar_label = "Burned Area Anomaly (%)"))
 
 
@@ -309,18 +338,24 @@ def run_for_region(region_info, diff_type = "anomoly",
     plt.tight_layout()
     
     fname = "figs/control_maps_for/" + extra_path  + "-summer.png"
-    plt.savefig(fname)
+    plt.savefig(fname,  dpi=300)
     
 
 from state_of_wildfires_region_info  import get_region_info
 
+levels_controls = [[1, 2, 5, 10, 20, 50, 80, 90, 95, 98, 99], None, None]
 regions = ["Congo", "Amazon", "Pantanal", "LA"]
 regions_info = get_region_info(regions)
 
-for diff_type in ['anomoly', 'absolute', 'ratio']:
-    for type in ["Standard_", "Potential"]:
-        for region in regions:
-            run_for_region(regions_info[region], diff_type = diff_type, limitation_type = type)
+
+for region in regions:
+    for consistent in [False, True]:
+        for diff_type, levels_control in zip(['absolute', 'anomoly', 'ratio'], levels_controls):
+            if diff_type== 'ratio':
+                for type in ["Standard_", "Potential"]:
+                    run_for_region(regions_info[region], diff_type = diff_type, 
+                               limitation_type = type, levels_controls = levels_control,
+                               consistent = consistent)
 
 set_trace()
 
