@@ -232,7 +232,7 @@ def run_ConFire(namelist):
     if subset_function_args_eval is None: subset_function_args_eval =subset_function_args 
     regions = select_from_info('regions')
     time_series_percentiles = select_from_info('time_series_percentiles')
-    
+     
     def run_for_regions(region = None):
         
         if region is None:
@@ -324,7 +324,7 @@ def run_ConFire(namelist):
                          )
                     for name, dir, expt, yfile in zip(names_all, dirs_all, exp_type, y_filen)
                 ]
-        #args_list.reverse()
+        args_list.reverse()
         if len(args_list) > 1 and select_from_info('parallelize', True): 
             try:
                 with get_context("spawn").Pool(processes=4) as pool:
@@ -348,8 +348,6 @@ if __name__=="__main__":
         print("Usage: python run_ConFire.py <namelist_path>")
         sys.exit(1)
     namelist = sys.argv[1]
-    #namelist = 'namelists/isimip2425-test.txt'
-    #namelist = 'namelists/nrt2425.txt'
-    #namelist = "namelists/ar7_clean.txt"
+
     run_ConFire(namelist)
     
