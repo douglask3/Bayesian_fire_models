@@ -187,6 +187,11 @@ def sub_year_months(cube, months_of_year):
                              np.any(np.abs(mnths - cell[0])<0.5))
     return cube.extract(season)
 
+def constrain_to_time(cube, years, months_of_year):
+    cube = sub_year_range(cube, years)
+    cube = sub_year_months(cube, months_of_year)
+    return(cube)
+
 def constrain_cube_by_cube_and_numericIDs(cube, regions, region):
     """constrains a cube to region identifies in 'mask'
         Assumes that the cubes aere iris and on the same grid

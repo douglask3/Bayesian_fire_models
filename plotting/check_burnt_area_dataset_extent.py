@@ -20,7 +20,7 @@ gfed_path = "/data/users/douglas.kelley/fireMIPbenchmarking/data/benchmarkData/I
 def run_for_region(region):
     region_info = get_region_info(region)[region]
     
-    rname = region_info['longname']
+    rname = region_info['shortname']
     rdir = region_info['dir']
     mnths = region_info['mnths']
     # Load cubes
@@ -44,6 +44,11 @@ def run_for_region(region):
         for coord in [cube.coord('latitude'), cube.coord('longitude')]:
             coord.coord_system = wgs84
 
+    cube2 = add_lat_lon_bounds(cube2)
+    cell_areas = iris.analysis.cartography.area_weights(cube2) / 1e5
+    area_cube = np.broadcast_to(cell_areas, cube2.shape)
+    cube2.data = cube2.data *100 / area_cube
+    
     cube2 = cube2.regrid(cube1, iris.analysis.Linear())
     a1 = cube1.collapsed(['time'], iris.analysis.MEAN) * len(mnths)
     a2 = cube2.collapsed(['time'], iris.analysis.MEAN) * len(mnths)
@@ -67,6 +72,7 @@ def run_for_region(region):
     diff.data -= a1.data
     plot_map_sow(diff, "MCD64A1 - GFED5", 
                  cmap=SoW_cmap['diverging_TealOrange'], 
+                 levels=[-5, -2, -1, -0.5, -0.1, 0.1, 0.5, 1, 2, 5],
                  ax=axes[2], cbar_label = "Differnce in Burned Area (%)",
                  overlay_value = 0.0, overlay_col = "#ffffff")
     
@@ -83,7 +89,7 @@ def run_for_region(region):
     sns.scatterplot(x=x, y=y, s=10, alpha=0.5, edgecolor=None, ax=ax)
 
     # --- 1:1 reference line ---
-    lims = [min(x.min(), y.min()), max(x.max(), y.max())]
+    lims = [0.0, max(x.max(), y.max())]
     ax.plot(lims, lims, 'k--', lw=1, label='1:1 line')
     
     # --- Best fit line (OLS regression) ---
@@ -107,13 +113,16 @@ def run_for_region(region):
     ax.set_yticks(ticks)
 
     rname += ' - ' + str(years[0]) + ' to ' + str(years[1]) + ', ' 
-    rname += calendar.month_name[int(mnths[0])-1] 
+    rname += calendar.month_name[int(mnths[0])] 
+    
     if len(mnths) > 1:
         for mn in mnths[1:]:
-            rname += ', ' + calendar.month_name[int(mnths[mn])-1] 
+            rname += ', ' + calendar.month_name[int(mn)] 
     fig.suptitle(rname, fontsize=16)
     plt.tight_layout()
     plt.savefig("figs/burnt_area_product_assessment-" + rdir + ".png",  dpi=300)
 
-run_for_region("Congo")
-set_trace()
+
+regions = ["Amazon", "Congo", "Pantanal", "LA"]
+[run_for_region(region) for region in regions]
+
