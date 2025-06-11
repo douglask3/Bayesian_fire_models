@@ -170,10 +170,11 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
     if units is not None: dataset.units = units
     if subset_function is not None:
         if isinstance(subset_function, list):
-            for FUN, args in zip(subset_function, subset_function_args):
+            for FUN, sfargs in zip(subset_function, subset_function_args):
                 try:    
-                    dataset = FUN(dataset, **args)
+                    dataset = FUN(dataset, **sfargs)
                 except:
+                    set_trace()
                     print("Warning! function: " + FUN.__name__ + " not applied to file: " + \
                           dir + filename)
         else:      
