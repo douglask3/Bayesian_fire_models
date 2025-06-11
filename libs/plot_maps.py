@@ -388,24 +388,25 @@ def get_cube_extent(cube):
     lat_max = cube.coord('latitude').points.max()
     return [lon_min, lon_max, lat_min, lat_max]
 
-def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, figsize = None):
-    if figsize is None:
-        figsize = (n_rows * 16/5, n_cols*4)
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(16, 16), 
-                             subplot_kw={'projection': ccrs.PlateCarree()})
+def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, figsize = None, size_scale = 4):
 
     extent = get_cube_extent(eg_cube)
     extent[0] -= (extent[1] - extent[0])*0.1
     extent[1] += (extent[1] - extent[0])*0.1
     extent[2] -= (extent[3] - extent[2])*0.1
     extent[3] += (extent[3] - extent[2])*0.1
+    if figsize is None:
+        ratio = (extent[3] - extent[2])/(extent[1] - extent[0])
+        figsize = (n_cols*size_scale, n_rows * size_scale * ratio)
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize, 
+                             subplot_kw={'projection': ccrs.PlateCarree()})
     
     for ax in axes.flat:
         ax.set_extent(extent, crs=ccrs.PlateCarree())
 
     # Flatten axes for easy indexing
     axes = axes.flatten()
-    return axes
+    return fig, axes
     
 
 def plot_map_sow(cube, title='', contour_obs=None, cmap='RdBu_r', 
