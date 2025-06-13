@@ -7,6 +7,7 @@ import seaborn as sns
 import fnmatch
 import sys
 import pickle
+from scipy.stats import genpareto
 sys.path.append('.')
 sys.path.append('src/')
 sys.path.append('SoW_info/')
@@ -76,6 +77,21 @@ def flatten(xss):
 def scale2upper1(y):
     return 1-np.exp(-y * (-np.log(0.5)))
 
+def scale2upper1_axis(ax, ytick_labels = np.array([0, 0.2, 0.5, 1, 2, 5])):
+    ax.set_yticks([])          # remove ticks
+    ax.set_yticklabels([])     # remove tick labels
+
+    # Step 1: Choose locations in transformed space (display space)
+    yticks_transformed = scale2upper1(ytick_labels)
+    yticks_transformed = np.append(yticks_transformed, 1)
+    
+    # Step 2: Invert to get original y values (for labeling)
+    ytick_labels = [f"{v:.2f}" for v in ytick_labels] + ['']
+
+    # Step 3: Apply to plot
+    ax.set_yticks(yticks_transformed)
+    ax.set_yticklabels(ytick_labels)
+
 def plot_kde(x, y, xlab, ylab, cmap_name = "gradient_hues_extended", ax = None, *args, **kw): 
     """
     Creates a filled 2D kernel density estimate (KDE) plot for two input variables.
@@ -110,22 +126,7 @@ def plot_kde(x, y, xlab, ylab, cmap_name = "gradient_hues_extended", ax = None, 
     
     sns.kdeplot(data=df, x=xlab, y=ylab, fill=True, 
                 cmap=SoW_cmap[cmap_name], ax = ax, *args, **kw)
-    
-    ax.set_yticks([])          # remove ticks
-    ax.set_yticklabels([])     # remove tick labels
-    # Step 1: Choose locations in transformed space (display space)
-    ytick_labels = np.array([0, 0.2, 0.5, 1, 2, 5])
-    #yticks_transformed = np.array([0.01, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99])
-    yticks_transformed = scale2upper1(ytick_labels)
-    # Step 2: Invert to get original y values (for labeling)
-    #ytick_labels = -np.log(1 - yticks_transformed)
-    ytick_labels = [f"{v:.2f}" for v in ytick_labels]
-
-    # Step 3: Apply to plot
-    ax.set_yticks(yticks_transformed)
-    ax.set_yticklabels(ytick_labels)
-    
-    
+    scale2upper1_axis(ax)
 
 def plot_fact_vs_counter(factual_flat, counterfactual_flat, obs, ax = False): 
 
@@ -164,12 +165,8 @@ def plot_fact_vs_counter(factual_flat, counterfactual_flat, obs, ax = False):
     plt.title("Factual vs Counterfactual Burned Area")
     
     plt.axvline(obs, color='red', linestyle='--', label='Observed Burned Area')
-    plt.axhline(obs, color='red', linestyle='--', label='Observed Burned Area')
     
     plt.grid(True)
-
-
-from scipy.stats import genpareto
 
 def fit_gpd_tail(data, threshold_quantile=0.90):
     """Fits GPD to upper tail above a given quantile threshold."""
@@ -428,32 +425,20 @@ def plot_attribution_scatter(regions, figname, *args, **kw):
     return out
 
 def add_violin_plot(df, df_type, ax, title):
-# Top: Mean
+
     sns.violinplot(
         data=df[df["Impact Type"] == df_type],
         cut = 0.0,
         x="Region", y="Relative Change (%)", hue="Source",
         split=False, inner="quartile", palette="Set2", ax=ax
     )
-    
+
     ax.set_title(title)
     ax.axhline(0.5, color="gray", linestyle="--", linewidth=1)
     ax.legend(loc="lower left")
     ax.axhline(0.5, color='k', linestyle='--')
     
-    ax.set_yticks([])          # remove ticks
-    ax.set_yticklabels([])     # remove tick labels
-    # Step 1: Choose locations in transformed space (display space)
-    ytick_labels = np.array([0, 0.2, 0.5, 1, 2, 5])
-    #yticks_transformed = np.array([0.01, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99])
-    yticks_transformed = scale2upper1(ytick_labels)
-    # Step 2: Invert to get original y values (for labeling)
-    #ytick_labels = -np.log(1 - yticks_transformed)
-    ytick_labels = [f"{v:.2f}" for v in ytick_labels]
-
-    # Step 3: Apply to plot
-    ax.set_yticks(yticks_transformed)
-    ax.set_yticklabels(ytick_labels)
+    scale2upper1_axis(ax)
 
 if __name__=="__main__":
     
@@ -535,21 +520,10 @@ if __name__=="__main__":
     # Set up the plot
     sns.set(style="whitegrid")
     fig, axes = plt.subplots(2, 1, figsize=(14, 10), sharex=True)
+
     add_violin_plot(df, "Mean", axes[0], "Mean Burnt Area Impact")
     add_violin_plot(df, "Extreme", axes[1], "Extreme Burnt Area Impact")
-    '''
-    # Bottom: Extreme
-    sns.violinplot(
-        data=df[df["Impact Type"] == "Extreme"],
-        cut = 0.0,
-        x="Region", y="Relative Change (%)", hue="Source",
-        split=False, inner="quartile", palette="Set2", ax=axes[1]
-    )
-    axes[1].set_title("Extreme Burnt Area Impact")
-    axes[1].axhline(0, color="gray", linestyle="--", linewidth=1)
-    axes[1].legend(loc="lower left")
-    axes[0].axhline(0, color='k', linestyle='--')
-    '''
+
     # Tidy up
     plt.tight_layout()
     plt.show()
