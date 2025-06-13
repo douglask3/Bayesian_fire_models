@@ -87,10 +87,11 @@ def scale2upper1_axis(ax, ytick_labels = np.array([0, 0.2, 0.5, 1, 2, 5])):
     
     # Step 2: Invert to get original y values (for labeling)
     ytick_labels = [f"{v:.2f}" for v in ytick_labels] + ['']
-
+    #set_trace()
     # Step 3: Apply to plot
     ax.set_yticks(yticks_transformed)
     ax.set_yticklabels(ytick_labels)
+    ax.set_ylim([0, 1])
 
 def plot_kde(x, y, xlab, ylab, cmap_name = "gradient_hues_extended", ax = None, *args, **kw): 
     """
@@ -425,17 +426,18 @@ def plot_attribution_scatter(regions, figname, *args, **kw):
     return out
 
 def add_violin_plot(df, df_type, ax, title):
-
+    
     sns.violinplot(
         data=df[df["Impact Type"] == df_type],
         cut = 0.0,
         x="Region", y="Relative Change (%)", hue="Source",
-        split=False, inner="quartile", palette="Set2", ax=ax
+        split=False, inner="quartile", palette=["#f68373", "#fc6", "#c7384e", "#cfe9ff"], 
+        ax=ax
     )
-
+    
     ax.set_title(title)
     ax.axhline(0.5, color="gray", linestyle="--", linewidth=1)
-    ax.legend(loc="lower left")
+    
     ax.axhline(0.5, color='k', linestyle='--')
     
     scale2upper1_axis(ax)
@@ -495,10 +497,7 @@ if __name__=="__main__":
 
     # Group data
     all_sources = [outs_era5, outs_isimip, outs_combined, outs_human]
-    #try:
-    #    outs_era5[0][0] = np.random.normal(outs_era5[0][0], 10, 100)
-    #except:
-    #    set_trace()
+
     # Flatten into long-form dataframe for seaborn
     records = []
     for region_idx, region in enumerate(regions):
@@ -519,12 +518,14 @@ if __name__=="__main__":
     
     # Set up the plot
     sns.set(style="whitegrid")
-    fig, axes = plt.subplots(2, 1, figsize=(14, 10), sharex=True)
+    fig, axes = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
 
     add_violin_plot(df, "Mean", axes[0], "Mean Burnt Area Impact")
+    axes[0].legend(loc="lower left")
     add_violin_plot(df, "Extreme", axes[1], "Extreme Burnt Area Impact")
+    axes[1].legend_.remove()
 
     # Tidy up
     plt.tight_layout()
-    plt.show()
+    plt.savefig("figs/attribution-summery.png")
     set_trace()
