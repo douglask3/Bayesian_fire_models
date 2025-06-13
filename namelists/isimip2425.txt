@@ -1,5 +1,5 @@
 ## model info
-regions:: ['Pantanal', 'Amazon',  'Congo', 'LA', 'NEIndia', 'Alberta']
+regions:: ['Congo', 'Amazon',  'Pantanal', 'LA', 'NEIndia', 'Alberta']
 model_title::  'ConFLAME_nrt-isimip_large/ConFLAME_<<region>>-2425'
 
 ## input data paths and filenames
