@@ -73,7 +73,10 @@ def flatten(xss):
     """
     return [x for xs in xss for x in xs]
 
-def plot_kde(x, y, xlab, ylab, cmap_name = "gradient_hues_extended", *args, **kw): 
+def scale2upper1(y):
+    return 1-np.exp(-y * (-np.log(0.5)))
+
+def plot_kde(x, y, xlab, ylab, cmap_name = "gradient_hues_extended", ax = None, *args, **kw): 
     """
     Creates a filled 2D kernel density estimate (KDE) plot for two input variables.
 
@@ -101,9 +104,28 @@ def plot_kde(x, y, xlab, ylab, cmap_name = "gradient_hues_extended", *args, **kw
     -------
     #>>> plot_kde(x_values, y_values, "Factual", "Counterfactual", cmap_name="SoW_gradient")
     """
+    if ax is None: ax  = plt.gca()
+    y = scale2upper1(y)
     df = pd.DataFrame({xlab: x, ylab: y})
+    
     sns.kdeplot(data=df, x=xlab, y=ylab, fill=True, 
-                cmap=SoW_cmap[cmap_name], *args, **kw)
+                cmap=SoW_cmap[cmap_name], ax = ax, *args, **kw)
+    
+    ax.set_yticks([])          # remove ticks
+    ax.set_yticklabels([])     # remove tick labels
+    # Step 1: Choose locations in transformed space (display space)
+    ytick_labels = np.array([0, 0.2, 0.5, 1, 2, 5])
+    #yticks_transformed = np.array([0.01, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99])
+    yticks_transformed = scale2upper1(ytick_labels)
+    # Step 2: Invert to get original y values (for labeling)
+    #ytick_labels = -np.log(1 - yticks_transformed)
+    ytick_labels = [f"{v:.2f}" for v in ytick_labels]
+
+    # Step 3: Apply to plot
+    ax.set_yticks(yticks_transformed)
+    ax.set_yticklabels(ytick_labels)
+    
+    
 
 def plot_fact_vs_counter(factual_flat, counterfactual_flat, obs, ax = False): 
 
@@ -134,7 +156,7 @@ def plot_fact_vs_counter(factual_flat, counterfactual_flat, obs, ax = False):
     x = np.linspace(0, 1, 20)
     log_levels = x**(8)  # try 3, 5, 7 for increasingly strong bias
     plot_kde(factual_flat, counterfactual_flat, "factual", "counterfactual",
-             levels=log_levels, log_scale = True, thresh=1e-4, axes = ax)
+             levels=log_levels, log_scale = True, thresh=1e-4, ax = ax)
 
     plt.plot([0.0000000001, 100], [0.0000000001, 100], 'k--', label='1:1 Line')
     plt.ylabel("Counterfactual Burned Area")
@@ -146,8 +168,28 @@ def plot_fact_vs_counter(factual_flat, counterfactual_flat, obs, ax = False):
     
     plt.grid(True)
 
+
+from scipy.stats import genpareto
+
+def fit_gpd_tail(data, threshold_quantile=0.90):
+    """Fits GPD to upper tail above a given quantile threshold."""
+    data = data[~np.isnan(data)]
+    threshold = np.quantile(data, threshold_quantile)
+    tail_data = data[data > threshold] - threshold
+    if len(tail_data) < 5:
+        return None  # too few values to fit
+    params = genpareto.fit(tail_data)
+    return threshold, params
+
+def estimate_tail_prob_gpd(obs, threshold, params):
+    """Estimates P(x > obs) from GPD tail."""
+    if obs <= threshold:
+        return 1.0  # obs not in tail
+    excess = obs - threshold
+    return genpareto.sf(excess, *params)
+
 def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = None):
-   """
+    """
     Plots a 2D KDE of Factual Burned Area vs. Relative Effect Ratio, quantifying the 
     percentage change in burned area due to climate change or other factors.
 
@@ -186,12 +228,15 @@ def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = N
     --------
     #>>> plot_fact_vs_ratio(factual, counterfactual, obs_value, "Relative Change", ax=ax)
     """
+    '''
     effect_ratio = (factual_flat - counterfactual_flat)*100
     test = effect_ratio>0
     effect_ratio[test] = effect_ratio[test]/factual_flat[test]
     test = ~test
     effect_ratio[test] = effect_ratio[test]/counterfactual_flat[test]
-
+    '''
+    effect_ratio = factual_flat/counterfactual_flat
+    
     x = np.linspace(0, 1, 20)
     log_levels = x**(5)  # try 3, 5, 7 for increasingly strong bias
     
@@ -199,28 +244,48 @@ def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = N
     test = factual_flat > xmin
     
     plot_kde(factual_flat[test], effect_ratio[test], "factual", "effect ratio",bw_adjust = 1,
-             levels=log_levels, thresh=1e-4, clip=((0.0,factual_flat.max()), (-100, 100)),
+             levels=log_levels, thresh=1e-4, clip=((0.0,factual_flat.max()), (0, 1)),
              ax = ax) 
     
     plot_kde(factual_flat[test], effect_ratio[test], "factual", "effect ratio",bw_adjust = 1,
-             levels=log_levels, thresh=1e-4, clip=((obs,factual_flat.max()), (-100, 100)),
+             levels=log_levels, thresh=1e-4, clip=((obs,factual_flat.max()), (0, 1)),
              ax = ax)
-    ax.axhline(0, color='k', linestyle='--')#, label='No Change (Ratio = 1)')
+    ax.axhline(0.5, color='k', linestyle='--')#, label='No Change (Ratio = 1)')
 
     ax.axvline(obs, color='red', linestyle='--', label='Observed Burned Area')
     
     mask = factual_flat > obs
+    if (np.sum(mask) < 10):
+        mask = factual_flat > np.sort(factual_flat)[-10]
     percentile = [10, 50, 90]
     if np.sum(mask) == 0: 
         return
-    cc_effect = np.percentile(effect_ratio[mask], percentile)/100.0
-    
-    cc_effect = np.round(1.0+cc_effect/(1.0-cc_effect), 2)
-    pv = np.mean(effect_ratio[mask]>0)
+    #set_trace()
+    cc_effect = np.percentile(effect_ratio[mask], percentile)
+    cc_effect = np.round(cc_effect, 2)
+    #cc_effect = np.round(1.0+cc_effect/(1.0-cc_effect), 2)
+    pv = np.mean(effect_ratio[mask]>1)
     pv = np.round(pv, 2)
     if (pv > 0.99):
         pv = str("> 0.99")
-    rr = np.sum(factual_flat>obs)/np.sum(counterfactual_flat > obs)
+
+    # Fit GPD to factual and counterfactual
+    f_res = fit_gpd_tail(factual_flat, 0.95)
+    c_res = fit_gpd_tail(counterfactual_flat, 0.95)
+
+    # If GPD could be fitted
+    if f_res and c_res:
+        f_thresh, f_params = f_res
+        c_thresh, c_params = c_res
+
+        pf = estimate_tail_prob_gpd(obs, f_thresh, f_params)
+        pc = estimate_tail_prob_gpd(obs, c_thresh, c_params)
+
+        rr = pf / pc
+    else:
+        set_trace()
+    #rr_gpd = np.nan  # or fallback to empirical estimate
+        rr = np.sum(factual_flat>obs)/np.sum(counterfactual_flat > obs)
     
     rr = np.round(rr, 2)
     percentile_text = [str(pc) + "%:\n" + str(cc) for pc, cc in zip(percentile, cc_effect)]
@@ -230,8 +295,8 @@ def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = N
     
     for i in range(len(percentile_text)):
         ax.text(0.3 + i*0.18, 0.2, percentile_text[i], transform=ax.transAxes)
-    ax.text(0.3, 0.09, "Risk Ratio:", transform=ax.transAxes)
-    ax.text(0.3, 0.02, rr, transform=ax.transAxes)
+    #ax.text(0.3, 0.09, "Risk Ratio:", transform=ax.transAxes)
+    #ax.text(0.3, 0.02, rr, transform=ax.transAxes)
     
     ax.set_xlabel(" ")
     ax.set_ylabel(plot_name)
@@ -273,12 +338,12 @@ def plot_for_region(region, metric, plot_FUN,
     else:
         obs = obs[1]
         if factual_flat.max() < 1:
-            factual_flat = factual_flat * 100.0
-            counterfactual_flat = counterfactual_flat * 100.0
+            factual_flat = factual_flat * 150.0
+            counterfactual_flat = counterfactual_flat * 150.0
         plot_name = ""
     if obs > factual_flat.max() and factual_flat.max() < 1:
-        factual_flat = factual_flat * 100
-        counterfactual_flat = counterfactual_flat * 100
+        factual_flat = factual_flat * 150
+        counterfactual_flat = counterfactual_flat * 150
 
     if obs > factual_flat.max():
         obs = obs * 0.67
@@ -362,12 +427,38 @@ def plot_attribution_scatter(regions, figname, *args, **kw):
     plt.savefig('figs/' + figname + ".png")
     return out
 
+def add_violin_plot(df, df_type, ax, title):
+# Top: Mean
+    sns.violinplot(
+        data=df[df["Impact Type"] == df_type],
+        cut = 0.0,
+        x="Region", y="Relative Change (%)", hue="Source",
+        split=False, inner="quartile", palette="Set2", ax=ax
+    )
+    
+    ax.set_title(title)
+    ax.axhline(0.5, color="gray", linestyle="--", linewidth=1)
+    ax.legend(loc="lower left")
+    ax.axhline(0.5, color='k', linestyle='--')
+    
+    ax.set_yticks([])          # remove ticks
+    ax.set_yticklabels([])     # remove tick labels
+    # Step 1: Choose locations in transformed space (display space)
+    ytick_labels = np.array([0, 0.2, 0.5, 1, 2, 5])
+    #yticks_transformed = np.array([0.01, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99])
+    yticks_transformed = scale2upper1(ytick_labels)
+    # Step 2: Invert to get original y values (for labeling)
+    #ytick_labels = -np.log(1 - yticks_transformed)
+    ytick_labels = [f"{v:.2f}" for v in ytick_labels]
+
+    # Step 3: Apply to plot
+    ax.set_yticks(yticks_transformed)
+    ax.set_yticklabels(ytick_labels)
+
 if __name__=="__main__":
     
     dir1 = "outputs/outputs_scratch/ConFLAME_nrt-attribution//"
     dir2 = "-2425/time_series/_18-frac_points_0.5/"
-
-
 
     regions = ["Amazon", "Congo", "Pantanal"]
     #retgions = {key: regions_info[key] for key in region_names if key in regions_info}
@@ -398,8 +489,11 @@ if __name__=="__main__":
     for ii in range(len(outs_era5)):
         outi = []
         for jj in range(len(outs_era5[ii])):
-            outi.append(np.random.choice(outs_era5[ii][jj], 1000) + \
-                np.random.choice(outs_isimip[ii][jj], 1000)/2.0)
+            try:
+                outi.append((np.random.choice(outs_era5[ii][jj], 1000) + \
+                np.random.choice(outs_isimip[ii][jj], 1000))/2.0)
+            except:
+                outi.append(np.random.choice(outs_era5[ii][jj], 1000))
         outs_combined.append(outi)#set_trace()
 
     
@@ -416,13 +510,18 @@ if __name__=="__main__":
 
     # Group data
     all_sources = [outs_era5, outs_isimip, outs_combined, outs_human]
-
+    #try:
+    #    outs_era5[0][0] = np.random.normal(outs_era5[0][0], 10, 100)
+    #except:
+    #    set_trace()
     # Flatten into long-form dataframe for seaborn
     records = []
     for region_idx, region in enumerate(regions):
         for source_idx, source_name in enumerate(sources):
             for kind_idx, kind in enumerate(["Mean", "Extreme"]):  # 0 = mean, 1 = extreme
                 samples = all_sources[source_idx][kind_idx][region_idx]
+                if samples is None: samples = np.array([1.0, 1.0])
+                samples = scale2upper1(samples)
                 for val in samples:
                     records.append({
                         'Region': region,
@@ -436,20 +535,13 @@ if __name__=="__main__":
     # Set up the plot
     sns.set(style="whitegrid")
     fig, axes = plt.subplots(2, 1, figsize=(14, 10), sharex=True)
-    
-    # Top: Mean
-    sns.violinplot(
-        data=df[df["Impact Type"] == "Mean"],
-        x="Region", y="Relative Change (%)", hue="Source",
-        split=False, inner="quartile", palette="Set2", ax=axes[0]
-    )
-    axes[0].set_title("Mean Burnt Area Impact")
-    axes[0].axhline(0, color="gray", linestyle="--", linewidth=1)
-    axes[0].legend(loc="lower left")
-    axes[0].axhline(0, color='k', linestyle='--')
+    add_violin_plot(df, "Mean", axes[0], "Mean Burnt Area Impact")
+    add_violin_plot(df, "Extreme", axes[1], "Extreme Burnt Area Impact")
+    '''
     # Bottom: Extreme
     sns.violinplot(
         data=df[df["Impact Type"] == "Extreme"],
+        cut = 0.0,
         x="Region", y="Relative Change (%)", hue="Source",
         split=False, inner="quartile", palette="Set2", ax=axes[1]
     )
@@ -457,7 +549,7 @@ if __name__=="__main__":
     axes[1].axhline(0, color="gray", linestyle="--", linewidth=1)
     axes[1].legend(loc="lower left")
     axes[0].axhline(0, color='k', linestyle='--')
-
+    '''
     # Tidy up
     plt.tight_layout()
     plt.show()
