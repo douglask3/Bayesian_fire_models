@@ -301,10 +301,7 @@ def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = None, force0 = Fal
         raise ValueError("No valid data found to calculate levels.")
 
     # Try log-scale if distribution is strongly right-skewed and positive
-    try:
-        yay = log_ok and np.all(data > 0) and (np.percentile(data, 90) / np.percentile(data, 10)) > 50
-    except:
-        set_trace()
+    
     if log_ok and np.all(data > 0) and (np.percentile(data, 90) / np.percentile(data, 10)) > 50:
         log_data = np.log10(data)
         percentiles = np.linspace(0, 100, n_levels + 1)
@@ -341,7 +338,7 @@ def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = None, force0 = Fal
         levels_rounded = np.sort(np.unique(np.append(levels_rounded, - levels_rounded)))
         
     if ratio is not None:
-        levels_rounded = np.exp(levels_rounded*100)
+        levels_rounded = np.exp(levels_rounded)
         
         try:
             levels_rounded = np.vectorize(nice_round)(levels_rounded)
@@ -349,6 +346,10 @@ def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = None, force0 = Fal
             set_trace()
         levels_rounded = np.unique(levels_rounded)
     print(levels_rounded)
+    #if levels_rounded.max() > 100000000.0:
+    #    set_trace()
+    if len(levels_rounded) < 2:
+        levels_rounded = levels_rounded + np.array([-0.001, 0, 0.001])
     return levels_rounded
 
 def add_overlay_value(cube, value, col, ax):
@@ -407,11 +408,59 @@ def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, figsize = None, size_scale 
     # Flatten axes for easy indexing
     axes = axes.flatten()
     return fig, axes
+ 
+import iris
+import numpy as np
+import iris.analysis
+import iris.analysis.maths
+def coarse_regrid(cube, max_lon_cells=60):
+    # Get current lat/lon coordinates
+    lats = cube.coord('latitude').points
+    lons = cube.coord('longitude').points
     
+    # Current resolution
+    nlat = len(lats)
+    nlon = len(lons)
+    
+    # Compute step size to get target lon resolution
+    lon_step = int(np.ceil(nlon / max_lon_cells))
+    lat_step = lon_step  # Optional: keep roughly square cells
+    
+    # Use iris.analysis.maths to average over blocks
+    
+
+    # Use binning-based aggregation
+    rebinned_cube = cube[::lat_step, ::lon_step]
+    
+    return rebinned_cube
+
+
+def add_confidence(cube_pvs, ax):
+    # Confidence mask: True where confidence is high (e.g., > 0.9)
+    cube_pvs = coarse_regrid(cube_pvs)
+    #cube_pvs.data = np.abs((cube_pvs.data*2)-1)
+        
+    mask = cube_pvs.data < 0.9
+    mask[cube_pvs.data.mask] = False
+
+    # Get lat/lon coordinates (assumes 2D lat/lon from cube_pvs)
+    lat = cube_pvs.coord('latitude').points
+    lon = cube_pvs.coord('longitude').points
+
+    # If necessary, meshgrid for plotting
+    lon2d, lat2d = np.meshgrid(lon, lat)
+
+    # Apply mask
+    conf_lon = lon2d[mask]
+    conf_lat = lat2d[mask]
+
+    # Plot dots
+    ax.plot(conf_lon, conf_lat, 'k.', markersize=2.5, transform=ccrs.PlateCarree(), zorder=10)   
 
 def plot_map_sow(cube, title='', contour_obs=None, cmap='RdBu_r', 
              levels = None, extend = 'both', ax=None,
-             cbar_label = '', overlay_value = None, overlay_col = "#cfe9ff"):
+             cbar_label = '', overlay_value = None, overlay_col = "#cfe9ff",
+             cube_pvs = None):
     
     cube.long_name = title
     cube.rename(title)
@@ -429,9 +478,12 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap='RdBu_r',
     
     img = iplt.contourf(cube, levels=levels, cmap=cmap, axes=ax, extend = extend, 
                         norm = norm)
+
     if overlay_value is not None:
         add_overlay_value(cube, overlay_value, overlay_col, ax)
 
+    if cube_pvs is not None:
+        add_confidence(cube_pvs, ax)
     if is_catigorical:
         tick_positions = np.array(levels) + 0.5
         tick_labels = [str(level) for level in levels]

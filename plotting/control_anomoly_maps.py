@@ -99,6 +99,8 @@ def compute_fraction_above_threshold(anomaly_cube, maskv=0):
 def load_ensemble_summary(path, year  = 2024, mnths = ['06' , '07'], diff_type = 'anomoly',
                           nensemble = 0,
                           percentile=(10, 50, 90),
+                          compare_vs = None,
+                          return_ensemble = False,
                           obs = None):
     files = [os.path.join(path, f) for f in os.listdir(path) \
                     if f.endswith('.nc') and 'sample-pred' in f]
@@ -118,28 +120,36 @@ def load_ensemble_summary(path, year  = 2024, mnths = ['06' , '07'], diff_type =
         pass
     
     season = sub_year_months(ensemble, mnths)
-    season = season.aggregated_by('year', iris.analysis.SUM)
+    season = season.aggregated_by('year', iris.analysis.MEAN)
      
     season_year = sub_year_range(season, [year, year])
     clim_mean = season.collapsed('time', iris.analysis.MEAN)
     maskv = 0.0
     nullv = 0.0
     scale = 100.0
+    compare_cube = None
     if diff_type == 'ratio':
         anomaly = season_year / clim_mean
         maskv = 1.0
         nullv = 1.0
         scale = 1.0
+        if compare_vs is not None:
+            anomaly = anomaly - 1.0
+            scale = load_ensemble_summary(compare_vs, year, mnths, diff_type,  nensemble,                                                 compare_vs = None, return_ensemble = True) - 1.0
+            mask = scale.data < 0
+            scale = 1.0/scale
+            scale.data[mask] = 0.0
+            nullv = 0.0
     elif diff_type == 'anomoly':
         anomaly = season_year - clim_mean
     else:
         anomaly = season_year
         nullv = 0.5
-    #
+    if return_ensemble: return anomaly
     pvs = compute_fraction_above_threshold(anomaly, nullv)
-    
+    anomaly *= scale
     pcs = anomaly.collapsed('realization', iris.analysis.PERCENTILE, percent=percentile)
-    pcs.data *= scale
+    #pcs.data *= scale
     
     if obs is None: 
         return pcs, pvs
@@ -170,7 +180,7 @@ def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 100,
     base_path = f"outputs/outputs_scratch/ConFLAME_nrt-drivers3/" + \
                 rdir + "-2425/samples/_21-frac_points_0.5/baseline-"
 
-    temp_path = "temp2/control_anom_maps2/"
+    temp_path = "temp2/control_anom_maps5/"
     os.makedirs(temp_path, exist_ok=True)
     
     extra_path = rdir + '/' + limitation_type + '/' + str(diff_type) + '/'
@@ -196,6 +206,7 @@ def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 100,
 
         anom_summery = [load_ensemble_summary(f"{base_path}/{limitation_type}{i}", 
                                                      year, mnths, diff_type, nensemble,
+                                                     compare_vs = f"{base_path}/Evaluate",
                                                      *args, **kw) for i in range(6)]
 
         
@@ -378,16 +389,27 @@ def show_main_control(region):
             SoW_cmap['gradient_purple'], 
             SoW_cmap['gradient_purple']]
 
-    def plot_control(i, scale, axis_diff, levels, *args, **kw):
+    def plot_control(i, scale, axis_diff, levels, extend = 'max', *args, **kw):
         cube2plot = anom_summery[i][0][1] 
         cube2plot.data *= scale
-        cube2plot.data[cube2plot.data > 100] = 100.0
+        if extend == 'max':
+            cube_pvs = None
+            if np.nanmean(cube2plot.data>90) > 0.5:
+                levels = 100 - np.array(levels)
+                levels = np.sort(levels)
+                extend = 'min'
+            elif extend == 'max' and np.nanmean(cube2plot.data>10) > 0.5:
+                levels = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+                extend = 'neither'
+        else:
+            cube_pvs = anom_summery[i][1] 
+        #set_trace()
         plot_map_sow(cube2plot, control_names[i], 
-                    cmap=cmaps[i], levels=levels, cube_pvs = anom_summery[i][1],
-                    ax=axes[i + axis_diff], *args, **kw)
+                    cmap=cmaps[i], levels=levels, cube_pvs = cube_pvs,
+                    ax=axes[i + axis_diff], extend = extend, *args, **kw)
     for i in range(len(anom_summery)):
         plot_control(i, 1, 3, 
-                     [0, 0.1, 0.2, 0.4, 0.8, 1, 2, 5, 10, 20], extend = 'max')
+                     [0, 0.1, 0.2, 0.4, 0.8, 1, 2, 5, 10, 20, 50])
                      #[0, 0.1, 0.5, 1, 5, 10, 50, 90, 95, 99, 99.5, 99.9, 100], extend = 'neither')
     cmaps = [SoW_cmap['diverging_GreenPink'].reversed(), 
             SoW_cmap['diverging_TealPurple'], 
@@ -398,10 +420,14 @@ def show_main_control(region):
     obs_anomaly, mod_pcs, mod_pvs, obs_pos, anom_summery, count_pos, count_neg, \
             extra_path, temp_path = open_mod_data(region_info, 
                                                   limitation_type = "Standard_",
-                                                  diff_type = "anomoly")
+                                                  diff_type = "ratio")
+    
     for i in range(len(anom_summery)):
-        plot_control(i, 100, 3 + len(anom_summery), 
-                     10*np.array([-3, -1, -0.3, -0.1, -0.03, -0.01, 0.01, 0.03,  0.1, 0.3, 1, 3]))
+        plot_control(i, 100, 3 + len(anom_summery),
+                     #[0.2, 0.25, 0.5, 0.67, 1, 1.5, 2, 4, 5],
+                     [-100, -60, -40, -20, -10, -5, -2, -1, 0, 2, 5, 10, 20, 40, 60, 100],
+                     overlay_value = 0.0, overlay_col = "#ffffff", extend = 'both') 
+                     #10*np.array([-3, -1, -0.3, -0.1, -0.03, -0.01, 0.01, 0.03,  0.1, 0.3, 1, 3]))
     fname = "figs/control_maps_for/" + region_info['dir'] + '/' + extra_path.split('/')[-1]  + "-contol_summery.png"
     
     plt.tight_layout()
@@ -415,7 +441,7 @@ results = {}
 for consistent in [False, True]:
     for region in regions:
         results[region] = {}
-        for diff_type, levels_control in zip(['absolute', 'anomoly', 'ratio'], levels_controls):
+        for diff_type, levels_control in zip(['ratio', 'absolute', 'anomoly'], levels_controls):
             results[region][diff_type] = {}
             for limitation_type in ["Standard_", "Potential"]:
                 tfile = run_for_region(regions_info[region], diff_type = diff_type, 
