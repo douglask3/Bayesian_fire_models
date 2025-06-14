@@ -319,34 +319,40 @@ def plot_for_region(region, metric, plot_FUN,
     counterfactual = pd.read_csv(dir + counterfactual_name + \
                                  "-/" + metric + "/points-Evaluate.csv")
     obs = pd.read_csv(obs_dir + '/' + region + '/' + obs_file)
-
+    
     # Extra years and flatten the arrays to 1D
     if all_mod_years:
         mod_years = None
     else:
         mod_years = years
-    factual_flat = extract_years(factual, mod_years, mnths) + 0.000000001
-    counterfactual_flat = extract_years(counterfactual, mod_years, mnths) + 0.000000001
+    factual_flat = extract_years(factual, mod_years, mnths)/len(mnths) + 0.000000001
+    counterfactual_flat = extract_years(counterfactual, mod_years, mnths)/len(mnths)\
+                                 + 0.000000001
     
     obs = extract_years(obs.set_index('time').T, years, mnths, '-15')
     factual_flat0 = factual_flat.copy()
     if metric == 'mean':
-        obs = obs[0]
+        obs = obs[0]#*3#*33.0
         plot_name = region_info['shortname']
     else:
+        plot_name = ""
         obs = obs[1]
-        if factual_flat.max() < 1:
+    '''    if factual_flat.max() < 1:
             factual_flat = factual_flat * 150.0
             counterfactual_flat = counterfactual_flat * 150.0
         plot_name = ""
     if obs > factual_flat.max() and factual_flat.max() < 1:
         factual_flat = factual_flat * 150
         counterfactual_flat = counterfactual_flat * 150
-
-    if obs > factual_flat.max():
-        obs = obs * 0.67
-
-    out = plot_FUN(factual_flat, counterfactual_flat, obs, plot_name = plot_name, *args, **kw)    
+    '''
+    factual_flat = factual_flat * 100
+    counterfactual_flat = counterfactual_flat * 100
+    #if obs > factual_flat.max():
+    #    obs = obs * 0.67
+    #set_trace()
+    #obs = obs * np.mean(factual_flat)/obs
+    out = plot_FUN(factual_flat, counterfactual_flat, obs, plot_name = plot_name, *args, **kw)
+    
     if add_legend:
         plt.legend()
 
@@ -444,8 +450,8 @@ def add_violin_plot(df, df_type, ax, title):
 
 if __name__=="__main__":
     
-    dir1 = "outputs/outputs_scratch/ConFLAME_nrt-attribution//"
-    dir2 = "-2425/time_series/_18-frac_points_0.5/"
+    dir1 = "outputs/outputs_scratch/ConFLAME_nrt-attribution5/"
+    dir2 = "-2425/time_series/_19-frac_points_0.5/"
 
     regions = ["Amazon", "Congo", "Pantanal"]
     #retgions = {key: regions_info[key] for key in region_names if key in regions_info}
