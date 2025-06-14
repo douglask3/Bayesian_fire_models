@@ -108,10 +108,6 @@ def load_ensemble_summary(path, year  = 2024, mnths = ['06' , '07'], diff_type =
         files = files[0:len(files):round(len(files)/nensemble)]
     
     cubes = iris.cube.CubeList([iris.load_cube(f) for f in sorted(files)])
-
-    # Concatenate across fake ensemble dim (we'll add one)
-    #for i, cube in enumerate(cubes):
-    #    cube.add_aux_coord(iris.coords.AuxCoord(i, long_name='realization'))
     ensemble = cubes.merge_cube()
     
     try:
@@ -208,8 +204,6 @@ def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 100,
                                                      year, mnths, diff_type, nensemble,
                                                      compare_vs = f"{base_path}/Evaluate",
                                                      *args, **kw) for i in range(6)]
-
-        
         pvs = [anom[1] for anom in anom_summery]
         count_pos = get_positive_count_layer(pvs, 0.1)
         count_neg = get_positive_count_layer(pvs, 0.9)
@@ -224,13 +218,13 @@ def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 100,
 def run_for_region(region_info, diff_type = "anomoly",
                    levels_mod = [-1, -0.1, -0.01, -0.001, 0.001, 0.01, 0.1, 1],
                    levels_controls = None, 
-                   consistent = True, plot_stuff = True,# [-50, -20, -10, -5, -2, -1, 0, 1, 2, 5, 10, 20, 50]
+                   consistent = True, plot_stuff = True,
                    *args, **kw):
-    #set_trace()
+
     obs_anomaly, mod_pcs, mod_pvs, obs_pos, anom_summery, count_pos, count_neg, \
             extra_path, temp_path = open_mod_data(region_info, diff_type = diff_type,     
                                                   *args, **kw)
-
+    
     anom_p10 = [anom[0][0] for anom in anom_summery]
     anom_p90 = [anom[0][-1] for anom in anom_summery]
     rt = None
@@ -337,12 +331,6 @@ def run_for_region(region_info, diff_type = "anomoly",
     plt.savefig(fname,  dpi=300)
     return temp_path
 
-from state_of_wildfires_region_info  import get_region_info
-
-levels_controls = [[1, 2, 5, 10, 20, 50, 80, 90, 95, 98, 99], None, None]
-regions = ["Congo", "Amazon", "Pantanal", "LA"]
-regions_info = get_region_info(regions)
-
 
 def show_main_control(region):
     region_info = get_region_info(region)[region]
@@ -410,7 +398,7 @@ def show_main_control(region):
     for i in range(len(anom_summery)):
         plot_control(i, 1, 3, 
                      [0, 0.1, 0.2, 0.4, 0.8, 1, 2, 5, 10, 20, 50])
-                     #[0, 0.1, 0.5, 1, 5, 10, 50, 90, 95, 99, 99.5, 99.9, 100], extend = 'neither')
+
     cmaps = [SoW_cmap['diverging_GreenPink'].reversed(), 
             SoW_cmap['diverging_TealPurple'], 
             SoW_cmap['diverging_BlueRed'], 
@@ -424,31 +412,27 @@ def show_main_control(region):
     
     for i in range(len(anom_summery)):
         plot_control(i, 100, 3 + len(anom_summery),
-                     #[0.2, 0.25, 0.5, 0.67, 1, 1.5, 2, 4, 5],
                      [-100, -60, -40, -20, -10, -5, -2, -1, 0, 2, 5, 10, 20, 40, 60, 100],
                      overlay_value = 0.0, overlay_col = "#ffffff", extend = 'both') 
-                     #10*np.array([-3, -1, -0.3, -0.1, -0.03, -0.01, 0.01, 0.03,  0.1, 0.3, 1, 3]))
+
     fname = "figs/control_maps_for/" + region_info['dir'] + '/' + extra_path.split('/')[-1]  + "-contol_summery.png"
     
     plt.tight_layout()
     plt.savefig(fname,  dpi=300)
 
+levels_controls = [[1, 2, 5, 10, 20, 50, 80, 90, 95, 98, 99], None, None]
+regions = ["Congo", "Amazon", "Pantanal", "LA"]
+regions_info = get_region_info(regions)
+
 for region in regions:
     show_main_control(region)
-set_trace()
 
-results = {}
 for consistent in [False, True]:
     for region in regions:
-        results[region] = {}
         for diff_type, levels_control in zip(['ratio', 'absolute', 'anomoly'], levels_controls):
-            results[region][diff_type] = {}
             for limitation_type in ["Standard_", "Potential"]:
                 tfile = run_for_region(regions_info[region], diff_type = diff_type, 
                                limitation_type = limitation_type, 
                                levels_controls = levels_control,
                                consistent = consistent, plot_stuff = False)
-                results[region][diff_type][limitation_type] = tfile
- 
-
 
