@@ -11,3 +11,5 @@ figs/
 temp*
 *donotcommit*
 pymc_env/*
+test-code/*.csv
+
