@@ -272,7 +272,8 @@ def concat_cube_data(cubes):
     return np.concatenate(data_list)
 
 
-def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = None, force0 = False):
+def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = None, force0 = False,
+                      ignore_v = None):
     """
     Generate 'pretty' contour levels that break the data into roughly equal-sized areas.
 
@@ -297,6 +298,8 @@ def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = None, force0 = Fal
         data = np.ma.masked_invalid(np.ravel(data))
     except:
         set_trace()
+    if ignore_v is not None:
+        data = data[data != ignore_v]
     if data.mask.all():
         raise ValueError("No valid data found to calculate levels.")
 
@@ -457,7 +460,7 @@ def add_confidence(cube_pvs, ax):
     # Plot dots
     ax.plot(conf_lon, conf_lat, 'k.', markersize=2.5, transform=ccrs.PlateCarree(), zorder=10)   
 
-def plot_map_sow(cube, title='', contour_obs=None, cmap='RdBu_r', 
+def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_BlueRed'], 
              levels = None, extend = 'both', ax=None,
              cbar_label = '', overlay_value = None, overlay_col = "#cfe9ff",
              cube_pvs = None):
