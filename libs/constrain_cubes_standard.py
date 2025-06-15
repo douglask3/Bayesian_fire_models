@@ -154,6 +154,7 @@ def sub_year_range(cube, year_range):
     Returns:
         cube of just years between to years provided.
     """
+    if len(year_range) == 1: year_range = [year_range[0], year_range[0]]
     
     try:
         icc.add_year(cube, 'time')
