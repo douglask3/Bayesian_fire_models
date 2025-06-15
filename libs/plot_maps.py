@@ -2,6 +2,9 @@ import iris
 import numpy as np
 import cartopy.crs as ccrs
 
+import iris.analysis
+import iris.analysis.maths
+
 import iris.plot as iplt
 import iris.quickplot as qplt
 import matplotlib.pyplot as plt
@@ -394,6 +397,37 @@ def get_cube_extent(cube):
 
 def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, figsize = None, size_scale = 4):
 
+    """
+    Creates a grid of Cartopy map subplots with a consistent geographic extent.
+
+    Parameters
+    ----------
+    n_rows : int
+        Number of rows in the subplot grid.
+    n_cols : int
+        Number of columns in the subplot grid.
+    eg_cube : iris.cube.Cube
+        An example cube used to determine the spatial extent of the maps.
+    size_scale : float, optional (default=5)
+        Scaling factor for figure size; adjusts the base width of each subplot.
+    figsize : tuple of float, optional
+        Manual override for figure size (width, height in inches). If not provided,
+        it is automatically calculated based on extent and scaling.
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+        The created matplotlib figure.
+    axes : list of matplotlib.axes._subplots.AxesSubplot
+        A flattened list of axes with PlateCarree projection, each set to the same extent.
+
+    Notes
+    -----
+    - Adds a 10% buffer to the spatial extent in all directions for aesthetic spacing.
+    - Ensures consistent geographic boundaries across all subplots.
+    - Automatically adjusts figure size based on aspect ratio of the geographic extent.
+    - Intended for plotting multiple maps side-by-side with shared spatial context.
+    """
     extent = get_cube_extent(eg_cube)
     extent[0] -= (extent[1] - extent[0])*0.1
     extent[1] += (extent[1] - extent[0])*0.1
@@ -412,11 +446,33 @@ def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, figsize = None, size_scale 
     axes = axes.flatten()
     return fig, axes
  
-import iris
-import numpy as np
-import iris.analysis
-import iris.analysis.maths
+
 def coarse_regrid(cube, max_lon_cells=60):
+    """
+    Coarsens the spatial resolution of a 2D cube by subsampling latitude and longitude.
+
+    Parameters
+    ----------
+    cube : iris.cube.Cube
+        A 2D iris cube with latitude and longitude coordinates.
+    max_lon_cells : int, optional (default=60)
+        The maximum number of longitude cells desired in the coarsened output.
+        The latitude step size is matched to preserve roughly square grid cells.
+
+    Returns
+    -------
+    rebinned_cube : iris.cube.Cube
+        The coarsened cube, produced by slicing the original cube at regular intervals.
+
+    Notes
+    -----
+    - This function performs a simple nearest-neighbor downsampling (i.e., subsetting),
+      not an area-weighted average.
+    - Intended to reduce resolution for visualisation (e.g., to avoid overplotting).
+    - The same step size is applied in both latitude and longitude to keep grid cells
+      approximately square.
+    - For more accurate regridding, consider using `iris.analysis.regrid` or block means.
+    """
     # Get current lat/lon coordinates
     lats = cube.coord('latitude').points
     lons = cube.coord('longitude').points
@@ -439,6 +495,26 @@ def coarse_regrid(cube, max_lon_cells=60):
 
 
 def add_confidence(cube_pvs, ax):
+     """
+    Add confidence markers (dots) to a map, based on a probability/confidence cube.
+
+    Parameters
+    ----------
+    cube_pvs : iris.cube.Cube
+        A 2D cube (latitude x longitude) containing confidence or probability values 
+        in the range 0 to 1. Values below 0.9 are considered uncertain and will be marked.
+    ax : matplotlib.axes._subplots.AxesSubplot
+        The map axes (with Cartopy projection) to draw the confidence dots on.
+
+    Notes
+    -----
+    - The cube is automatically coarsened using `coarse_regrid` to reduce overplotting.
+    - Only unmasked data below the confidence threshold (default 0.9) are plotted.
+    - Confidence points are plotted as small black dots using `ax.plot`.
+    - Assumes that the cube uses 2D latitude and longitude coordinates.
+    - Intended to indicate areas of low model agreement or statistical uncertainty.
+    """
+
     # Confidence mask: True where confidence is high (e.g., > 0.9)
     cube_pvs = coarse_regrid(cube_pvs)
     #cube_pvs.data = np.abs((cube_pvs.data*2)-1)
