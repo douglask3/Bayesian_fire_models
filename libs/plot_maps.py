@@ -461,7 +461,45 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap='RdBu_r',
              levels = None, extend = 'both', ax=None,
              cbar_label = '', overlay_value = None, overlay_col = "#cfe9ff",
              cube_pvs = None):
-    
+    """
+    Plot a SoW-style map of fire (or climate) data with optional overlays and confidence markers.
+
+    Parameters
+    ----------
+    cube : iris.cube.Cube
+        The main data cube to plot. Can be continuous or categorical (integer).
+    title : str, optional
+        Title for the map and the cube.
+    contour_obs : iris.cube.Cube, optional
+        A cube showing observed anomaly contours (e.g. burned area), used to overlay 0-contour lines.
+    cmap : str or matplotlib Colormap, optional
+        Colormap to use. For categorical data, should have as many colors as categories.
+    levels : list, optional
+        Contour levels. If None, will be auto-generated.
+    extend : str, optional
+        How to handle out-of-bound data in colorbar ('both', 'neither', 'min', 'max').
+    ax : matplotlib Axes, optional
+        Axes to plot on. If None, creates new figure and axes.
+    cbar_label : str, optional
+        Label for the colorbar.
+    overlay_value : int or float, optional
+        If specified, will overlay regions of the cube matching this value (e.g., a control flag).
+    overlay_col : str, optional
+        Color to use for the overlay highlight (default: light cyan).
+    cube_pvs : iris.cube.Cube, optional
+        A cube of confidence/probability values (e.g., p-values or ensemble agreement). Adds hatching or dots.
+
+    Returns
+    -------
+    img : matplotlib ContourSet
+        The main contourf plot handle (for further use or modification).
+
+    Notes
+    -----
+    - Categorical data is automatically detected via integer dtype and uses discrete color mapping.
+    - Adds coastlines, rivers, borders, and land mask for context.
+    - Observational contours and confidence patterns help interpret model results.
+    """ 
     cube.long_name = title
     cube.rename(title)
     is_catigorical =  np.issubdtype(cube.core_data().dtype, np.integer)
