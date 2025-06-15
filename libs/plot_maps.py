@@ -396,7 +396,6 @@ def get_cube_extent(cube):
     return [lon_min, lon_max, lat_min, lat_max]
 
 def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, figsize = None, size_scale = 4):
-
     """
     Creates a grid of Cartopy map subplots with a consistent geographic extent.
 
@@ -495,7 +494,7 @@ def coarse_regrid(cube, max_lon_cells=60):
 
 
 def add_confidence(cube_pvs, ax):
-     """
+    """
     Add confidence markers (dots) to a map, based on a probability/confidence cube.
 
     Parameters
