@@ -21,7 +21,8 @@ def load_and_average_months(file, months, years):
     season_year = sub_year_range(season, years)
     return season_year.collapsed('time', iris.analysis.MEAN)
 
-def plot_factual_and_cf(variable, factual_path, cf_dir, months, years, label=None, shift = 0.0):
+def plot_factual_and_cf(variable, factual_path, cf_dir, months, years, label=None, units = '',
+                        shift = 0.0, scale = 1.0, axes = None, ax0 = None):
     # Load factual
     factual_avg = load_and_average_months(factual_path, months, years) + shift
     
@@ -52,35 +53,53 @@ def plot_factual_and_cf(variable, factual_path, cf_dir, months, years, label=Non
     title_label = label or variable
     levels = auto_pretty_levels(np.append(np.append(cf_10.data.flatten(), cf_90.data.flatten()), factual_avg.data.flatten()), ignore_v = shift)
     
+
+    if axes is None:
+        fig, axes = set_up_sow_plot_windows(5, 1, factual_avg)
+        ax0 = 0
     plot_map_sow(factual_avg, title=f"Factual {title_label}", 
-                 cbar_label=variable, levels = levels)
+                 cbar_label=variable, levels = levels, ax = axes[ax0])
     plot_map_sow(cf_10, title=f"CF 10th percentile {title_label}", 
-                 cbar_label=variable, levels = levels)
+                 cbar_label=variable, levels = levels, ax = axes[ax0+1])
     plot_map_sow(cf_90, title=f"CF 90th percentile {title_label}", 
-                 cbar_label=variable, levels = levels)
+                 cbar_label=variable, levels = levels, ax = axes[ax0 + 2])
     levels = auto_pretty_levels([diff_10, diff_90])
     plot_map_sow(diff_10, title=f"Difference (Factual - CF 10th percentile) {title_label}", 
-                 cbar_label=f"Δ {variable}", levels = levels)
+                 cbar_label=f"Δ {variable}", levels = levels, ax = axes[ax0 + 3])
     plot_map_sow(diff_90, title=f"Difference (Factual - CF 90th percentile) {title_label}", 
-                 cbar_label=f"Δ {variable}", levels = levels)
+                 cbar_label=f"Δ {variable}", levels = levels, ax = axes[ax0 + 4])
 
-
+    
 region = 'Amazon'
 region_info = get_region_info(region)[region]
 
-variable = 'tas_max'
-# Variable: tas_max
-plot_factual_and_cf(
-    variable = variable,
-    factual_path = 'data/data/driving_data2425/' + region_info['dir'] + \
-                   '/nrt/era5_monthly/' + variable + '.nc',
-    cf_dir = 'data/data/driving_data2425/' + region_info['dir'] + \
-             '/nrt/era5_monthly/CF/',
-    months = region_info['mnths'],
-    years = region_info['years'],
-    label='Max Temp',
-    shift = -273.15
-)
+variable_info = {'tas_max':{"file": 'tas_max', 'label': 'Max Temp', 'Units': "°C", 
+                            'shift': -273.15, 'scale': 1.0},
+                 'precip': {"file": 'precip', 'label': 'Precipitation', 'Units': "mm/day",
+                            "shift": 0.0, 'scale': 1.0}}
+
+variables = ['tas_max', 'precip']
+eg_cube = iris.load_cube('data/data/driving_data2425/' + region_info['dir'] + \
+                       '/nrt/era5_monthly/' + variable_info[variables[0]]['file'] + '.nc')
+fig, axes = set_up_sow_plot_windows(len(variables), 5, eg_cube = eg_cube)
+
+for i, variable in enumerate(variables):
+    info = variable_info[variable]
+    plot_factual_and_cf(
+        variable = info['file'],
+        factual_path = 'data/data/driving_data2425/' + region_info['dir'] + \
+                       '/nrt/era5_monthly/' + variable + '.nc',
+        cf_dir = 'data/data/driving_data2425/' + region_info['dir'] + \
+                 '/nrt/era5_monthly/CF/',
+        months = region_info['mnths'],
+        years = region_info['years'],
+        label = info['label'],
+        units = info['Units'],
+        shift = info['shift'],
+        scale = info['scale'],
+        axes = axes,
+        ax0 = i*5
+    )
 
 plt.show()
 set_trace()
