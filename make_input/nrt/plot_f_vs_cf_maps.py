@@ -22,7 +22,9 @@ def load_and_average_months(file, months, years):
     return season_year.collapsed('time', iris.analysis.MEAN)
 
 def plot_factual_and_cf(variable, factual_path, cf_dir, months, years, label=None, units = '',
-                        shift = 0.0, scale = 1.0, axes = None, ax0 = None):
+                        shift = 0.0, scale = 1.0, 
+                        cbar = 'gradient_hues', dcbar = 'diverging_TealOrange',
+                        axes = None, ax0 = None):
     # Load factual
     factual_avg = load_and_average_months(factual_path, months, years) + shift
     
@@ -57,26 +59,31 @@ def plot_factual_and_cf(variable, factual_path, cf_dir, months, years, label=Non
     if axes is None:
         fig, axes = set_up_sow_plot_windows(5, 1, factual_avg)
         ax0 = 0
-    plot_map_sow(factual_avg, title=f"Factual {title_label}", 
+    cbar_label = variable + ' (' + units + ')'
+    plot_map_sow(factual_avg, title=f"Factual {title_label}", cmap = SoW_cmap[cbar],
                  cbar_label=variable, levels = levels, ax = axes[ax0])
-    plot_map_sow(cf_10, title=f"CF 10th percentile {title_label}", 
-                 cbar_label=variable, levels = levels, ax = axes[ax0+1])
-    plot_map_sow(cf_90, title=f"CF 90th percentile {title_label}", 
-                 cbar_label=variable, levels = levels, ax = axes[ax0 + 2])
+    plot_map_sow(cf_10, title=f"CF 10th percentile {title_label}", cmap = SoW_cmap[cbar],
+                 cbar_label=cbar_label, levels = levels, ax = axes[ax0+1])
+    plot_map_sow(cf_90, title=f"CF 90th percentile {title_label}", cmap = SoW_cmap[cbar],
+                 cbar_label=cbar_label, levels = levels, ax = axes[ax0 + 2])
     levels = auto_pretty_levels([diff_10, diff_90])
     plot_map_sow(diff_10, title=f"Difference (Factual - CF 10th percentile) {title_label}", 
-                 cbar_label=f"Δ {variable}", levels = levels, ax = axes[ax0 + 3])
+                 cmap = SoW_cmap[dcbar],
+                 cbar_label=f"Δ {cbar_label}", levels = levels, ax = axes[ax0 + 3])
     plot_map_sow(diff_90, title=f"Difference (Factual - CF 90th percentile) {title_label}", 
-                 cbar_label=f"Δ {variable}", levels = levels, ax = axes[ax0 + 4])
+                 cmap = SoW_cmap[dcbar],
+                 cbar_label=f"Δ {cbar_label}", levels = levels, ax = axes[ax0 + 4])
 
     
 region = 'Amazon'
 region_info = get_region_info(region)[region]
 
 variable_info = {'tas_max':{"file": 'tas_max', 'label': 'Max Temp', 'Units': "°C", 
-                            'shift': -273.15, 'scale': 1.0},
+                            'shift': -273.15, 'scale': 1.0, 
+                            'cbar': 'gradient_red', 'dcbar': 'diverging_BlueRed'},
                  'precip': {"file": 'precip', 'label': 'Precipitation', 'Units': "mm/day",
-                            "shift": 0.0, 'scale': 1.0}}
+                            "shift": 0.0, 'scale': 1.0, 
+                            'cbar': 'gradient_teal', 'dcbar': 'diverging_TealOrange'}}
 
 variables = ['tas_max', 'precip']
 eg_cube = iris.load_cube('data/data/driving_data2425/' + region_info['dir'] + \
@@ -97,8 +104,10 @@ for i, variable in enumerate(variables):
         units = info['Units'],
         shift = info['shift'],
         scale = info['scale'],
-        axes = axes,
-        ax0 = i*5
+        cbar  = info['cbar'],
+        dcbar = info['dcbar'],
+        axes  = axes,
+        ax0   = i*5
     )
 
 plt.show()
