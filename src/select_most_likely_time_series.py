@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from pdb import set_trace
-
+import os
 # --- Load data ---
 # Model ensemble data
 
@@ -42,8 +42,8 @@ def for_region(region):
     gaussian_weights = np.exp(-squared_distances / (2 * sigma**2))
     weights = gaussian_weights/np.sum(gaussian_weights)
     
-    def for_variable(variable = "ratio/Control"):
-        sample_file = mod_dir + variable + ".csv"
+    def for_variable(variable = "ratio/Control.csv"):
+        sample_file = mod_dir + variable
 
         control_df = pd.read_csv(sample_file)
         control_df.set_index('realization', inplace=True)
@@ -57,14 +57,22 @@ def for_region(region):
         rng = np.random.default_rng(seed=42)  # for reproducibility
         
         for i, time in enumerate(control_df.columns):
-            sampled_idxs = rng.choice(len(realizations), size=N, replace=True, p=weights.values)
+            try:
+                sampled_idxs = rng.choice(len(realizations), size=N, replace=True, p=weights.values)
+            except:
+                set_trace()
             bootstrapped_array[:, i] = control_df.iloc[sampled_idxs, i].values
         
         # Optional: wrap into DataFrame with the same index/columns as control_matched
         bootstrapped_df = pd.DataFrame(bootstrapped_array, columns=control_df.columns)
         bootstrapped_df.index = range(N)  # or use sampled_idxs if you want source index info
         bootstrapped_df.to_csv(sample_file[:-4] + '-weighted.csv')
-        set_trace() 
-    for_variable()
+    
+    dirs = ["absolute", "anomoly", "ratio"]
+    for dir in dirs:
+        files = os.listdir(mod_dir + dir)
+        for file in files:
+            if 'csv' in file and 'standard' in file:
+                for_variable(dir + '/' +file)
 for_region('Amazon')
 
