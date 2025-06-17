@@ -140,7 +140,7 @@ def make_time_series(cube, name, output_path, percentile = None, cube_assess = N
     make_output_TS(climatology, 'climatology')
     make_output_TS(anomaly, 'anomaly')
     make_output_TS(ratio, 'ratio')
-    set_trace()
+    
     return out_dir
 
 def make_both_time_series(percentiles, *args, **kw):
