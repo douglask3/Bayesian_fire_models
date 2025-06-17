@@ -9,6 +9,10 @@ import matplotlib.pyplot as plt
 
 import datetime
 
+import sys
+sys.path.append('libs/')
+from climtatology_difference import *
+
 try:
     from concurrent.futures import ProcessPoolExecutor, as_completed
     from multiprocessing import get_context
@@ -73,31 +77,6 @@ def above_percentile_mean(cube, cube_assess = None, percentile = 0.95):
     return np.sum(cube.data[mask] * area_data_np[mask]) / np.sum(area_data_np[mask])
 
   
-def climtatology_difference(data):
-
-    # `data` is your (n x m) array
-    n, m = data.shape
-
-    # Step 1: Calculate month index for each column (0=Jan, 11=Dec)
-    month_indices = np.arange(m) % 12  # shape (m,)
-    
-    # Step 2: Create an empty (n x 12) array to hold monthly means
-    climatology = np.zeros((n, 12))
-    
-    # Step 3: Fill in the monthly means
-    for month in range(12):
-        climatology[:, month] = data[:, month_indices == month].mean(axis=1)
-
-    # Step 4: Create anomaly and ratio arrays (n x m)
-    anomaly = np.zeros_like(data)
-    ratio = np.zeros_like(data)
-    
-    for i in range(m):
-        month = month_indices[i]
-        anomaly[:, i] = data[:, i] - climatology[:, month]
-        ratio[:, i] = data[:, i] / climatology[:, month]
-    return climatology, anomaly, ratio
-
 def make_time_series(cube, name, output_path, percentile = None, cube_assess = None, 
                      grab_old = False, *args, **kw):
     print("finding " + str(percentile) + " for " + name + "\n\t into:" + output_path)
