@@ -72,22 +72,44 @@ def above_percentile_mean(cube, cube_assess = None, percentile = 0.95):
     mask = (cube_assess.data >= threshold_value) & (~cube_assess.data.mask)
     return np.sum(cube.data[mask] * area_data_np[mask]) / np.sum(area_data_np[mask])
 
+  
+def climtatology_difference(data):
+
+    # `data` is your (n x m) array
+    n, m = data.shape
+
+    # Step 1: Calculate month index for each column (0=Jan, 11=Dec)
+    month_indices = np.arange(m) % 12  # shape (m,)
     
+    # Step 2: Create an empty (n x 12) array to hold monthly means
+    climatology = np.zeros((n, 12))
+    
+    # Step 3: Fill in the monthly means
+    for month in range(12):
+        climatology[:, month] = data[:, month_indices == month].mean(axis=1)
+
+    # Step 4: Create anomaly and ratio arrays (n x m)
+    anomaly = np.zeros_like(data)
+    ratio = np.zeros_like(data)
+    
+    for i in range(m):
+        month = month_indices[i]
+        anomaly[:, i] = data[:, i] - climatology[:, month]
+        ratio[:, i] = data[:, i] / climatology[:, month]
+    return climatology, anomaly, ratio
+
 def make_time_series(cube, name, output_path, percentile = None, cube_assess = None, 
                      grab_old = False, *args, **kw):
     print("finding " + str(percentile) + " for " + name + "\n\t into:" + output_path)
     print(datetime.datetime.now())
     if percentile is None or percentile == 0.0:        
         out_dir = output_path + '/mean/'
-        percentile_name = '0.0' 
     else:
         out_dir = output_path + '/pc-' + str(percentile) + '/'
-        percentile_name = str(percentile)
     
-    out_file_points = out_dir + 'points-' + name + '.csv'
-    out_file_TS = output_path + '/time_series-' + name + '-' + percentile_name + '.csv'
-    if os.path.isfile(out_file_TS) and os.path.isfile(out_file_points) and grab_old:    
-        return out_file_TS, out_file_points
+    lock_file = out_dir + '.txt'
+    if os.path.isfile(lock_file) and grab_old:    
+        return out_dir
     
     if cube_assess is None: cube_assess = cube
     cube = add_bounds(cube)
@@ -112,22 +134,35 @@ def make_time_series(cube, name, output_path, percentile = None, cube_assess = N
         area_weighted_mean = np.array([percentile_for_relization(cube, i) \
                                       for i in range(cube.shape[0])])      
     
+    climatology, anomaly, ratio = climtatology_difference(area_weighted_mean)
     makeDir(out_dir)
     def output_cube_to_csv(data, realizations, extra_dim,  filename): 
-        times = cube.coord('time').units.num2date(cube.coord('time').points)
+        times = cube.coord('time').units.num2date(cube.coord('time').points)[0:data.shape[1]]
         df = pd.DataFrame(data, index=realizations, columns=[t.isoformat() for t in times])
         df.index.name = extra_dim
         df.to_csv(filename)
         #np.savetxt(out_file_points, area_weighted_mean.data, delimiter=',')
-    output_cube_to_csv(area_weighted_mean, cube.coord('realization').points, 
-                       'realization', out_file_points)
-
-    percentiles = [5, 10, 25, 75, 90, 95]
-    TS = np.nanpercentile(area_weighted_mean,  percentiles, axis = 0)
     
-    output_cube_to_csv(TS, percentiles,  'percentiles', out_file_TS)
 
-    return out_file_TS, out_file_points
+    percentiles = [5, 10, 25, 50, 75, 90, 95]
+
+    def make_output_TS(data, dir = ''):
+        
+        out_file_points = out_dir + '/members/' + dir + '/'
+        out_file_TS = out_dir + '/percentles/' + dir + '/' 
+        makeDir(out_file_points)
+        makeDir(out_file_TS)
+        output_cube_to_csv(data, cube.coord('realization').points, 
+                       'realization', out_file_points  + name + '.csv')
+        TS = np.nanpercentile(data, percentiles, axis = 0)
+        output_cube_to_csv(TS, percentiles,  'percentiles', out_file_TS  + name + '.csv')
+    
+    make_output_TS(area_weighted_mean, 'absolute')
+    make_output_TS(climatology, 'climatology')
+    make_output_TS(anomaly, 'anomaly')
+    make_output_TS(ratio, 'ratio')
+    set_trace()
+    return out_dir
 
 def make_both_time_series(percentiles, *args, **kw):
     if percentiles is None: return None
