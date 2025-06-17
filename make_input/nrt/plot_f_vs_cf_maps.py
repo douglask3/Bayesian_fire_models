@@ -19,7 +19,9 @@ def load_and_average_months(file, months, years):
     cube = iris.load_cube(file)
     season = sub_year_months(cube, months)
     season_year = sub_year_range(season, years)
-    return season_year.collapsed('time', iris.analysis.MEAN)
+    if len(months) > 1:
+        season_year = season_year.collapsed('time', iris.analysis.MEAN)
+    return season_year    
 
 def plot_factual_and_cf(variable, factual_path, cf_dir, months, years, label=None, units = '',
                         shift = 0.0, scale = 1.0, 
@@ -74,43 +76,78 @@ def plot_factual_and_cf(variable, factual_path, cf_dir, months, years, label=Non
                  cmap = dcmap,
                  cbar_label=f"Δ {cbar_label}", levels = levels, ax = axes[ax0 + 4])
 
-    
-region = 'Amazon'
-region_info = get_region_info(region)[region]
 
-variable_info = {'tas_max':{"file": 'tas_max', 'label': 'Max Temp', 'Units': "°C", 
+
+variable_info = {'tas_mean':{"file": 'tas_mean', 'label': 'Mean Monthly Temp', 'Units': "°C", 
+                            'shift': -273.15, 'scale': 1.0, 
+                            'cmap': SoW_cmap['gradient_red'], 
+                            'dcmap': SoW_cmap['diverging_BlueRed']},
+                 'tas_max':{"file": 'tas_max', 'label': 'Max Monthly Temp', 'Units': "°C", 
                             'shift': -273.15, 'scale': 1.0, 
                             'cmap': SoW_cmap['gradient_red'], 
                             'dcmap': SoW_cmap['diverging_BlueRed']},
                  'precip': {"file": 'precip', 'label': 'Precipitation', 'Units': "mm/day",
                             "shift": 0.0, 'scale': 1.0, 
                             'cmap': SoW_cmap['gradient_teal'], 
-                            'dcmap': SoW_cmap['diverging_TealOrange'].reversed()}}
+                            'dcmap': SoW_cmap['diverging_TealOrange'].reversed()},
+                 'dry_days': {"file": 'dry_days', 'label': 'Mean. no dry days', 
+                              'Units': "fraction",
+                              "shift": 0.0, 'scale': 1.0, 
+                              'cmap': SoW_cmap['gradient_teal'].reversed(), 
+                              'dcmap': SoW_cmap['diverging_TealOrange']},
+                 'max_consec_dry': {"file": 'dry_days', 'label': 'Max. no consecutive dry days',
+                              'Units': "no. days",
+                              "shift": 0.0, 'scale': 1.0, 
+                              'cmap': SoW_cmap['gradient_teal'].reversed(), 
+                              'dcmap': SoW_cmap['diverging_TealOrange']},
+                 'hurs_mean': {"file": 'hurs_mean', 'label': 'Humidity', 
+                               'Units': "%",
+                               "shift": 0.0, 'scale': 1.0, 
+                               'cmap': SoW_cmap['gradient_hotpink'], 
+                               'dcmap': SoW_cmap['diverging_TealPurple'].reversed()},
+                 'hurs_min': {"file": 'hurs_min', 'label': 'Min. Humidity', 
+                               'Units': "%",
+                               "shift": 0.0, 'scale': 1.0, 
+                               'cmap': SoW_cmap['gradient_hotpink'], 
+                               'dcmap': SoW_cmap['diverging_TealPurple'].reversed()},
+                 'wind_max': {"file": 'wind_max', 'label': 'Max. Wind', 
+                               'Units': "m/s",
+                               "shift": 0.0, 'scale': 1.0, 
+                               'cmap': SoW_cmap['gradient_purple'], 
+                               'dcmap': SoW_cmap['diverging_GreenPink'].reversed()}}
 
-variables = ['tas_max', 'precip']
-eg_cube = iris.load_cube('data/data/driving_data2425/' + region_info['dir'] + \
-                       '/nrt/era5_monthly/' + variable_info[variables[0]]['file'] + '.nc')
-fig, axes = set_up_sow_plot_windows(len(variables), 5, eg_cube = eg_cube)
+variables = ['tas_max', 'precip', 'dry_days', 'max_consec_dry', 'hurs_mean', 'hurs_min',
+             'wind_max']
 
-for i, variable in enumerate(variables):
-    info = variable_info[variable]
-    plot_factual_and_cf(
-        variable = info['file'],
-        factual_path = 'data/data/driving_data2425/' + region_info['dir'] + \
-                       '/nrt/era5_monthly/' + variable + '.nc',
-        cf_dir = 'data/data/driving_data2425/' + region_info['dir'] + \
-                 '/nrt/era5_monthly/CF/',
-        months = region_info['mnths'],
-        years = region_info['years'],
-        label = info['label'],
-        units = info['Units'],
-        shift = info['shift'],
-        scale = info['scale'],
-        cmap  = info['cmap'],
-        dcmap = info['dcmap'],
-        axes  = axes,
-        ax0   = i*5
-    )
+    
+regions = ['Amazon', 'Congo', 'Pantanal']
 
-plt.show()
-set_trace()
+for region in regions:
+    region_info = get_region_info(region)[region]
+    eg_cube = iris.load_cube('data/data/driving_data2425/' + region_info['dir'] + \
+                           '/nrt/era5_monthly/' + variable_info[variables[0]]['file'] + '.nc')
+    fig, axes = set_up_sow_plot_windows(len(variables), 5, 
+                                        eg_cube = eg_cube, figsize = (30, 30))
+
+    for i, variable in enumerate(variables):
+        info = variable_info[variable]
+        plot_factual_and_cf(
+            variable = info['file'],
+            factual_path = 'data/data/driving_data2425/' + region_info['dir'] + \
+                           '/nrt/era5_monthly/' + variable + '.nc',
+            cf_dir = 'data/data/driving_data2425/' + region_info['dir'] + \
+                     '/nrt/era5_monthly/CF/',
+            months = region_info['mnths'],
+            years = region_info['years'],
+            label = info['label'],
+            units = info['Units'],
+            shift = info['shift'],
+            scale = info['scale'],
+            cmap  = info['cmap'],
+            dcmap = info['dcmap'],
+            axes  = axes,
+            ax0   = i*5
+        )
+    plt.tight_layout()
+    plt.savefig('figs/f_cf_era5' + region_info['dir'] + '.png', dpi = 300)
+
