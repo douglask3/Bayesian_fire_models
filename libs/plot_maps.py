@@ -435,6 +435,8 @@ def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, figsize = None, size_scale 
     if figsize is None:
         ratio = (extent[3] - extent[2])/(extent[1] - extent[0])
         figsize = (n_cols*size_scale, n_rows * size_scale * ratio)
+        print("Automated figure size: " + str(figsize))
+        
     fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize, 
                              subplot_kw={'projection': ccrs.PlateCarree()})
     
