@@ -96,26 +96,38 @@ def compute_fraction_above_threshold(anomaly_cube, maskv=0):
 
     return fraction_cube
 
-def load_ensemble_summary(path, year  = 2024, mnths = ['06' , '07'], diff_type = 'anomoly',
+def load_ensemble_summary(paths, year  = 2024, mnths = ['06' , '07'], diff_type = 'anomoly',
                           nensemble = 0,
                           percentile=(10, 50, 90),
                           compare_vs = None,
                           return_ensemble = False,
                           obs = None):
-    files = [os.path.join(path, f) for f in os.listdir(path) \
-                    if f.endswith('.nc') and 'sample-pred' in f]
-    if nensemble > 0:
-        files = files[0:len(files):round(len(files)/nensemble)]
+    if not isinstance(paths, list):
+        paths = [paths]
+
+    def open_path(path):
+        files = [os.path.join(path, f) for f in os.listdir(path) \
+                       if f.endswith('.nc') and 'sample-pred' in f]
+        if nensemble > 0:
+            files = files[0:len(files):round(len(files)/nensemble)]
+        
+        cubes = iris.cube.CubeList([iris.load_cube(f) for f in sorted(files)])
+        ensemble = cubes.merge_cube()
+        
+        try:
+            iris.coord_categorisation.add_month(ensemble, 'time', name='month')
+        except:
+            pass
     
-    cubes = iris.cube.CubeList([iris.load_cube(f) for f in sorted(files)])
-    ensemble = cubes.merge_cube()
-    
-    try:
-        iris.coord_categorisation.add_month(ensemble, 'time', name='month')
-    except:
-        pass
-    
-    season = sub_year_months(ensemble, mnths)
+        season = sub_year_months(ensemble, mnths)
+        return season
+    season = [open_path(path) for path in paths]
+    if len(season) == 1: 
+        season = season[0]
+    else:
+        for sea in season[1:]: season[0].data = sea.data * season[0].data
+        season = season[0]**(1/len(season))
+        
     season = season.aggregated_by('year', iris.analysis.MEAN)
      
     season_year = sub_year_range(season, [year, year])
@@ -176,7 +188,7 @@ def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 100,
     base_path = f"outputs/outputs_scratch/ConFLAME_nrt-drivers3/" + \
                 rdir + "-2425/samples/_21-frac_points_0.5/baseline-"
 
-    temp_path = "temp2/control_anom_maps5/"
+    temp_path = "temp2/control_anom_maps6/"
     os.makedirs(temp_path, exist_ok=True)
     
     extra_path = rdir + '/' + limitation_type + '/' + str(diff_type) + '/'
@@ -189,7 +201,8 @@ def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 100,
     temp_path = temp_path + extra_path + '.pckl'
     #set_trace()
     if os.path.isfile(temp_path):
-        obs_anomaly, mod_pcs, mod_pvs, obs_pos, anom_summery, count_pos, count_neg \
+        obs_anomaly, mod_pcs, mod_pvs, obs_pos, anom_summery, anom_summery_sow, \
+            count_pos, count_neg \
             = pickle.load(open(temp_path,"rb"))
     else:
         obs = iris.load_cube("data/data/driving_data2425/" + rdir + "/burnt_area.nc")
@@ -204,15 +217,25 @@ def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 100,
                                                      year, mnths, diff_type, nensemble,
                                                      compare_vs = f"{base_path}/Evaluate",
                                                      *args, **kw) for i in range(6)]
+        
+        anom_summery_sow = [load_ensemble_summary([f"{base_path}/{limitation_type}{i}", 
+                                                   f"{base_path}/{limitation_type}{j}"],
+                                                     year, mnths, diff_type, nensemble,
+                                                     compare_vs = f"{base_path}/Evaluate",
+                                                     *args, **kw) \
+                                                    for i,j in zip([0, 1, 4], [2, 3, 5])]
+        
         pvs = [anom[1] for anom in anom_summery]
         count_pos = get_positive_count_layer(pvs, 0.1)
         count_neg = get_positive_count_layer(pvs, 0.9)
         count_neg.data = len(pvs) - count_neg.data
         
         pickle.dump([obs_anomaly, mod_pcs, mod_pvs, obs_pos, 
-                     anom_summery, count_pos, count_neg], open(temp_path, "wb"))
+                     anom_summery, anom_summery_sow, count_pos, count_neg], 
+                    open(temp_path, "wb"))
     return obs_anomaly, mod_pcs, mod_pvs, obs_pos, \
-                     anom_summery, count_pos, count_neg, extra_path, temp_path
+                     anom_summery, anom_summery_sow, \
+                     count_pos, count_neg, extra_path, temp_path
 
 
 def run_for_region(region_info, diff_type = "anomoly",
@@ -221,7 +244,8 @@ def run_for_region(region_info, diff_type = "anomoly",
                    consistent = True, plot_stuff = True,
                    *args, **kw):
 
-    obs_anomaly, mod_pcs, mod_pvs, obs_pos, anom_summery, count_pos, count_neg, \
+    obs_anomaly, mod_pcs, mod_pvs, obs_pos, anom_summery, anom_summery_sow,\
+            count_pos, count_neg, \
             extra_path, temp_path = open_mod_data(region_info, diff_type = diff_type,     
                                                   *args, **kw)
     
@@ -335,11 +359,12 @@ def run_for_region(region_info, diff_type = "anomoly",
 def show_main_control(region):
     region_info = get_region_info(region)[region]
 
-    obs_anomaly, mod_pcs, mod_pvs, obs_pos, anom_summery, count_pos, count_neg, \
+    obs_anomaly, mod_pcs, mod_pvs, obs_pos, anom_summery, anom_summery_sow, \
+            count_pos, count_neg, \
             extra_path, temp_path = open_mod_data(region_info, 
                                                   limitation_type = "Standard_",
                                                   diff_type = "ratio")
-
+    anom_summery = anom_summery_sow
     fig, axes = set_up_sow_plot_windows(5, 3, mod_pcs[0], size_scale = 6)
     levels_BA_obs = region_info['Ratio_levels']
 
@@ -354,21 +379,23 @@ def show_main_control(region):
     plot_BA(obs_anomaly, "Observed Burned Area", 0)
     plot_BA(mod_pcs[1], "Observed Burned Area", 1, cube_pvs = mod_pvs)
 
-    obs_anomaly, mod_pcs, mod_pvs, obs_pos, anom_summery, count_pos, count_neg, \
+    obs_anomaly, mod_pcs, mod_pvs, obs_pos, anom_summery, anom_summery_sow, \
+            count_pos, count_neg, \
             extra_path, temp_path = open_mod_data(region_info, 
                                                   limitation_type = "Standard_",
                                                   diff_type = "anomoly")
-    
+    anom_summery = anom_summery_sow
     plot_map_sow(count_pos, "Number of positive fire indicators", 
                         levels = range( count_pos.data.max() + 2), 
                         cmap=SoW_cmap['gradient_hues'], extend = 'neither', ax = axes[2])
 
-    obs_anomaly, mod_pcs, mod_pvs, obs_pos, anom_summery, count_pos, count_neg, \
+    obs_anomaly, mod_pcs, mod_pvs, obs_pos, anom_summery, anom_summery_sow, \
+            count_pos, count_neg, \
             extra_path, temp_path = open_mod_data(region_info, 
                                                   limitation_type = "Standard_",
                                                   diff_type = "absolute")
 
-    
+    anom_summery = anom_summery_sow
     control_names = ['Fuel', 'Moisture', 'Weather', 'Wind', 'Ignitions', 'Suppression']
     cmaps = [SoW_cmap['gradient_teal'], 
             SoW_cmap['gradient_teal'], 
@@ -405,11 +432,12 @@ def show_main_control(region):
             SoW_cmap['diverging_BlueRed'], 
             SoW_cmap['diverging_GreenPurple'], SoW_cmap['diverging_GreenPurple']]
 
-    obs_anomaly, mod_pcs, mod_pvs, obs_pos, anom_summery, count_pos, count_neg, \
+    obs_anomaly, mod_pcs, mod_pvs, obs_pos, anom_summery, anom_summery_sow, \
+            count_pos, count_neg, \
             extra_path, temp_path = open_mod_data(region_info, 
                                                   limitation_type = "Standard_",
                                                   diff_type = "ratio")
-    
+    anom_summery = anom_summery_sow
     for i in range(len(anom_summery)):
         plot_control(i, 100, 3 + len(anom_summery),
                      [-100, -60, -40, -20, -10, -5, -2, -1, 0, 2, 5, 10, 20, 40, 60, 100],
