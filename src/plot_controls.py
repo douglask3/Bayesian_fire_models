@@ -6,16 +6,14 @@ import numpy as np
 import glob
 import os
 import matplotlib.colors as mcolors
-from pdb import set_trace
-# Define the base directory
-base_dir = "outputs/outputs/ConFire_nrt4Amazon-2425-fuel2/samples/_19-frac_points_0.5//baseline-/"
 
-# List of experiment subdirectories
-experiments = ["control", "Evaluate", "Standard_0", "Standard_1", "Standard_2", "Standard_3" , "Standard_4"] #, "Potential0", "Potential1"
+import sys
+sys.path.append('SoW_info/')
+from state_of_wildfires_colours  import SoW_cmap
+from state_of_wildfires_region_info  import get_region_info
+sys.path.append('libs/')
+from plot_maps import *
 
-same_norm = False
-
-max_smaples = 100
 
 # Function to load and concatenate all files in a directory
 def load_ensemble(directory):
@@ -27,7 +25,6 @@ def load_ensemble(directory):
     return cubes.merge_cube()  # Merge along realization dimension if possible
 
 # Prepare figure
-fig, axes = plt.subplots(len(experiments), 3, figsize=(15, 25), subplot_kw={'projection': ccrs.PlateCarree()})
 
 def round_to_nice(v):
     """Round to nearest 'nice' number (1, 2, or 5 × 10^n)"""
@@ -52,23 +49,26 @@ def get_nice_percentile_levels(cube, percentiles=[0,10,20,30,40,50,60,70,80,90])
     nice_levels = [round_to_nice(v) for v in raw_percentiles]
     return sorted(set(nice_levels))  # remove duplicates
 
-def plot_map(cube, norm = None, *args, **kw):
-    #if norm is None:
-    #    norm = mcolors.LogNorm(vmin=np.max([cube.data.max()/1000000000, cube.data.min()]), 
-    #                           vmax=cube.data.max())
-    #set_trace()
-    #levels = get_nice_percentile_levels(cube)
-    #print(levels)
-    #if len(levels) == 1: set_trace()
-    
-    #set_trace()
-    qplt.contourf(cube, norm=norm, *args, **kw)
+def plot_map(cube, title, cmap, levels, ax):
+    plot_map_sow(p10, title, cmap=SoW_cmap[cmap], 
+                    levels=levels,# extend = "neither",
+                    ax=ax, cbar_label = "", ignore_v = 0)
 
+from pdb import set_trace
+# Define the base directory
+base_dir = "outputs/outputs_scratch/ConFLAME_nrt-attribution8/Amazon-2425//samples/_19-frac_points_0.5//baseline-/"
+
+# List of experiment subdirectories
+experiments = ["control", "Evaluate", "Standard_0", "Standard_1", "Standard_2", "Standard_3" , "Standard_4"]
+
+same_levels = False
+max_smaples = 100
 
 for i, exp in enumerate(experiments):
     print(exp)
-    cube = load_ensemble(os.path.join(base_dir, exp))
-     
+    cube = load_ensemble(os.path.join(base_dir, exp))*100.0
+    if i == 0:
+        fig, axes = set_up_sow_plot_windows(7, 3, cube, size_scale = 6, flatten = False)
     # Compute 10th and 90th percentiles
     annual_average = cube.collapsed('time', iris.analysis.MEAN)
     p10 = annual_average.collapsed('realization', iris.analysis.PERCENTILE, percent=10)
@@ -77,24 +77,20 @@ for i, exp in enumerate(experiments):
     p10.rename(f"{exp} - 10th %ile")
     mean.rename(f"{exp} - mean")
     p90.rename(f"{exp} - 90th %ile")
+
+    def define_level(cbs):
+        return auto_pretty_levels(cbs, n_levels = 7, ignore_v = 0.0)
     
-    if same_norm:        
-        norm = mcolors.LogNorm(vmin=np.max([0.00000000000001, p10.data.min()]), vmax=p90.data.max())
+    if same_levels:        
+        levels10 = levelsmn = level90 =  define_level([p10, p90])
     else:
-        norm = None
-    # Plot 10th percentile
-    ax = axes[i, 0]
-    ax.set_title(f"{exp} - 10th %ile")
-    plot_map(p10, norm=norm, axes=ax, cmap='Blues')
-
-    ax.set_title(f"{exp} - mean")
-    ax = axes[i, 1]
-    plot_map(mean, norm=norm, axes=ax, cmap='Greens')
-
-    # Plot 90th percentile
-    ax = axes[i, 2]
-    ax.set_title(f"{exp} - 90th %ile")
-    plot_map(p90, norm=norm, axes=ax, cmap='Reds')
+        levels10 =  define_level([p10 ])
+        levelsmn =  define_level([mean])
+        levels90 =  define_level([p90 ])
+    #levels = np.append(np.append(0.0, levels), 100.0)
+    plot_map(p10 , f"{exp} - 10th %ile", 'gradient_teal', levels10, axes[i, 0])   
+    plot_map(mean, f"{exp} - mean", 'gradient_hotpink'  , levelsmn, axes[i, 1])  
+    plot_map(p90 , f"{exp} - 90th %ile", 'gradient_red' , levels90, axes[i, 2])
     
 plt.tight_layout()
 fig.savefig(base_dir + "controls.png", dpi=300, bbox_inches="tight")

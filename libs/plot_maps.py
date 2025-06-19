@@ -355,6 +355,8 @@ def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = None, force0 = Fal
     print(levels_rounded)
     #if levels_rounded.max() > 100000000.0:
     #    set_trace()
+    #if len(levels_rounded) < 4:
+    #    set_trace()
     if len(levels_rounded) < 2:
         levels_rounded = levels_rounded + np.array([-0.001, 0, 0.001])
     return levels_rounded
@@ -396,7 +398,8 @@ def get_cube_extent(cube):
     lat_max = cube.coord('latitude').points.max()
     return [lon_min, lon_max, lat_min, lat_max]
 
-def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, figsize = None, size_scale = 4):
+def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, figsize = None, size_scale = 4,
+                            flatten = True):
     """
     Creates a grid of Cartopy map subplots with a consistent geographic extent.
 
@@ -445,7 +448,7 @@ def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, figsize = None, size_scale 
         ax.set_extent(extent, crs=ccrs.PlateCarree())
 
     # Flatten axes for easy indexing
-    axes = axes.flatten()
+    if flatten: axes = axes.flatten()
     return fig, axes
  
 
@@ -541,7 +544,7 @@ def add_confidence(cube_pvs, ax):
 def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_BlueRed'], 
              levels = None, extend = 'both', ax=None,
              cbar_label = '', overlay_value = None, overlay_col = "#cfe9ff",
-             cube_pvs = None):
+             cube_pvs = None, *args, **kw):
     """
     Plot a SoW-style map of fire (or climate) data with optional overlays and confidence markers.
 
@@ -588,7 +591,7 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
         fig, ax = plt.subplots(subplot_kw={'projection': ccrs.PlateCarree()}, figsize=(10, 6))
     # Main filled contour
     if levels is  None:
-        levels = auto_pretty_levels(cube.data)
+        levels = auto_pretty_levels(cube.data, *args, **kw)
     if is_catigorical:
         norm = BoundaryNorm(boundaries=np.array(levels) + 0.5, ncolors=cmap.N)
     else:   
