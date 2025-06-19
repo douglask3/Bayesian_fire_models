@@ -592,11 +592,14 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
     # Main filled contour
     if levels is  None:
         levels = auto_pretty_levels(cube.data, *args, **kw)
+    elif levels == 'auto':
+        levels = None
     if is_catigorical:
         norm = BoundaryNorm(boundaries=np.array(levels) + 0.5, ncolors=cmap.N)
-    else:   
+    elif levels is not None:   
         norm = BoundaryNorm(boundaries=levels,  ncolors=cmap.N, extend = extend)
-    
+    else:
+        norm = None
     
     img = iplt.contourf(cube, levels=levels, cmap=cmap, axes=ax, extend = extend, 
                         norm = norm)
