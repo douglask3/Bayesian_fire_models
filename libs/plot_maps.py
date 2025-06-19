@@ -301,6 +301,7 @@ def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = None, force0 = Fal
         data = np.ma.masked_invalid(np.ravel(data))
     except:
         set_trace()
+    data = data[np.abs(data) < 9E9]
     if ignore_v is not None:
         data = data[data != ignore_v]
     if data.mask.all():
