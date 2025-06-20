@@ -1,6 +1,6 @@
 ## model info
-regions:: [ 'Pantanal', 'LA','Amazon', 'Congo', 'Alberta', 'NEIndia']
-model_title::  'ConFLAME_nrt-attribution4/<<region>>-2425'
+regions:: ['Pantanal',  'Congo', 'LA', 'Amazon', 'Alberta', 'NEIndia']
+model_title::  'ConFLAME_nrt-attribution9/<<region>>-2425'
 
 ## input data paths and filenames
 dir_training:: "data/data/driving_data2425/<<region>>/nrt/era5_monthly/"
@@ -14,19 +14,19 @@ model_class:: ConFire
 priors:: {'pname': "link-qSpread_mu",'np': 1, 'dist': 'Normal', 'mu': 1.0, 'sigma': 0.5}
 priors:: {'pname': "link-qSpread_sigma",'np': 1, 'dist': 'HalfNormal', 'sigma': 0.5}
 #priors:: {'pname': "link-qSpread",'np': 1, 'dist': 'LogNormal', 'mu': 2.0, 'sigma': 1.0}
-priors:: {'pname': "controlID", 'value': [[13, 14, 15, 16, 17], [0, 1, 2, 3, 4, 5], [6], [7, 8, 9, 11, 12, 18], [7, 8, 9, 10, 11, 12]]}
-priors:: {'pname': "driver_Direction", 'value': [[1, 1, 1, 1, 1], [-1, 1, 1, 1, -1, -1], [1], [1, 1, 1, 1, 1, 1], [-1, -1, -1, -1, -1, -1]]}
+priors:: {'pname': "controlID", 'value': [[13, 14, 15, 16, 17], [0, 1, 2, 3], [6], [7, 8, 9, 11, 12, 18], [7, 8, 9, 10, 11, 12]]}
+priors:: {'pname': "driver_Direction", 'value': [[1, 1, 1, 1, 1], [-1, 1, 1, 1], [1], [1, 1, 1, 1, 1, 1], [-1, -1, -1, -1, -1, -1]]}
 priors:: {'pname': "control_Direction", 'value': [1, 1, 1, 1, 1, 1]}
 #priors:: {'pname': "Fmax",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 1.0}
 #priors:: {'pname': 'lin_correct', 'np': 1, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 4.0}
 priors:: {'pname': "x0",'np': 5, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
 priors:: {'pname': "betas",'np': 5, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
-priors:: {'pname': "betas",'np': 6, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "betas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "betas",'np': 6, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "betas",'np': 6, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "powers",'np': 5, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
-priors:: {'pname': "powers",'np': 6, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 priors:: {'pname': "powers",'np': 6, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 priors:: {'pname': "powers",'np': 6, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
@@ -52,7 +52,7 @@ dir_outputs:: 'outputs/outputs_scratch/'
 y_filen_eval:: 'burnt_area.nc'
 subset_function_eval:: [sub_year_range]
 subset_function_args_eval:: [{'year_range': [2024, 2026]}]
-sample_for_plot:: 1000
+sample_for_plot:: 5000
 control_names:: ['Moisture', 'Wind', 'Ignition', 'Suppression']
 levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
 dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
