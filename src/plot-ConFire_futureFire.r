@@ -18,8 +18,8 @@ dcols2 = rev(c('#7f3b08','#b35806','#e08214','#fdb863','#fee0b6','#f7f7f7','#d8d
 levels = c(0.001, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5)#find_levels(c(mn[!is.na(mn)], mx[!is.na(mx)]), seq(10, 90, 10))
 levels = c(0.01, 0.03, 0.1, 0.3)
 
-dlevels = c(0.5, 0.667, 0.8, 1, 1.25, 1.75,2)
-dlevels_labs = c('half', '2/3', '4/5', 'no change', '1 1/4', '1 3/4', 'double')
+dlevels = c(0.25, 0.5, 0.667, 0.8, 1, 1.25, 1.75,2)
+dlevels_labs = c('quter', 'half', '2/3', '4/5', 'no change', '1 1/4', '1 3/4', 'double', '4')
 dlevels2 = c(0.1, 0.2, 0.5, 0.75, 1, 1.5, 2, 5, 10)
 nsample = 10
 
@@ -29,7 +29,9 @@ region = 'Amazon'; countries = c('Brazil','Guyana', 'Suriname')
 #region = 'NW_Amazon'; countries = c('Brazil')
 
 dir = paste0("outputs/ConFire_", region, "-2425-attempt2/samples/_13-frac_points_0.5/")
-eg_rast = raster(paste0("outputs/ConFire_", region, "-final/samples/_13-frac_points_0.5/baseline-/control/sample-pred0.nc"))
+dir = paste0("outputs/outputs_scratch/ConFLAME_nrt-isimip_large/ConFLAME_", region, "-2425/samples/_15-frac_points_0.5/")
+#eg_rast = raster(paste0("outputs/ConFire_", region, "-final/samples/_13-frac_points_0.5/baseline-/control/sample-pred0.nc"))
+eg_rast = raster(paste0("outputs/outputs_scratch/ConFLAME_nrt-isimip_large/ConFLAME_", region, "-2425/samples/_15-frac_points_0.5/baseline-/control/sample-pred0.nc"))
 plt_width = c('Amazon' = 1, 'NW_Amazon' = 1, 'Greece' = 0.67)[region]
 plt_height = plt_width*nrow(eg_rast)/ncol(eg_rast)
 
@@ -42,9 +44,18 @@ addCoast <- function(countries) {
     for (cntry in countries) { 
         country <- ne_countries(country = cntry, scale = "medium", returnclass = "sf")
         states <- ne_states(country = cntry, returnclass = "sf")
+        
         plot(st_geometry(country), add = TRUE, lwd = 1)
         plot(st_geometry(states), add = TRUE, lwd = 0.5, lty = 3)
     }
+    coast <- ne_coastline(returnclass='sf')
+    plot(st_geometry(coast), add = TRUE, lwd = 1.2)
+    rivers <- st_read('data/ne/ne_110m_rivers_lake_centerlines.shp')
+    plot(st_geometry(rivers), col = 'blue', lwd = 1, add = TRUE)
+    lakes <- st_read("data/ne/ne_110m_lakes.shp")
+    plot(st_geometry(lakes), col = 'blue', lwd = 1, add = TRUE)
+    
+    
 }
 plot_control <- function(run, control, name, years = c(2000, 2019), cols, levels, dats0 = NULL, addLab = FALSE, ...) {
     
@@ -105,17 +116,21 @@ plot_control <- function(run, control, name, years = c(2000, 2019), cols, levels
     }
     
     
-    cdat = layer.apply(1:(length(levels) + 1), function(i) mean(cdat == i))
+    cdat = layer.apply(1:(length(levels) + 1), function(i) mean(cdat == i, na.rm = T))
+    
+    cdat[eg_rast>9E9] = NaN
+    cdat[eg_rast<9E9 & is.na(cdat)] = 0.0
     mask = which(!is.na(cdat[[1]][]))
     vcdat = t(apply(cdat[mask], 1, function(i) rev(cumsum(rev(i)))))^0.5
     vcdat = 15 * vcdat / ncol(cdat)
     xydat = cbind(xyFromCell(cdat, mask)) 
 
-    if (ncol(dats) > 40) {
+    if (ncol(dats) > 60) {
         y = seq(min(xydat[,2]), max(xydat[,2]), length.out = 40)
         x = seq(min(xydat[,1]), max(xydat[,1]), by = diff(y[1:2]))
+        
         xydat_new = cbind(rep(x, length(y)), rep(y, each = length(x)))
-
+        
         assign_xy <- function(xy) 
             which.min((xy[1] - xydat_new[,1])**2 + (xy[2] - xydat_new[,2])**2)
        
@@ -128,17 +143,25 @@ plot_control <- function(run, control, name, years = c(2000, 2019), cols, levels
             else if (length(test) > 1 ) vcdat_new[i,] = apply(vcdat[test,], 2, mean)
         }
         test = !is.na(vcdat_new[,1])
+        
         xydat = xydat_new[test,]
         vcdat = vcdat_new[test,]
-    }
+    }    
     
-    plot(range(xydat[,1]), range(xydat[,2]), type = 'n', xlab = '', ylab = '', 
+    xrange = range(xydat[,1]);
+    xrange[1] = xrange[1] - 0.1*diff(xrange); xrange[2] = xrange[2] + 0.1*diff(xrange)
+    yrange = range(xydat[,2]);
+    yrange[1] = yrange[1] - 0.1*diff(yrange); yrange[2] = yrange[2] + 0.1*diff(yrange)
+    plot(xrange, yrange, type = 'n', xlab = '', ylab = '', 
               xaxt = 'n', yaxt = 'n', xaxs = 'i', yaxs ='i')
+    land <- ne_countries(returnclass = 'sf')
+    plot(st_geometry(land), col = "#eeeeee", border = NA, add = TRUE)
     addLevel <- function(i) points(xydat[,1], xydat[,2], pch = 19, 
                                    cex = plt_width*3*vcdat[,i], col = cols[i])
     lapply(1:length(cols), addLevel) 
     
     addCoast(countries)
+    
     #contour(is.na(eg_rast), levels = 0.5, drawlabels=FALSE, add = TRUE)   
     #legendColBar(c(0.1, 0.7), c(0.1, 0.9), cols = cols, limits = levels, ...)
     return(dats_out)
@@ -155,7 +178,7 @@ plot_controls <- function(years, runs, control, name) {
     heights = c(0.4, rep(c(0.02, plt_height), 3)[-1], 0.35, 0.1)
     widths = c(0.2, plt_width, 0.02, plt_width, 0.02, plt_width, 0.2)
 
-    png(paste("figs/ConFire_histMaps_fires", region, years, control, name, ".png", sep = '-'), 
+    png(paste(c("figs/ConFire_histMaps_fires", region, years, control, name, ".png"), collapse = '-'), 
         height = 2.2*sum(heights), width = 2.2*sum(widths), 
             res = 300, units = 'in')
     layout(lmat, heights = heights, widths = widths)
@@ -185,23 +208,28 @@ plot_controls <- function(years, runs, control, name) {
             predict(smooth.spline(y~qx, spar = 0.5), logit(0.99))[[2]]
         } 
         gt_smooth <- function(x) {
-            if (all(is.na(x))) return(NaN)
+            if (all(is.na(x)) || x[1] > 9E9) return(NaN)
             target = x[1]
             y = sort(x[-1])
-            
             1-logistic(predict(smooth.spline(qx~y, spar = 0.5), target)[[2]])
         } 
         q99 = calc(dats, function(x) quantile(x, 0.99, na.rm = TRUE))
         q99 = calc(dats, quantile_smooth)#function(x) quantile(x, 0.99, na.rm = TRUE))
         rchange = calc(addLayer(q99, ddats) , gt_smooth)*100
         #rchange = mean(ddats > q99) / mean(dats > q99)
-        
+        #rchange = raster::disaggregate(rchange, fact = ceiling(200/ncol(rchange)), method = 'bilinear')
         #if (ncol(rchange) > 40) rchange = raster::aggregate(rchange, fact = ncol(dats)/40)
         mask = which(!is.na(rchange[[1]][]))
-        xydat = cbind(xyFromCell(rchange, mask), cut_results(rchange[mask], dlevels2))
         
-        plot(range(xydat[,1]), range(xydat[,2]), type = 'n', xlab = '', ylab = '', 
+        xydat = cbind(xyFromCell(rchange, mask), cut_results(rchange[mask], dlevels2))
+        xrange = range(xydat[,1]);
+    xrange[1] = xrange[1] - 0.1*diff(xrange); xrange[2] = xrange[2] + 0.1*diff(xrange)
+    yrange = range(xydat[,2]);
+    yrange[1] = yrange[1] - 0.1*diff(yrange); yrange[2] = yrange[2] + 0.1*diff(yrange)
+        plot(xrange, yrange, type = 'n', xlab = '', ylab = '', 
               xaxt = 'n', yaxt = 'n', xaxs = 'i', yaxs ='i')
+        land <- ne_countries(returnclass = 'sf')
+        plot(st_geometry(land), col = "#eeeeee", border = NA, add = TRUE)   
         add_poly <- function(vs) {
             polygon(vs[1] + 0.25 * c(-1, -1, 1, 1, -1), vs[2] + 0.25 *c(-1, 1, 1, -1, -1), 
                     col = dcols2[vs[3]], border = NA)
@@ -224,7 +252,7 @@ plot_controls <- function(years, runs, control, name) {
         points(xp, rep(0.05, length(cols)), pch = 19, col = cols)
         labs = c('', labs, '+')
         xt = c(xp[1], xp[-1] - diff(xp)/2, tail(xp, 1))
-        text(xt, rep(0.0, length(xt)), labs, adj = c(0, -1), srt = 30, xpd = NA)
+        text(xt, rep(0.0, length(xt)), labs, adj = c(0, -1), srt = 30, xpd = NA, cex = 0.67)
     }
     add_leg(cols,  levels)
     mtext(side = 1, line = 0, 'Burned area (%)', cex = 0.67)
