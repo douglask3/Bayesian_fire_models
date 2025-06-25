@@ -1,6 +1,6 @@
 ## model info
-regions:: ['Pantanal', 'LA', 'Amazon', 'Congo', 'Alberta', 'NEIndia']
-model_title::  'ConFLAME_nrt-drivers3/<<region>>-2425'
+regions:: ['Amazon']#, 'Pantanal', 'Congo', 'LA',  'Alberta', 'NEIndia']
+model_title::  'ConFLAME_nrt-drivers8/<<region>>-2425'
 
 ## input data paths and filenames
 dir_training:: "data/data/driving_data2425/<<region>>/nrt/era5_monthly/"
@@ -59,7 +59,7 @@ dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
 cmap:: 'OrRd'
 dcmap:: 'RdBu_r'
 dir_projecting:: "data/data/driving_data2425/<<region>>/nrt/era5_monthly/"
-parallelize:: False
+parallelize:: True
 
 ## experiment info
 limitation_types:: ['standard', 'potential']
