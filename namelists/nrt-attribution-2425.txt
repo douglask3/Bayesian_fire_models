@@ -34,10 +34,10 @@ priors:: {'pname': "powers",'np': 6, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.
 ### optimization info
 inference_step_type:: "metropolis"
 link_func_class:: MaxEnt
-niterations:: 1000
+niterations:: 100
 cores:: 10
-fraction_data_for_sample:: 0.5
-min_data_points_for_sample:: 4000
+fraction_data_for_sample:: 0.05
+min_data_points_for_sample:: 400
 subset_function:: sub_year_months
 subset_function:: sub_year_range
 subset_function_args:: {'months_of_year': [0, 1, 2, 3, 11]}
@@ -52,7 +52,9 @@ dir_outputs:: 'outputs/outputs_scratch/'
 y_filen_eval:: 'burnt_area.nc'
 subset_function_eval:: [sub_year_range]
 subset_function_args_eval:: [{'year_range': [2024, 2026]}]
+
 sample_for_plot:: 5000
+
 control_names:: ['Moisture', 'Wind', 'Ignition', 'Suppression']
 levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
 dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]

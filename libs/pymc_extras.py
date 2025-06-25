@@ -65,9 +65,21 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
                       link_func_class = MaxEnt, hyper = True, sample_error = True,
                       test_eg_cube = False, out_index = None, *args, **kw):  
     
+    if lmask is None:
+        asRaster = False
+        extension = '.csv'
+        test_eg_cube = False
+        def load_fun(filen):
+            set_trace()
+            np.genfromtxt(filen, delimiter=',')        
+    else:
+        asRaster = True
+        extension = '.nc'
+        load_fun =  iris.load_cube
+    
     def sample_model(i, run_name = 'control'):   
         dir_sample =  combine_path_and_make_dir(dir_samples, run_name)
-        file_sample = dir_sample + '/sample-pred' + str(i) + '.nc'
+        file_sample = dir_sample + '/sample-pred' + str(i) + extension
 
         dont_do_prob = True
         if test_eg_cube:
@@ -78,19 +90,20 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
                 dont_do_prob = False
             
         if grab_old_trace and os.path.isfile(file_sample) and dont_do_prob:
-            out = iris.load_cube(file_sample)
+            out = load_fun(file_sample)
             if test_eg_cube:           
                 return out, prob
             else:
                 return out
         
-        coord = iris.coords.DimCoord(i, "realization")
-        def make_into_cube(dat, filename):            
-            dat = insert_data_into_cube(dat, eg_cube, lmask)
-            
-            dat.add_aux_coord(coord)
-            iris.save(dat, filename)
-            return dat
+
+        if asRaster:
+            coord = iris.coords.DimCoord(i, "realization")
+            def make_into_cube(dat, filename):            
+                dat = insert_data_into_cube(dat, eg_cube, lmask)
+                dat.add_aux_coord(coord)
+                iris.save(dat, filename)
+                return dat
 
         
         print("Generating Sample:" + file_sample)
@@ -111,6 +124,7 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
         
     
         if out_index is not None: out = out[:, out_index]
+
         if test_eg_cube:
             prob = link_func_class().sample_given_(eg_cube.data.flatten()[lmask], out, 
                                                    [*link_param_in])
@@ -126,6 +140,7 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
                      
         out = make_into_cube(out, file_sample)
         
+
         if test_eg_cube: 
             return out, prob
         else:
@@ -138,6 +153,7 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
     idx = range(0, nits, int(np.floor(nits/sample_for_plot)))
     out = np.array(list(map(lambda id: sample_model(id, run_name), idx)))
     
+    if not asRaster: return out
     if test_eg_cube: 
         mout = out[:, 1]
         for cube in mout:
