@@ -5,9 +5,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import fnmatch
-import sys
 import pickle
 from scipy.stats import genpareto
+
+import sys
 sys.path.append('.')
 sys.path.append('src/')
 sys.path.append('SoW_info/')
@@ -226,19 +227,17 @@ def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = N
     --------
     #>>> plot_fact_vs_ratio(factual, counterfactual, obs_value, "Relative Change", ax=ax)
     """
-    '''
-    effect_ratio = (factual_flat - counterfactual_flat)*100
-    test = effect_ratio>0
-    effect_ratio[test] = effect_ratio[test]/factual_flat[test]
-    test = ~test
-    effect_ratio[test] = effect_ratio[test]/counterfactual_flat[test]
-    '''
+    if obs > factual_flat.max():
+        counterfactual_flat = counterfactual_flat * obs * 1.1/factual_flat.max()
+        factual_flat = factual_flat * obs * 1.1/factual_flat.max()
+    
     effect_ratio = factual_flat/counterfactual_flat
+    
     
     x = np.linspace(0, 1, 20)
     log_levels = x**(5)  # try 3, 5, 7 for increasingly strong bias
     
-    xmin = factual_flat.max()/100
+    xmin = factual_flat.max()/1000
     test = factual_flat > xmin
     
     plot_kde(factual_flat[test], effect_ratio[test], "factual", "effect ratio",bw_adjust = 1,
@@ -262,10 +261,13 @@ def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = N
     cc_effect = np.percentile(effect_ratio[mask], percentile)
     cc_effect = np.round(cc_effect, 2)
     #cc_effect = np.round(1.0+cc_effect/(1.0-cc_effect), 2)
-    pv = np.mean(effect_ratio[mask]>1)
+    
+    pv = np.mean(effect_ratio[mask]>1) + 0.5/np.sum(mask)
     pv = np.round(pv, 2)
     if (pv > 0.99):
-        pv = str("> 0.99")
+        pv = str(">99%")
+    else:
+        pv = str(int(pv*100)) + '%'
 
     # Fit GPD to factual and counterfactual
     f_res = fit_gpd_tail(factual_flat, 0.95)
@@ -281,20 +283,27 @@ def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = N
 
         rr = pf / pc
     else:
-        set_trace()
+        #set_trace()
     #rr_gpd = np.nan  # or fallback to empirical estimate
         rr = np.sum(factual_flat>obs)/np.sum(counterfactual_flat > obs)
     
-    rr = np.round(rr, 2)
-    percentile_text = [str(pc) + "%:\n" + str(cc) for pc, cc in zip(percentile, cc_effect)]
     
-    ax.text(0.3, 0.35, "Climate change impact (pvalue: " + str(pv) + ")", 
+    rr = np.round(rr, 2)
+    def cc_str(cc):
+        if cc > 100.0:       
+            cc = '> 100'
+        else:
+            cc = str(cc)
+        return(cc)
+    percentile_text = [str(pc) + "%:\n" + cc_str(cc) for pc, cc in zip(percentile, cc_effect)]
+    
+    ax.text(0.3, 0.35, "Climate change impact (likelihood: " + pv + ")", 
               transform=ax.transAxes, axes = ax)
     
     for i in range(len(percentile_text)):
         ax.text(0.3 + i*0.18, 0.2, percentile_text[i], transform=ax.transAxes)
-    #ax.text(0.3, 0.09, "Risk Ratio:", transform=ax.transAxes)
-    #ax.text(0.3, 0.02, rr, transform=ax.transAxes)
+    ax.text(0.3, 0.09, "Risk Ratio:", transform=ax.transAxes)
+    ax.text(0.3, 0.02, rr, transform=ax.transAxes)
     
     ax.set_xlabel(" ")
     ax.set_ylabel(plot_name)
@@ -315,10 +324,18 @@ def plot_for_region(region, metric, plot_FUN,
     mnths = region_info['mnths']
     # Load the data
     dir = dir1 + region + dir2 + '/'
-    factual = pd.read_csv(dir + factual_name + "-/" + metric + "/points-Evaluate.csv")
-    counterfactual = pd.read_csv(dir + counterfactual_name + \
-                                 "-/" + metric + "/points-Evaluate.csv")
+    try:    
+        factual = pd.read_csv(dir + factual_name + "-/" + metric + \
+                                     "/members/absolute/Evaluate.csv")
+        counterfactual = pd.read_csv(dir + counterfactual_name + \
+                              "-/" + metric + "/members/absolute/Evaluate.csv")
+    except:
+        factual = pd.read_csv(dir + factual_name + "-/" + metric + \
+                                     "/points-Evaluate.csv")
+        counterfactual = pd.read_csv(dir + counterfactual_name + \
+                              "-/" + metric + "/points-Evaluate.csv")
     obs = pd.read_csv(obs_dir + '/' + region + '/' + obs_file)
+    obs = obs[['time', 'mean_burnt_area', 'p95_burnt_area']]
     
     # Extra years and flatten the arrays to 1D
     if all_mod_years:
@@ -330,9 +347,10 @@ def plot_for_region(region, metric, plot_FUN,
                                  + 0.000000001
     
     obs = extract_years(obs.set_index('time').T, years, mnths, '-15')
+    
     factual_flat0 = factual_flat.copy()
     if metric == 'mean':
-        obs = obs[0]#*3#*33.0
+        obs = obs[0]#*20#*33.0
         plot_name = region_info['shortname']
     else:
         plot_name = ""
@@ -358,7 +376,8 @@ def plot_for_region(region, metric, plot_FUN,
 
     return out
 
-def plot_attribution_scatter(regions, figname, *args, **kw):
+def plot_attribution_scatter(regions, figname, plot_FUN = plot_fact_vs_ratio,
+                             *args, **kw):
     """
     Loads and prepares burned area data for a specified region and metric, then
     calls a user-defined plotting function to visualize the comparison between 
@@ -417,16 +436,19 @@ def plot_attribution_scatter(regions, figname, *args, **kw):
     for i, metric in enumerate(metrics):
         outi = []
         for j, region in enumerate(regions):
-            ax = axes[j, i]
+            if len(regions) == 1:
+                ax = axes[i]
+            else:
+                ax = axes[j, i]
             print(region)
-            outi.append(plot_for_region(region, metric, plot_fact_vs_ratio, ax = ax, 
+            outi.append(plot_for_region(region, metric, plot_FUN = plot_FUN, ax = ax, 
                             *args, **kw))
         out.append(outi)
     
-    fig.text(0.05, 0.5, "Relative difference in burned area (%)", ha='right', va='center', fontsize=12, rotation=90)
-    fig.text(0.23, 0.95, "Entire region", ha='center', va='bottom', fontsize=14)
-    fig.text(0.73, 0.95, "High burnt areas", ha='center', va='bottom', fontsize=14)
-    fig.text(0.5, 0.05, "Factual burned area (%)", ha='center', va='top', fontsize=12)
+    fig.text(0.05, 0.5, "Amplification Factor", ha='right', va='center', fontsize=12, rotation=90)
+    fig.text(0.33, 0.9, "Entire region", ha='center', va='bottom', fontsize=14)
+    fig.text(0.73, 0.9, "High burnt areas", ha='center', va='bottom', fontsize=14)
+    fig.text(0.5, 0.09, "Factual burned area (%)", ha='center', va='top', fontsize=12)
     
     plt.savefig('figs/' + figname + ".png")
     return out
@@ -436,12 +458,13 @@ def add_violin_plot(df, df_type, ax, title):
     sns.violinplot(
         data=df[df["Impact Type"] == df_type],
         cut = 0.0,
-        x="Region", y="Relative Change (%)", hue="Source",
-        split=False, inner="quartile", palette=["#f68373", "#fc6", "#c7384e", "#cfe9ff"], 
+        x="Region", y="Amplification Factor", hue="Source",
+        split=False, inner="quartile", palette=["#f68373", "#c7384e", "#fc6",  "#862976", "#cfe9ff"], 
         ax=ax
     )
     
     ax.set_title(title)
+    ax.set_xlabel('')
     ax.axhline(0.5, color="gray", linestyle="--", linewidth=1)
     
     ax.axhline(0.5, color='k', linestyle='--')
@@ -450,10 +473,12 @@ def add_violin_plot(df, df_type, ax, title):
 
 if __name__=="__main__":
     
-    dir1 = "outputs/outputs_scratch/ConFLAME_nrt-attribution5/"
+    dir1 = "outputs/outputs_scratch/ConFLAME_nrt-attribution9/"
     dir2 = "-2425/time_series/_19-frac_points_0.5/"
 
-    regions = ["Amazon", "Congo", "Pantanal"]
+    regions = ["Amazon", "Pantanal", "LA", "Congo"]
+    region_names = ['Northeast Amazonia', 'Pantanal and Chiquitano', 
+                    'Southern California','Congo Basin']
     #retgions = {key: regions_info[key] for key in region_names if key in regions_info}
     obs_dir = 'data/data/driving_data2425//'
     obs_file = 'burnt_area_data.csv'
@@ -462,8 +487,14 @@ if __name__=="__main__":
                              dir1 = dir1, dir2 = dir2,
                              obs_dir = obs_dir, obs_file = obs_file) 
     
-    dir1 = "outputs/outputs/ConFLAME_"
-    dir2 = "-2425-attempt12/time_series/_15-frac_points_0.5/"
+    outs_era52 = plot_attribution_scatter(regions, "attribution_scatter_era5_cf_mean_2425",
+                             dir1 = dir1, dir2 = dir2, 
+                             counterfactual_name = 'counterfactual-metmean',
+                             obs_dir = obs_dir, obs_file = obs_file) 
+    dir1 = "outputs/outputs_scratch/ConFLAME_isimip_attribution/ConFLAME_"
+    dir2 = "-2425/time_series/_15-frac_points_0.5/"
+    dir1 = "outputs/outputs_scratch/ConFLAME_isimip_attribution/ConFLAME_"
+    dir2 = "-2425/time_series/_15-frac_points_0.5/
 
     outs_isimip = plot_attribution_scatter(regions, 
                              "attribution_scatter_isimip_2425",
@@ -482,31 +513,37 @@ if __name__=="__main__":
     for ii in range(len(outs_era5)):
         outi = []
         for jj in range(len(outs_era5[ii])):
+            if jj % 2 == 0:
+                out_e = outs_era52
+            else:
+                out_e = outs_era5
             try:
-                outi.append((np.random.choice(outs_era5[ii][jj], 1000) + \
+                outi.append((np.random.choice(out_e[ii][jj], 1000) + \
                 np.random.choice(outs_isimip[ii][jj], 1000))/2.0)
             except:
-                outi.append(np.random.choice(outs_era5[ii][jj], 1000))
+                outi.append(np.random.choice(out_e[ii][jj], 1000))
         outs_combined.append(outi)#set_trace()
 
     
     f = open('temp/store.pckl', 'wb')
-    pickle.dump([outs_era5, outs_isimip, outs_combined, outs_human], f)
+    pickle.dump([outs_era5, outs_era52, outs_isimip, outs_combined, outs_human], f)
     f.close()
     
     f = open('temp/store.pckl', 'rb')
-    outs_era5, outs_isimip, outs_combined, outs_human = pickle.load(f)
+    outs_era5, outs_era52, outs_isimip, outs_combined, outs_human = pickle.load(f)
     f.close()
 
     # Example labels for the sources
-    sources = ['Climate (HadGEM+ERA5)', 'Climate (ISIMIP3a)', 'Climate (Combined)', 'Human']
+    sources = ['Climate (ERA5 HadGEM ensemble)', 
+               'Climate (ERA5 HadGEM means)',
+               'Climate (ISIMIP3a)', 'Climate (Combined)', 'Human']
 
     # Group data
-    all_sources = [outs_era5, outs_isimip, outs_combined, outs_human]
+    all_sources = [outs_era5, outs_era52, outs_isimip, outs_combined, outs_human]
 
     # Flatten into long-form dataframe for seaborn
     records = []
-    for region_idx, region in enumerate(regions):
+    for region_idx, region in enumerate(region_names):
         for source_idx, source_name in enumerate(sources):
             for kind_idx, kind in enumerate(["Mean", "Extreme"]):  # 0 = mean, 1 = extreme
                 samples = all_sources[source_idx][kind_idx][region_idx]
@@ -517,19 +554,19 @@ if __name__=="__main__":
                         'Region': region,
                         'Source': source_name,
                         'Impact Type': kind,
-                        'Relative Change (%)': val
+                        'Amplification Factor': val
                     })
     
     df = pd.DataFrame.from_records(records)
     
     # Set up the plot
     sns.set(style="whitegrid")
-    fig, axes = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
+    fig, axes = plt.subplots(2, 1, figsize=(12, 6), sharex=True)
 
     add_violin_plot(df, "Mean", axes[0], "Mean Burnt Area Impact")
-    axes[0].legend(loc="lower left")
     add_violin_plot(df, "Extreme", axes[1], "Extreme Burnt Area Impact")
-    axes[1].legend_.remove()
+    axes[0].legend_.remove()
+    axes[1].legend(loc="lower left", ncol = 2)
 
     # Tidy up
     plt.tight_layout()
