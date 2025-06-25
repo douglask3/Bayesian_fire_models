@@ -8,8 +8,8 @@ from matplotlib.transforms import Bbox
 from matplotlib import patches
 from matplotlib.ticker import FuncFormatter
 
-file_pattern_1 = r"C:/Users/rmvre/OneDrive/Documents/SoW_2024_2025/Congo/data_csv/means/plotC/*copy_anomaly.csv"
-file_pattern_2 = r"C:/Users/rmvre/OneDrive/Documents/SoW_2024_2025/Congo/data_csv/pc-95.0/plotC/*copy_anomaly.csv"
+file_pattern_1 = r"C:/Users/rmvre/OneDrive/Documents/SoW_2024_2025/Amazon/new_data_csv/means/plotC/*anomaly.csv"
+file_pattern_2 = r"C:/Users/rmvre/OneDrive/Documents/SoW_2024_2025/Amazon/new_data_csv/pc-95.0/plotC/*anomaly.csv"
 
 csv_files_1 = glob.glob(file_pattern_1)
 csv_files_2 = glob.glob(file_pattern_2)
@@ -69,6 +69,7 @@ for i, file_path in enumerate(csv_files_1):
     ##x-ticks grid
     ax.grid(True, axis='x', linestyle='--', alpha=0.5)
     ax.grid(True, axis='y', linestyle='--', alpha=0.5)
+    
     ## Remove x ticks and labels for all but last subplot in column
     if i != n_rows - 1:
         ax.tick_params(axis='x', which='both', bottom=False, labelbottom=False)
@@ -78,7 +79,7 @@ for i, file_path in enumerate(csv_files_1):
     ax.yaxis.set_label_position("left")
     ax.tick_params(axis='y',labelsize=7)
     ax.tick_params(axis='x',labelsize=7)
-    ax.yaxis.set_major_formatter(FuncFormatter(lambda y, _: f'{y*100:.4f}'))
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda y, _: f'{y*3592468.44:.1f}'))
     
  #loop through files pc-95.0
 for i, file_path in enumerate(csv_files_2):
@@ -127,14 +128,14 @@ for i, file_path in enumerate(csv_files_2):
     ax.yaxis.set_label_position("right")
     ax.tick_params(axis='y',labelsize=7)
     ax.tick_params(axis='x',labelsize=7)
-    ax.yaxis.set_major_formatter(FuncFormatter(lambda y, _: f'{y*100:.1f}'))
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda y, _: f'{y*100:.3f}'))
   
 #create shaded rectagle in each row
 plt.subplots_adjust(hspace=0.15, wspace=0)
 
 middle_row = n_rows // 2 # Add y-axis label for the right column (centered vertically on the column)
 axes[middle_row, 1].set_ylabel('Max. Burned Area (%) allowed by control', fontsize=8)
-axes[middle_row, 1].yaxis.set_label_coords(1.1, 1.0) # Adjust label position slightly to the right for better spacing
+axes[middle_row, 1].yaxis.set_label_coords(1.16, 1.0) # Adjust label position slightly to the right for better spacing
 
 #legend in the left y-axis
 legend_labels = [
@@ -150,15 +151,22 @@ for i in range(n_rows):
     axes[i, 0].set_ylabel(legend_labels[i], rotation = 90, fontsize=7)
     axes[i, 0].yaxis.set_label_position("left")
     axes[i, 0].yaxis.label.set_ha('center')
+    axes[i, 0].yaxis.set_label_coords(-0.15,0.5) 
+    
+fig.text(0.02, 0.5, 'Control Contribution (km$^2$)', fontsize=8, rotation='vertical', va='center')
     
 #title for the whole plot
-fig.suptitle('Congo', fontsize=12, fontweight='bold', y=0.94)    
+fig.suptitle('Amazon', fontsize=12, fontweight='bold', y=0.94)    
 
 #title in each column
 fig.text(0.32, 0.9, 'All region', ha='center', fontsize=10, fontweight='bold') 
 fig.text(0.72, 0.9, 'Extreme burned areas', ha='center', fontsize=10, fontweight='bold')    
-    
-plt.show()
+
+#plt.show()
+
+#save as pdf landscape orientation
+fig.set_size_inches(11.7, 8.3)
+plt.savefig("C:/Users/rmvre/OneDrive/Documents/SoW_2024_2025/Amazon/plotC/plotC_Amazon_km2_v2.pdf", format='pdf', bbox_inches='tight')
 
 
 
