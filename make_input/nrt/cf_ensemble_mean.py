@@ -2,7 +2,7 @@ import xarray as xr
 from pathlib import Path
 import re
 from collections import defaultdict
-
+from pdb import set_trace
 def run_for_region(region):
 
     # Input and output directories
@@ -34,7 +34,9 @@ def run_for_region(region):
         mean_ds = sum(ds_list) / len(ds_list)
         
         # Save to output
-        output_file = output_dir / f"{var}_mean.nc"
+        if var[-1] == '_':
+            var = var[:-1]
+        output_file = output_dir / f"{var}.nc"
         mean_ds.to_netcdf(output_file)
         print(f"Saved: {output_file}")
 
