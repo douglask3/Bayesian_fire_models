@@ -16,7 +16,7 @@ dcols2 = rev(c('#7f3b08','#b35806','#e08214','#fdb863','#fee0b6','#f7f7f7','#d8d
 
 
 levels = c(0.001, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5)#find_levels(c(mn[!is.na(mn)], mx[!is.na(mx)]), seq(10, 90, 10))
-levels = c(0.01, 0.03, 0.1, 0.3)
+levels = c(0.01, 0.03, 0.1, 0.3)/10
 
 dlevels = c(0.25, 0.5, 0.667, 0.8, 1, 1.25, 1.75,2)
 dlevels_labs = c('quter', 'half', '2/3', '4/5', 'no change', '1 1/4', '1 3/4', 'double', '4')
@@ -25,6 +25,9 @@ nsample = 10
 
 
 region = 'Amazon'; countries = c('Brazil','Guyana', 'Suriname')
+region = 'Pantanal'; countries = c('Brazil', 'Bolivia', 'Paraguay')
+region = 'LA'; countries = c('United States of America')
+#region = 'Congo'; countries = c("Cameroon", "Central African Republic", "Democratic Republic of the Congo", "Republic of the Congo", "Equatorial Guinea", "Gabon")
 #region = 'Greece'; countries = c('Greece')
 #region = 'NW_Amazon'; countries = c('Brazil')
 
@@ -32,7 +35,7 @@ dir = paste0("outputs/ConFire_", region, "-2425-attempt2/samples/_13-frac_points
 dir = paste0("outputs/outputs_scratch/ConFLAME_nrt-isimip_large/ConFLAME_", region, "-2425/samples/_15-frac_points_0.5/")
 #eg_rast = raster(paste0("outputs/ConFire_", region, "-final/samples/_13-frac_points_0.5/baseline-/control/sample-pred0.nc"))
 eg_rast = raster(paste0("outputs/outputs_scratch/ConFLAME_nrt-isimip_large/ConFLAME_", region, "-2425/samples/_15-frac_points_0.5/baseline-/control/sample-pred0.nc"))
-plt_width = c('Amazon' = 1, 'NW_Amazon' = 1, 'Greece' = 0.67)[region]
+plt_width = c('Amazon' = 1, 'Pantanal' = 1, 'LA' = 0.8, 'NW_Amazon' = 1, 'Congo' = 1.0, 'Greece' = 0.67)[region]
 plt_height = plt_width*nrow(eg_rast)/ncol(eg_rast)
 
 
@@ -125,8 +128,8 @@ plot_control <- function(run, control, name, years = c(2000, 2019), cols, levels
     vcdat = 15 * vcdat / ncol(cdat)
     xydat = cbind(xyFromCell(cdat, mask)) 
 
-    if (ncol(dats) > 60) {
-        y = seq(min(xydat[,2]), max(xydat[,2]), length.out = 40)
+    if (ncol(dats) > 20) {
+        y = seq(min(xydat[,2]), max(xydat[,2]), length.out = 10)
         x = seq(min(xydat[,1]), max(xydat[,1]), by = diff(y[1:2]))
         
         xydat_new = cbind(rep(x, length(y)), rep(y, each = length(x)))
@@ -157,7 +160,7 @@ plot_control <- function(run, control, name, years = c(2000, 2019), cols, levels
     land <- ne_countries(returnclass = 'sf')
     plot(st_geometry(land), col = "#eeeeee", border = NA, add = TRUE)
     addLevel <- function(i) points(xydat[,1], xydat[,2], pch = 19, 
-                                   cex = plt_width*3*vcdat[,i], col = cols[i])
+                                   cex = plt_width*6*vcdat[,i], col = cols[i])
     lapply(1:length(cols), addLevel) 
     
     addCoast(countries)
