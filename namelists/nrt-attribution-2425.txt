@@ -1,5 +1,5 @@
 ## model info
-regions:: ['Pantanal',  'Congo', 'LA', 'Amazon', 'Alberta', 'NEIndia']
+regions:: ['LA', 'Amazon', 'Pantanal', 'Congo',  'Alberta', 'NEIndia']
 model_title::  'ConFLAME_nrt-attribution9/<<region>>-2425'
 
 ## input data paths and filenames
@@ -64,7 +64,7 @@ parallelize:: True
 ## experiment info
 limitation_types:: ['standard']
 controls_to_plot:: [0, 1, 2, 3, 4]
-experiment_dir:: ["data/data/driving_data2425/<<region>>/nrt/era5_monthly/", "data/data/driving_data2425/<<region>>/nrt/era5_monthly/CF/||data/data/driving_data2425/<<region>>/nrt/era5_monthly/"]
-experiment_type:: ['single', 'ensemble-single']
-experiment_names:: ["factual", "counterfactual"]
+experiment_dir:: ["data/data/driving_data2425/<<region>>/nrt/era5_monthly/", "data/data/driving_data2425/<<region>>/nrt/era5_monthly/CF/||data/data/driving_data2425/<<region>>/nrt/era5_monthly/","data/data/driving_data2425/<<region>>/nrt/era5_monthly/CF_mean/||data/data/driving_data2425/<<region>>/nrt/era5_monthly/"]
+experiment_type:: ['single', 'ensemble-single', 'single']
+experiment_names:: ["factual", "counterfactual", "counterfactual-metmean"]
 time_series_percentiles:: [0.0, 95.0]
