@@ -3,8 +3,8 @@ import glob
 import os
 
 file_patterns = [
-    r"C:/Users/rmvre/OneDrive/Documents/SoW_2024_2025/Congo/data_csv/means/plotA/*_copy.csv",
-    r"C:/Users/rmvre/OneDrive/Documents/SoW_2024_2025/Congo/data_csv/pc-95.0/plotA/*_copy.csv"
+    r"C:/Users/rmvre/OneDrive/Documents/SoW_2024_2025/Amazon/new_data_csv/means/plotA/*.csv",
+    r"C:/Users/rmvre/OneDrive/Documents/SoW_2024_2025/Amazon/new_data_csv/pc-95.0/plotA/*.csv"
 ]
 
 for pattern in file_patterns:
@@ -24,9 +24,10 @@ for pattern in file_patterns:
         
         monthly_mean_df = pd.concat(monthly_means, axis=1)
         
-    #copy first 6 columns to the end    
-        first_6 = monthly_mean_df.iloc[:, :6]
-        final_df = pd.concat([monthly_mean_df, first_6], axis=1)      
+    #copy first 2 columns to the end and last 4 to the beginning    
+        first_2 = monthly_mean_df.iloc[:, :2]
+        last_4 = monthly_mean_df.iloc[:, -4:]
+        final_df = pd.concat([last_4, monthly_mean_df, first_2], axis=1)      
         
     #output file path
         output_path = file_path.replace("plotA", "plotC")
