@@ -147,11 +147,11 @@ if __name__=="__main__":
     dir = "/data/users/opatt/HadGEM3-A-N216/"
     sub_dir = '/day/'
 
-    temp_dir = "/data/scratch/douglas.kelley/Bayesian_fire_models/temp/hadgem_nrt/"
+    temp_dir = "/data/scratch/douglas.kelley/Bayesian_fire_models/temp/hadgem_nrt2/"
     out_dir = "data/data/driving_data2425/nrt_attribution/"
 
-    start_years = [2023, 2013]
-    start_years = [2013]
+    start_years = [2013, 2023]
+
     shapefile_path = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
     region_names = ["northeast India",
                    "Alberta",
@@ -160,8 +160,7 @@ if __name__=="__main__":
                    "Amazon and Rio Negro rivers",
                    "Pantanal basin"]
 
-    variables = ['pr', 'tasmax', 'hursmin', 'tas', 'sfcWind', 'uas', 
-                 'vas',  'mrros']
+    variables = ['pr', 'tasmax','hursmin', 'tas','sfcWind', 'uas', 'vas',  'mrros']
     experiments = [['historicalNatExt', 'NAT'], ['historicalExt', 'ALL']]
     
     for start_year in start_years:
