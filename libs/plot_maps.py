@@ -305,6 +305,7 @@ def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = None, force0 = Fal
     if ignore_v is not None:
         data = data[data != ignore_v]
     if data.mask.all():
+        return np.array([-1, 0, 1])
         raise ValueError("No valid data found to calculate levels.")
 
     # Try log-scale if distribution is strongly right-skewed and positive
@@ -592,7 +593,7 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
     # Main filled contour
     if levels is  None:
         levels = auto_pretty_levels(cube.data, *args, **kw)
-    elif levels == 'auto':
+    elif isinstance(levels, str) and levels == 'auto':
         levels = None
     if is_catigorical:
         norm = BoundaryNorm(boundaries=np.array(levels) + 0.5, ncolors=cmap.N)
