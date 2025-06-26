@@ -51,6 +51,60 @@ def Potential_limitation(training_namelist, namelist,
                      name + '/Potential'+ str(controlID), extra_params, hyper = False,
                      *args, **kws)
 
+def Potential_climateology_limitation(training_namelist, namelist,
+                        controlID, name, control_direction, *args, **kws):   
+ 
+    info = read_variables_from_namelist(training_namelist) 
+    Control = Standard_limitation(training_namelist, namelist,
+                              controlID, name, control_direction,
+                              *args, **kws)[0]   
+
+    control_Directioni = np.array(control_direction.copy())
+    control_Directioni[controlID] = 0.0
+    
+    extra_params = {"control_Direction": control_Directioni}
+    
+    Others = call_eval(training_namelist, namelist,
+                     name + '/Without'+ str(controlID), extra_params, hyper = False,
+                     *args, **kws)[0]
+
+    
+    print("--\n----\n-------\n----\n-------------------------------------")
+    print("--\n----\n-------\n----\n-------------------------------------")
+    print("--\n----\n-------\n----\n-------------------------------------")
+    print("--\n----\n-------\n----\n-------------------------------------")
+    
+    def for_realization(r):
+        ens_no = Control.coord('realization').points[r]
+        filename = info['dir_outputs'] + '/samples/' + \
+                   info['filename_out'] + '/' + name + \
+                   '/Potential_climatology' + str(controlID) + '/'
+        makeDir(filename) 
+        filename = filename  + 'sample-pred' + str(ens_no) + '.nc'
+        if os.path.exists(filename):
+            return iris.load_cube(filename)
+
+        anomaly_cube = Control[r].copy()
+        Climateology = anomaly_cube.aggregated_by('month', iris.analysis.MEAN)
+        for month in range(1, 13):
+            # Make a mask for the current month
+            month_mask = anomaly_cube.coord('month').points == month
+            
+            # Get climatology slice for this month
+            clim_slice = Climateology.extract(iris.Constraint(month=month))
+            
+            # Subtract climatology from all matching time steps
+            anomaly_cube.data[month_mask, :] -= clim_slice.data[None, :, :]
+     
+        out = anomaly_cube * Others[r]
+        iris.save(out, filename)
+        return out
+    
+    outs = [for_realization(r) for r in range(Control.shape[0])]
+    outs = iris.cube.CubeList(outs).merge_cube()
+    return [outs]
+
+
 def above_percentile_mean(cube, cube_assess = None, percentile = 0.95):
     if cube_assess is None: cube_assess = cube
     area_cube = iris.analysis.cartography.area_weights(cube_assess)
@@ -197,6 +251,8 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
             limitation_types_funs += [Standard_limitation]
         if 'potential' in limitation_types:
             limitation_types_funs += [Potential_limitation]
+        if 'potential_climateology' in limitation_types:
+            limitation_types_funs += [Potential_climateology_limitation]
     
         for ltype, FUN in zip(limitation_types,limitation_types_funs):
             limitation = [FUN(training_namelist, namelist, i, 
