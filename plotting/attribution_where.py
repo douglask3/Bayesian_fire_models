@@ -4,16 +4,24 @@ import sys
 sys.path.append('libs/')
 from plot_maps import *
 from  constrain_cubes_standard import *
-
+from state_of_wildfires_region_info  import get_region_info
 import matplotlib.pyplot as plt
 import iris
 import numpy as np
 
-fact_dir = 'outputs/outputs_scratch/ConFLAME_nrt-attribution9/Amazon-2425/samples/_19-frac_points_0.5/factual-/Evaluate/'
-cfact_dir = 'outputs/outputs_scratch/ConFLAME_nrt-attribution9/Amazon-2425/samples/_19-frac_points_0.5/counterfactual-/Evaluate/'
 
-fact_files = sorted(glob.glob(os.path.join(fact_dir, 'sample-pred*.nc')))[0:1000]
-cfact_files = sorted(glob.glob(os.path.join(cfact_dir, 'sample-pred*.nc')))[0:1000]
+dir1 = 'outputs/outputs_scratch/ConFLAME_nrt-attribution9/'
+dir2 = '-2425/samples/_19-frac_points_0.5/factual-/Evaluate/'
+def map_attribution_for_region(dir1, dir2, region, variable = 'Evaluate', nfiles = 1000)
+    region_info = get_region_info(region)[region]
+    set_trace()
+    fact_dir = dir1 + 'Amazon' + dir2  + '/'
+    cfact_dir = fact_dir + 'counterfactual-/' + variable + '/'
+    fact_dir = fact_dir + variable + '/'
+    cfact_dir = 'outputs/outputs_scratch/ConFLAME_nrt-attribution9/Amazon-2425/samples/_19-frac_points_0.5/counterfactual-/Evaluate/'
+
+fact_files = sorted(glob.glob(os.path.join(fact_dir, 'sample-pred*.nc')))[0:nfiles]
+cfact_files = sorted(glob.glob(os.path.join(cfact_dir, 'sample-pred*.nc')))[0:nfiles]
 
 # Load first cube to get grid info
 count_map = iris.load_cube(fact_files[0])[0]

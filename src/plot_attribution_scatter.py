@@ -75,24 +75,70 @@ def flatten(xss):
     """
     return [x for xs in xss for x in xs]
 
+
+def signif(x, p):
+    x = np.asarray(x)
+    x_positive = np.where(np.isfinite(x) & (x != 0), np.abs(x), 10**(p-1))
+    mags = 10 ** (p - 1 - np.floor(np.log10(x_positive)))
+    return np.round(x * mags) / mags
+
 def scale2upper1(y):
     return 1-np.exp(-y * (-np.log(0.5)))
 
-def scale2upper1_axis(ax, ytick_labels = np.array([0, 0.2, 0.5, 1, 2, 5])):
+def scale2upper1_inverse(z):
+    return -np.log(1 - z) / np.log(2)
+
+def scale2upper1_labels(ytick_labels):
+    # Compute difference from 1
+    diffs = ytick_labels - 1
+
+    # Format labels
+    formatted_labels = []
+    for d in diffs:
+        if np.isclose(d, 0):
+            formatted_labels.append("1")
+        else:
+            sign = "+" if d > 0 else "-"
+            magnitude = abs(d)
+            formatted_labels.append(f"1 {sign} {magnitude:.6f}")
+    return formatted_labels
+def scale2upper1_axis(ax, ytick_labels = None, ylim = None):
     ax.set_yticks([])          # remove ticks
     ax.set_yticklabels([])     # remove tick labels
+    if ytick_labels is None:
+        if ylim is None or ylim[0] < 0.2:
+            ylim = [0,1]
+            ytick_labels = np.array([0, 0.2, 0.5, 1, 2, 5])
+        else:
+                
+            y0 = signif(1-scale2upper1_inverse(ylim[0]), 1)
+            ytick_labels = np.array([-y0, -y0/2, 0, y0/2, y0]) + 1
+            #set_trace()
+            if len(ylim) == 1:
+                ylim = [ylim[0], 1-ylim[0]]
+            
+            #ytick_labels = np.array([0, 0.2, 0.5, 1, 2, 5])
+    else:
+        if ylim is None:
+            ylim = np.range( ytick_labels)                                                                                   
 
     # Step 1: Choose locations in transformed space (display space)
     yticks_transformed = scale2upper1(ytick_labels)
     yticks_transformed = np.append(yticks_transformed, 1)
     
     # Step 2: Invert to get original y values (for labeling)
-    ytick_labels = [f"{v:.2f}" for v in ytick_labels] + ['']
+    #set_trace()
+    ytick_labels_txt = [f"{v:.2f}" for v in ytick_labels] + ['']
+    if len(np.unique(ytick_labels_txt)) < len(ytick_labels):
+        ytick_labels_txt = scale2upper1_labels(ytick_labels) + ['']
     #set_trace()
     # Step 3: Apply to plot
-    ax.set_yticks(yticks_transformed)
-    ax.set_yticklabels(ytick_labels)
-    ax.set_ylim([0, 1])
+    try:
+        ax.set_yticks(yticks_transformed)
+        ax.set_yticklabels(ytick_labels_txt)
+    except:
+        set_trace()
+    ax.set_ylim(ylim)
 
 def plot_kde(x, y, xlab, ylab, cmap_name = "gradient_hues_extended", ax = None, *args, **kw): 
     """
@@ -494,7 +540,7 @@ if __name__=="__main__":
     dir1 = "outputs/outputs_scratch/ConFLAME_isimip_attribution/ConFLAME_"
     dir2 = "-2425/time_series/_15-frac_points_0.5/"
     dir1 = "outputs/outputs_scratch/ConFLAME_isimip_attribution/ConFLAME_"
-    dir2 = "-2425/time_series/_15-frac_points_0.5/
+    dir2 = "-2425/time_series/_15-frac_points_0.5/"
 
     outs_isimip = plot_attribution_scatter(regions, 
                              "attribution_scatter_isimip_2425",
