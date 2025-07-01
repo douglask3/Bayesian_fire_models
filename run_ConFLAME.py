@@ -51,6 +51,47 @@ def Potential_limitation(training_namelist, namelist,
                      name + '/Potential'+ str(controlID), extra_params, hyper = False,
                      *args, **kws)
 
+
+
+def Without_limitation(training_namelist, namelist,
+                        controlID, name, control_direction, *args, **kws):   
+    control_Directioni = np.array(control_direction.copy())
+    control_Directioni[controlID] = 0.0
+    
+    extra_params = {"control_Direction": control_Directioni}
+    
+    return call_eval(training_namelist, namelist,
+                     name + '/Without'+ str(controlID), extra_params, hyper = False,
+                     *args, **kws)
+
+def Potential_limitation(training_namelist, namelist,
+                        controlID, name, control_direction, *args, **kws):   
+    Others = Without_limitation(training_namelist, namelist,
+                              controlID, name, control_direction,
+                              *args, **kws)[0]   
+    Control = call_eval(training_namelist, namelist,
+                     name + '/control', hyper = False,
+                     *args, **kws)
+
+    def for_realization(r):
+        ens_no = Control.coord('realization').points[r]
+        filename = info['dir_outputs'] + '/samples/' + \
+                   info['filename_out'] + '/' + name + \
+                   '/Potential_' + str(controlID) + '/'
+        makeDir(filename) 
+        filename = filename  + 'sample-pred' + str(ens_no) + '.nc'
+        if os.path.exists(filename):
+            return iris.load_cube(filename)
+        
+        out = Other[r] - Control[r]
+        iris.save(out, filename)
+        return out
+    
+    outs = [for_realization(r) for r in range(Control.shape[0])]
+    outs = iris.cube.CubeList(outs).merge_cube()
+    
+    return  [outs]
+
 def Potential_climateology_limitation(training_namelist, namelist,
                         controlID, name, control_direction, *args, **kws):   
  
@@ -64,16 +105,10 @@ def Potential_climateology_limitation(training_namelist, namelist,
     
     extra_params = {"control_Direction": control_Directioni}
     
-    Others = call_eval(training_namelist, namelist,
-                     name + '/Without'+ str(controlID), extra_params, hyper = False,
-                     *args, **kws)[0]
+    Others = Without_limitation(training_namelist, namelist,
+                              controlID, name, control_direction,
+                              *args, **kws)[0]   
 
-    
-    print("--\n----\n-------\n----\n-------------------------------------")
-    print("--\n----\n-------\n----\n-------------------------------------")
-    print("--\n----\n-------\n----\n-------------------------------------")
-    print("--\n----\n-------\n----\n-------------------------------------")
-    
     def for_realization(r):
         ens_no = Control.coord('realization').points[r]
         filename = info['dir_outputs'] + '/samples/' + \
@@ -102,6 +137,7 @@ def Potential_climateology_limitation(training_namelist, namelist,
     
     outs = [for_realization(r) for r in range(Control.shape[0])]
     outs = iris.cube.CubeList(outs).merge_cube()
+    
     return [outs]
 
 
