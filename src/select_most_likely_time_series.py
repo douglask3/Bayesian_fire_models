@@ -28,15 +28,8 @@ def plot_anaomly_vs_obs(ensemble_matched, obs_ratio_matched, common_times, scale
             out = scale2upper1(out)
         return out
 
-    pcs = [percentile_fun(pc) for pc in [10, 25, 50, 75, 90]]# = np.nanpercentile(ensemble_matched, 10, axis=0)
-    #p25 = np.nanpercentile(ensemble_matched, 25, axis=0)
-    #p50 = np.nanpercentile(ensemble_matched, 50, axis=0)  # median
-    #p75 = np.nanpercentile(ensemble_matched, 75, axis=0)
-    #p90 = np.nanpercentile(ensemble_matched, 90, axis=0)
-
-    # Time axis
-    #time = np.arange(ensemble_matched.shape[1])
-    # Plot shaded regions for model spread
+    pcs = [percentile_fun(pc) for pc in [10, 25, 50, 75, 90]]
+    
     
     if obs_ratio_matched is not None:
         if unit == 'ratio':
@@ -53,11 +46,6 @@ def plot_anaomly_vs_obs(ensemble_matched, obs_ratio_matched, common_times, scale
     # Plot observations
     if obs_ratio_matched is not None:
         ax.plot(common_times, obs_ratio_matched, color='blue', lw=1)#, marker='o'
-
-    # Labels and legend
-    
-    #ax.set_title('Observed vs Ensemble Model Burned Area')
-
     if last12:
         end_date = common_times[-1]
         # Get start date 1 year before
@@ -123,8 +111,7 @@ def for_region(dir1, dir2, obs_dir, obs_var, region, region_size,
         obs_ratio_matched = region_size * obs_ratio_matched/100.0
         scale = np.mean(np.abs(ensemble_matched), axis = 1)
         scale = np.mean(np.abs(obs_ratio_matched))/scale
-        #set_trace()
-        #obs_ratio_matched = obs_ratio_matched * region_size
+
     else:
         scale = None
         region_size = 1.0
@@ -233,14 +220,7 @@ def run_regions_controls(regions, controls, contol_names, unit = 'ratio'):
             axesi[0].set_title('Burned Area Anomoly')
         else:
             axesi[0].set_title(region_names[i])
-    #if i == 0:
-    #    axesi[0].set_title('All region')
-    
-    #for_region(dir1, dir2[1], obs_dir, 'p95_burnt_ratio', region, axesi[1])
-    #if i == 0:
-    #    axesi[1].set_title('Highest Burned Areas')
 
-#plt.legend(ncol = 2)
         plt.tight_layout()
     fig.subplots_adjust(left=0.09)
     if unit == 'ratio':
@@ -258,7 +238,7 @@ def run_regions_controls(regions, controls, contol_names, unit = 'ratio'):
                 '-' + unit + '.pdf')
 #plt.show()
 #set_trace()
-
+run_regions_controls(regions, controls, contol_names, 'anomaly')
 controls = ['potential_climateology-Fuel-Moisture.csv', 'potential_climateology-Weather-Wind.csv', 'potential_climateology-Suppression-Ignition.csv']
 contol_names = ['Fuel', 'Weather', 'Ignitions/Humans']
 colors = ['#e98400', '#0096a1','#ee007f']
