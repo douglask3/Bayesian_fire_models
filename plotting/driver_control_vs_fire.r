@@ -1,6 +1,7 @@
 library(raster)
 library(interp)
 source("libs/plot_raster_map.r")
+source("libs/logistic.r")
 
 dir0 = 'outputs/outputs_scratch/ConFLAME_nrt-drivers6/<<region>>-2425/samples/_21-frac_points_0.5/baseline-/'
 
@@ -43,12 +44,7 @@ openDat <- function(dir, region, nfiles = 100, layers = 253:255) {
     return(outs)
 }
 
-logit <- function(x) {
-    x = (x+0.000001)/1.000002
-    log(x/(1-x))
-}
-logistic <- function(x) 
-    return(1/(1+exp(-x)))
+
 
 plot_BA_vs_control <- function(i, dat, y0, y) {
     x = logit(unlist(dat[[i]]))
