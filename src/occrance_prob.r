@@ -20,7 +20,6 @@ atleast_n_events <- function(n, pevent)  {
 	return(out)
 }
 
-
 cal_occurance_prob_for_ssp <- function(ssp, model, dir,
 								       event = 0, life_expectancy = 78, whichend = 'end', nevents = 1:3, mnth = NaN) {
 	print(ssp)
@@ -42,16 +41,9 @@ cal_occurance_prob_for_ssp <- function(ssp, model, dir,
 	before25 = substr(colnames(dat), 2, 5) < 2025
 	if (event == 0)
 		event =  quantile(as.matrix(dat[,before25]), 1-1/12000)
-	#if (dir == 'Congo')
-	#		browser()
+
 	if (whichend == 'end') dat = dat[,!before25]
 	
-	#browser()
-	#for_decade <- function(yr) {
-#		ddat = dat[,yr:(yr+9)]
-#		apply(ddat, 1, function(x) any(x>event))
-#	}
-	#dat = sapply(seq(1, ncol(dat)-10), for_decade)
 	pevent =  apply(dat, 2,  function(x) mean(x>event))
 	
 	if (is.na(mnth)) {
@@ -125,20 +117,14 @@ for_region <- function(name, life_expectancy, xaxist =  T, yaxist = T,...) {
 	if (xaxist) axs =2 else axs = 4
 	axis(axs, at = 0.5, labels = paste0('Born in ', 2025-life_expectancy ), las = 2)
 	axis(axs, at = 1.5, labels = '\nstrong\nmitigation-\nssp0126\n', las = 2)
-	axis(axs, at = 2.5, labels = paste0('middle of\nthe road-\nssp270'), las = 2) # \n2025 to ', 2025+life_expectancy 
+	axis(axs, at = 2.5, labels = paste0('middle of\nthe road-\nssp270'), las = 2) 
 	axis(axs, at = 3.5, labels = 'no\nmitigation\nssp585\n', las = 2)
 	
 	if (yaxist) axis(1)
-	#title(paste0(letters[which(region_names == name)], ') ', name), line = 0.25, xpd = NA)
 	title( name, line = 0.25, xpd = NA)
 }
 	
-#for_region <-function(...) {
-#	outs = lapply(1:3, for_returns, ...)
-#	xrange = range(unlist(outs))
-#	plot(xrange, c(0, length(ssps)))
-#	browser()
-#}
+
 png("life_return.png", height = 5.1, width = 7.4, units = 'in', res = 300) 
 layout(rbind(matrix(1:4, ncol = 2), 5), heights = c(1, 1, 0.28))
 par(mar = c(1.5, 0.5, 0.5, 0.5), oma = c(2.5, 6, 1, 6))
@@ -152,11 +138,3 @@ legend('bottom', horiz = TRUE, pch= 15, pt.cex = 3, col = paste0(c("#f68373", "#
 			   
 dev.off()
 
-#events = c(0, 0, 0, 0)
-#png("life_return_1_in_1000.png", height = 5.5*1.3, width = 4.5*1.3, units = 'in', res = 300) 
-#par(mfrow = c(length(dirs),1), mar = c(1.5, 3.2, 2, 0.5), oma = c(2.5, 0, 0, 0))
-#outs2 = mapply(for_region, region_names, life_expectancys, dirs, event = events,  mnth = mnths)
-#mnths = c(NaN, NaN, NaN, NaN)
-#mtext(side = 1, outer = TRUE, 'Likelihood (%)', line = 1)
-#			   
-#dev.off()
