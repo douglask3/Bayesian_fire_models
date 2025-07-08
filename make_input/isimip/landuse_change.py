@@ -5,7 +5,12 @@ from pdb import set_trace
 
 # Load the cube
 def work_out_change(dir, file_in, file_out):
-    cube = iris.load_cube(dir + file_in)
+    
+    if "_loss_" in file_out and "counterclim" in dir:
+        filename = dir.replace('counterclim', 'obsclim') + file_in
+    else:
+        filename = dir + file_in
+    cube = iris.load_cube(filename)
 
     # Check time dimension
     time_dim = cube.coord_dims('time')[0]
@@ -23,7 +28,9 @@ def work_out_change(dir, file_in, file_out):
 
     # Create a new cube
     diff_cube = cube.copy(full_diff_data)
-
+    if "_loss_" in file_out:
+        diff_cube.data = - diff_cube.data
+        diff_cube.data[diff_cube.data < 0.0] = 0.0
     # Update metadata
     diff_cube.standard_name = None
     diff_cube.long_name = 'change_in_' + (cube.name() or 'variable')
@@ -35,7 +42,7 @@ def work_out_change(dir, file_in, file_out):
 
 if __name__=="__main__":
     
-    regions = ['NWIndia', 'Alberta', 'LA', 'Congo','Pantanal', 'Amazon']
+    regions = ['NEIndia', 'Alberta', 'LA', 'Congo','Pantanal', 'Amazon']
 
     clims = ["obsclim", "counterclim"]
     periods3a = ["period_2000_2019", "period_1901_1920"]
@@ -44,9 +51,11 @@ if __name__=="__main__":
     models = ["GFDL-ESM4", "IPSL-CM6A-LR", "MPI-ESM1-2-HR", "MRI-ESM2-0", "UKESM1-0-LL"]
     periods3b = ["period_1994_2014", "period_2015_2099", "period_2015_2099", "period_2015_2099"]
 
-    files_in  = ["debiased_tree_cover_jules-es.nc","crop_jules-es.nc",  
+    files_in  = ["debiased_tree_cover_jules-es.nc",
+                 "debiased_tree_cover_jules-es.nc","crop_jules-es.nc",  
                  "pasture_jules-es.nc"]
     files_out = ["debiased_tree_cover_change_jules-es.nc",
+                 "debiased_tree_cover_loss_jules-es.nc",
                  "crop_change_jules-es.nc", "pasture_change_jules-es.nc"]
 
     def run_for_all_files(dir):
