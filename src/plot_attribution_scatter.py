@@ -113,11 +113,10 @@ def scale2upper1_axis(ax, ytick_labels = None, ylim = None):
                 
             y0 = signif(1-scale2upper1_inverse(ylim[0]), 1)
             ytick_labels = np.array([-y0, -y0/2, 0, y0/2, y0]) + 1
-            #set_trace()
+            
             if len(ylim) == 1:
                 ylim = [ylim[0], 1-ylim[0]]
             
-            #ytick_labels = np.array([0, 0.2, 0.5, 1, 2, 5])
     else:
         if ylim is None:
             ylim = np.range( ytick_labels)                                                                                   
@@ -127,11 +126,10 @@ def scale2upper1_axis(ax, ytick_labels = None, ylim = None):
     yticks_transformed = np.append(yticks_transformed, 1)
     
     # Step 2: Invert to get original y values (for labeling)
-    #set_trace()
     ytick_labels_txt = [f"{v:.2f}" for v in ytick_labels] + ['']
     if len(np.unique(ytick_labels_txt)) < len(ytick_labels):
         ytick_labels_txt = scale2upper1_labels(ytick_labels) + ['']
-    #set_trace()
+    
     # Step 3: Apply to plot
     try:
         ax.set_yticks(yticks_transformed)
@@ -300,10 +298,10 @@ def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = N
     mask = factual_flat > obs
     if (np.sum(mask) < 10):
         mask = factual_flat > np.sort(factual_flat)[-10]
-    percentile = [10, 50, 90]
+    percentile = [5, 50, 95]
     if np.sum(mask) == 0: 
         return
-    #set_trace()
+    
     cc_effect = np.percentile(effect_ratio[mask], percentile)
     cc_effect = np.round(cc_effect, 2)
     #cc_effect = np.round(1.0+cc_effect/(1.0-cc_effect), 2)
@@ -329,7 +327,6 @@ def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = N
 
         rr = pf / pc
     else:
-        #set_trace()
     #rr_gpd = np.nan  # or fallback to empirical estimate
         rr = np.sum(factual_flat>obs)/np.sum(counterfactual_flat > obs)
     
@@ -409,12 +406,10 @@ def plot_for_region(region, metric, plot_FUN,
         factual_flat = factual_flat * 150
         counterfactual_flat = counterfactual_flat * 150
     '''
+    
     factual_flat = factual_flat * 100
     counterfactual_flat = counterfactual_flat * 100
-    #if obs > factual_flat.max():
-    #    obs = obs * 0.67
-    #set_trace()
-    #obs = obs * np.mean(factual_flat)/obs
+    
     out = plot_FUN(factual_flat, counterfactual_flat, obs, plot_name = plot_name, *args, **kw)
     
     if add_legend:
@@ -500,9 +495,9 @@ def plot_attribution_scatter(regions, figname, plot_FUN = plot_fact_vs_ratio,
     return out
 
 def add_violin_plot(df, df_type, ax, title):
-    
+    data = df[df["Impact Type"] == df_type]
     sns.violinplot(
-        data=df[df["Impact Type"] == df_type],
+        data=data,
         cut = 0.0,
         x="Region", y="Amplification Factor", hue="Source",
         split=False, inner="quartile", palette=["#f68373", "#c7384e", "#fc6",  "#862976", "#cfe9ff"], 
@@ -517,12 +512,44 @@ def add_violin_plot(df, df_type, ax, title):
     
     scale2upper1_axis(ax)
 
+    regions = data['Region'].unique()
+    
+    sources = data['Source'].unique()
+    n_sources = len(sources)
+
+    # 2. Calculate position offsets for sub-violins within each Region group
+    positions = []
+    for i, region in enumerate(regions):
+        for j in range(n_sources):
+            offset = -0.3 + j * (0.6 / (n_sources - 1))  # Spread violins within 0.8 width
+            positions.append(i + offset)
+
+    #tick_positions = range(len(ax.get_xticks()))
+    #tick_labels = ax.get_xticklabels()
+    arr = data["likelihood"].values
+    custom_labels, idx = np.unique(arr, return_index=True)    
+    custom_labels = custom_labels[np.argsort(idx)]
+    custom_labels = np.round(custom_labels*100)
+    
+    y_min = 0.0#data["Amplification Factor"].min()
+    for x, label in zip(positions, custom_labels):
+        if label > 99:
+            label_str = '>99%'
+        else:
+            label_str = str(label)[0:2] + '%'
+        ax.text(x-0.05, 0.4, label_str, ha='center', va='top', fontsize=8, rotation=45)
+    
+    
+#    for i, label in enumerate(custom_labels):
+#        ax.text(i, y_min, str(label)[0:2] + '%', ha='center', va='top', fontsize=10, color='black')
+    
+
 if __name__=="__main__":
     
     dir1 = "outputs/outputs_scratch/ConFLAME_nrt-attribution9/"
     dir2 = "-2425/time_series/_19-frac_points_0.5/"
 
-    regions = ["Amazon", "Pantanal", "LA", "Congo"]
+    regions = ["Amazon", "Pantanal",  "LA", "Congo"]
     region_names = ['Northeast Amazonia', 'Pantanal and Chiquitano', 
                     'Southern California','Congo Basin']
     #retgions = {key: regions_info[key] for key in region_names if key in regions_info}
@@ -537,10 +564,12 @@ if __name__=="__main__":
                              dir1 = dir1, dir2 = dir2, 
                              counterfactual_name = 'counterfactual-metmean',
                              obs_dir = obs_dir, obs_file = obs_file) 
+    
     dir1 = "outputs/outputs_scratch/ConFLAME_isimip_attribution/ConFLAME_"
     dir2 = "-2425/time_series/_15-frac_points_0.5/"
-    dir1 = "outputs/outputs_scratch/ConFLAME_isimip_attribution/ConFLAME_"
-    dir2 = "-2425/time_series/_15-frac_points_0.5/"
+    dir1 = "outputs/outputs_scratch/ConFLAME_nrt-isimip_large/ConFLAME_"
+    dir2 = "-2425/time_series/_16-frac_points_0.5/"
+    dir1 = "outputs/outputs_scratch/ConFLAME_isimip_attribution-LUC2/"
 
     outs_isimip = plot_attribution_scatter(regions, 
                              "attribution_scatter_isimip_2425",
@@ -552,6 +581,14 @@ if __name__=="__main__":
                              dir1 = dir1, dir2 = dir2,
                              obs_dir = obs_dir, obs_file = obs_file, 
                              factual_name = "counterfactual", 
+                             counterfactual_name = "early_industrial",
+                             all_mod_years = True) 
+
+    outs_all = plot_attribution_scatter(regions, 
+                             "attribution_scatter_isimip_all_2425",
+                             dir1 = dir1, dir2 = dir2,
+                             obs_dir = obs_dir, obs_file = obs_file, 
+                             factual_name = "factual", 
                              counterfactual_name = "early_industrial",
                              all_mod_years = True) 
 
@@ -568,24 +605,26 @@ if __name__=="__main__":
                 np.random.choice(outs_isimip[ii][jj], 1000))/2.0)
             except:
                 outi.append(np.random.choice(out_e[ii][jj], 1000))
-        outs_combined.append(outi)#set_trace()
+        outs_combined.append(outi)
 
     
     f = open('temp/store.pckl', 'wb')
-    pickle.dump([outs_era5, outs_era52, outs_isimip, outs_combined, outs_human], f)
+    pickle.dump([outs_era5, outs_era52, outs_isimip, outs_combined, outs_human, outs_all], f)
     f.close()
     
     f = open('temp/store.pckl', 'rb')
-    outs_era5, outs_era52, outs_isimip, outs_combined, outs_human = pickle.load(f)
+    outs_era5, outs_era52, outs_isimip, outs_combined, outs_human, outs_all = pickle.load(f)
     f.close()
 
     # Example labels for the sources
-    sources = ['Climate (ERA5 HadGEM ensemble)', 
-               'Climate (ERA5 HadGEM means)',
-               'Climate (ISIMIP3a)', 'Climate (Combined)', 'Human']
+    sources = ['Anthropogenic climate forcing', 
+              # 'Climate (ERA5 HadGEM means)',
+               'Total climate forcing', #'Climate (Combined)', 
+               'Socio-economic factors',
+               'All forcings']
 
     # Group data
-    all_sources = [outs_era5, outs_era52, outs_isimip, outs_combined, outs_human]
+    all_sources = [outs_era5, outs_isimip, outs_human, outs_all]
 
     # Flatten into long-form dataframe for seaborn
     records = []
@@ -593,6 +632,11 @@ if __name__=="__main__":
         for source_idx, source_name in enumerate(sources):
             for kind_idx, kind in enumerate(["Mean", "Extreme"]):  # 0 = mean, 1 = extreme
                 samples = all_sources[source_idx][kind_idx][region_idx]
+                
+                if np.max(samples) > 1.0:
+                    liki =  np.mean(samples>1.0)
+                else:
+                    liki =  np.mean(samples>0.5)
                 if samples is None: samples = np.array([1.0, 1.0])
                 samples = scale2upper1(samples)
                 for val in samples:
@@ -600,7 +644,8 @@ if __name__=="__main__":
                         'Region': region,
                         'Source': source_name,
                         'Impact Type': kind,
-                        'Amplification Factor': val
+                        'Amplification Factor': val,
+                        'likelihood': liki
                     })
     
     df = pd.DataFrame.from_records(records)
@@ -609,12 +654,12 @@ if __name__=="__main__":
     sns.set(style="whitegrid")
     fig, axes = plt.subplots(2, 1, figsize=(12, 6), sharex=True)
 
-    add_violin_plot(df, "Mean", axes[0], "Mean Burnt Area Impact")
-    add_violin_plot(df, "Extreme", axes[1], "Extreme Burnt Area Impact")
+    add_violin_plot(df, "Mean", axes[0], "Regional burned areas")
+    add_violin_plot(df, "Extreme", axes[1], "Sub-regional extremes")
     axes[0].legend_.remove()
     axes[1].legend(loc="lower left", ncol = 2)
 
     # Tidy up
     plt.tight_layout()
     plt.savefig("figs/attribution-summery.png")
-    set_trace()
+    
