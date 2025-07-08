@@ -10,20 +10,26 @@ from scipy.ndimage import gaussian_filter1d
 def effect_ratio_and_rr_over_range(factual_flat, counterfactual_flat, 
                                    obs, plot_name, ax = None):
     effect_ratio = factual_flat/counterfactual_flat
-    xs = np.arange(0, np.nanmax(factual_flat)/2, np.nanmax(factual_flat)/1000)
+    try:
+        xs = np.arange(0, np.nanmax(factual_flat)/2, np.nanmax(factual_flat)/1000)
+    except:
+        set_trace()
     def for_x(x):
         test = factual_flat > x
-        er = np.percentile(effect_ratio[test], [10, 25, 50, 75, 90])
         
+        er = np.percentile(effect_ratio[test], [10, 25, 50, 75, 90])
         rr = np.sum(test)/np.sum(counterfactual_flat > x)
         return np.append(er, rr)
     outs = np.array([for_x(x) for x in xs])
+    scale = (1.1/xs.max())
     if obs > xs.max():
-        xs = xs * obs * 1.1/xs.max()
+        xs = xs * obs * scale
+    
     #set_trace()
     #def filter(ys, sigma = 2):
     #    gaussian_filter1d(ys, sigma)
     outs = scale2upper1(outs)
+    
     outs = gaussian_filter1d(outs, sigma=10.0, axis = 0)
     
     p5, p10, p50, p90, p95 = outs[:,0], outs[:,1], outs[:,2], outs[:,3], outs[:,4]
@@ -45,7 +51,9 @@ def effect_ratio_and_rr_over_range(factual_flat, counterfactual_flat,
     scale2upper1_axis(ax)
     #ax.tick_params(axis='y')#, labelcolor='tab:blue')
     ax.grid(alpha=0.3)
-
+    rrobs =  scale2upper1_inverse(risk_ratio[np.argmin(np.abs(xs - obs))])
+    ax.text(0.09, 0.09, "Risk Ratio of event:" + str(np.round(rrobs, 1)), 
+            transform=ax.transAxes)
     # Twin axis for risk ratio
     #ax2 = ax.twinx()
     ax.plot(xs, risk_ratio, color='tab:red', label='Risk ratio', linewidth=2)
@@ -54,7 +62,8 @@ def effect_ratio_and_rr_over_range(factual_flat, counterfactual_flat,
     
     #scale2upper1_axis(ax2)
     # Legends
-    ax.legend(loc='lower left')
+    if plot_name == 'Congo Basin':
+        ax.legend(loc='lower right')
     #ax2.legend(loc='lower right')
 
 
@@ -62,14 +71,13 @@ if __name__=="__main__":
     dir1 = "outputs/outputs_scratch/ConFLAME_nrt-attribution9/"
     dir2 = "-2425/time_series/_19-frac_points_0.5/"
 
-    regions = ["Amazon"]#, "Pantanal"]#"Congo", 
-    #retgions = {key: regions_info[key] for key in region_names if key in regions_info}]
+    
     regions = ["Amazon", "Pantanal", "LA", "Congo"]
     region_names = ['Northeast Amazonia', 'Pantanal and Chiquitano', 
                     'Southern California','Congo Basin']
     obs_dir = 'data/data/driving_data2425//'
     obs_file = 'burnt_area_data.csv'
-
+    
     plot_attribution_scatter(regions, "attribution_metrics_era5_2425",
                              dir1 = dir1, dir2 = dir2,
                              obs_dir = obs_dir, obs_file = obs_file, 
@@ -81,3 +89,34 @@ if __name__=="__main__":
                              obs_dir = obs_dir, obs_file = obs_file, 
                              plot_FUN = effect_ratio_and_rr_over_range) 
     
+    dir1 = "outputs/outputs_scratch/ConFLAME_nrt-isimip_large/ConFLAME_"
+    dir2 = "-2425/time_series/_15-frac_points_0.5/"
+
+    dir1 = "outputs/outputs_scratch/ConFLAME_isimip_attribution/ConFLAME_"
+    dir2 = "-2425/time_series/_15-frac_points_0.5/"
+    dir2 = "-2425/time_series/_16-frac_points_0.5/"
+    dir1 = "outputs/outputs_scratch/ConFLAME_isimip_attribution-LUC2/"
+    
+    plot_attribution_scatter(regions, "attribution_metrics_isimip_2425",
+                             dir1 = dir1, dir2 = dir2, 
+                             counterfactual_name = 'counterfactual',
+                             obs_dir = obs_dir, obs_file = obs_file, 
+                             plot_FUN = effect_ratio_and_rr_over_range, all_mod_years = True)
+
+
+    plot_attribution_scatter(regions,  "attribution_metrics_isimip_human_2425",
+                             dir1 = dir1, dir2 = dir2,
+                             obs_dir = obs_dir, obs_file = obs_file, 
+                             factual_name = "counterfactual", 
+                             counterfactual_name = "early_industrial",
+                             plot_FUN = effect_ratio_and_rr_over_range, 
+                             all_mod_years = True) 
+
+    plot_attribution_scatter(regions, 
+                             "attribution_scatter_metrics_all_2425",
+                             dir1 = dir1, dir2 = dir2,
+                             obs_dir = obs_dir, obs_file = obs_file, 
+                             factual_name = "factual", 
+                             counterfactual_name = "early_industrial",
+                             all_mod_years = True,
+                             plot_FUN = effect_ratio_and_rr_over_range)  
