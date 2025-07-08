@@ -1,6 +1,6 @@
 ## model info
 regions:: ['Congo', 'LA',  'Amazon', 'Pantanal']#,  'Alberta', 'NEIndia']
-model_title::  'ConFLAME_nrt-drivers8/<<region>>-2425'
+model_title::  'ConFLAME_nrt-drivers9/<<region>>-2425'
 
 ## input data paths and filenames
 dir_training:: "data/data/driving_data2425/<<region>>/nrt/era5_monthly/"
@@ -52,7 +52,7 @@ dir_outputs:: 'outputs/outputs_scratch/'
 
 ## evaluation info
 #y_filen_eval:: 'burnt_area.nc'
-sample_for_plot:: 100
+sample_for_plot:: 1000
 control_names:: ['Fuel', 'Weather', 'Moisture', 'Wind', 'Ignition', 'Suppression']
 levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
 dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
