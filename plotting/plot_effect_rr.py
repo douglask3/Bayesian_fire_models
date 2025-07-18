@@ -8,8 +8,9 @@ from plot_attribution_scatter import *
 from scipy.ndimage import gaussian_filter1d
 
 def effect_ratio_and_rr_over_range(factual_flat, counterfactual_flat, 
-                                   obs, plot_name, ax = None):
+                                   obs, plot_name, add_RR = True, ax = None):
     effect_ratio = factual_flat/counterfactual_flat
+    
     try:
         xs = np.arange(0, np.nanmax(factual_flat)/2, np.nanmax(factual_flat)/1000)
     except:
@@ -17,7 +18,7 @@ def effect_ratio_and_rr_over_range(factual_flat, counterfactual_flat,
     def for_x(x):
         test = factual_flat > x
         
-        er = np.percentile(effect_ratio[test], [10, 25, 50, 75, 90])
+        er = np.percentile(effect_ratio[test], [5, 10, 25, 50, 75, 90, 95])
         rr = np.sum(test)/np.sum(counterfactual_flat > x)
         return np.append(er, rr)
     outs = np.array([for_x(x) for x in xs])
@@ -28,20 +29,22 @@ def effect_ratio_and_rr_over_range(factual_flat, counterfactual_flat,
     #set_trace()
     #def filter(ys, sigma = 2):
     #    gaussian_filter1d(ys, sigma)
+    
     outs = scale2upper1(outs)
+    #outs = gaussian_filter1d(outs, sigma=10.0, axis = 0)
     
-    outs = gaussian_filter1d(outs, sigma=10.0, axis = 0)
-    
-    p5, p10, p50, p90, p95 = outs[:,0], outs[:,1], outs[:,2], outs[:,3], outs[:,4]
-    risk_ratio = outs[:,5]
+    p5, p10, p25, p50, p75, p90, p95 = \
+        outs[:,0], outs[:,1], outs[:,2], outs[:,3], outs[:,4], outs[:,5], outs[:,6]
+    risk_ratio = outs[:,7]
 
 
     # Plot the median
     ax.plot(xs, p50, color='tab:blue', label='50% percentile')
     
     # Fill between percentiles
-    ax.fill_between(xs, p10, p90, color='tab:blue', alpha=0.2, label='25-75%')
-    ax.fill_between(xs, p5, p95, color='tab:blue', alpha=0.1, label='10-90%')
+    ax.fill_between(xs, p25, p75, color='tab:blue', alpha=0.3, label='25-75%')
+    ax.fill_between(xs, p10, p90, color='tab:blue', alpha=0.2, label='10-90%')
+    ax.fill_between(xs, p5, p95, color='tab:blue', alpha=0.1, label='5-95%')
 
     ax.axhline(0.5, color='k', linestyle='--')#, label='No Change (Ratio = 1)')
     ax.axvline(obs, color='red', linestyle='--', label='Observed Burned Area')
@@ -56,7 +59,7 @@ def effect_ratio_and_rr_over_range(factual_flat, counterfactual_flat,
             transform=ax.transAxes)
     # Twin axis for risk ratio
     #ax2 = ax.twinx()
-    ax.plot(xs, risk_ratio, color='tab:red', label='Risk ratio', linewidth=2)
+    if add_RR: ax.plot(xs, risk_ratio, color='tab:red', label='Risk ratio', linewidth=2)
     #ax2.set_ylabel('Risk ratio', color='tab:red')
     #ax2.tick_params(axis='y', labelcolor='tab:red')
     
@@ -72,9 +75,9 @@ if __name__=="__main__":
     dir2 = "-2425/time_series/_19-frac_points_0.5/"
 
     
-    regions = ["Amazon", "Pantanal", "LA", "Congo"]
+    regions = ["Amazon", "Pantanal", "LA", "Congo"] #
     region_names = ['Northeast Amazonia', 'Pantanal and Chiquitano', 
-                    'Southern California','Congo Basin']
+                    'Southern California','Congo Basin'] #
     obs_dir = 'data/data/driving_data2425//'
     obs_file = 'burnt_area_data.csv'
     
@@ -95,13 +98,15 @@ if __name__=="__main__":
     dir1 = "outputs/outputs_scratch/ConFLAME_isimip_attribution/ConFLAME_"
     dir2 = "-2425/time_series/_15-frac_points_0.5/"
     dir2 = "-2425/time_series/_16-frac_points_0.5/"
+    #dir1 = "outputs/outputs_scratch/ConFLAME_isimip_attribution-2324/"
+    #dir1 = "outputs/outputs_scratch/ConFLAME_isimip_attribution-2324-noTree/"
     dir1 = "outputs/outputs_scratch/ConFLAME_isimip_attribution-LUC2/"
-    
     plot_attribution_scatter(regions, "attribution_metrics_isimip_2425",
                              dir1 = dir1, dir2 = dir2, 
                              counterfactual_name = 'counterfactual',
                              obs_dir = obs_dir, obs_file = obs_file, 
-                             plot_FUN = effect_ratio_and_rr_over_range, all_mod_years = True)
+                             plot_FUN = effect_ratio_and_rr_over_range, 
+                             add_RR = False, all_mod_years = True)
 
 
     plot_attribution_scatter(regions,  "attribution_metrics_isimip_human_2425",
@@ -110,6 +115,7 @@ if __name__=="__main__":
                              factual_name = "counterfactual", 
                              counterfactual_name = "early_industrial",
                              plot_FUN = effect_ratio_and_rr_over_range, 
+                             add_RR = False,
                              all_mod_years = True) 
 
     plot_attribution_scatter(regions, 
@@ -119,4 +125,5 @@ if __name__=="__main__":
                              factual_name = "factual", 
                              counterfactual_name = "early_industrial",
                              all_mod_years = True,
+                             add_RR = False,
                              plot_FUN = effect_ratio_and_rr_over_range)  
