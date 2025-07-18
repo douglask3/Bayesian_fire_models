@@ -6,6 +6,9 @@ from pdb import set_trace
 # Load the cube
 def work_out_change(dir, file_in, file_out):
     
+    #if "counterclim" in dir and file_in == 'debiased_tree_cover_jules-es.nc':
+    #    set_trace()
+
     if "_loss_" in file_out and "counterclim" in dir:
         filename = dir.replace('counterclim', 'obsclim') + file_in
     else:
