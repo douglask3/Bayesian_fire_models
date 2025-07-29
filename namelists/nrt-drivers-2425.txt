@@ -1,5 +1,5 @@
 ## model info
-regions:: ['Congo', 'LA',  'Amazon', 'Pantanal']#,  'Alberta', 'NEIndia']
+regions:: ['Amazon', 'Pantanal', 'Congo', 'LA', 'Alberta', 'NEIndia']
 model_title::  'ConFLAME_nrt-drivers9/<<region>>-2425'
 
 ## input data paths and filenames
