@@ -55,18 +55,21 @@ def effect_ratio_and_rr_over_range(factual_flat, counterfactual_flat,
     #ax.tick_params(axis='y')#, labelcolor='tab:blue')
     ax.grid(alpha=0.3)
     rrobs =  scale2upper1_inverse(risk_ratio[np.argmin(np.abs(xs - obs))])
-    ax.text(0.09, 0.09, "Risk Ratio of event:" + str(np.round(rrobs, 1)), 
-            transform=ax.transAxes)
+    
     # Twin axis for risk ratio
     #ax2 = ax.twinx()
-    if add_RR: ax.plot(xs, risk_ratio, color='tab:red', label='Risk ratio', linewidth=2)
+    if add_RR: 
+        ax.plot(xs, risk_ratio, color='tab:red', label='Risk ratio', linewidth=2)
+        ax.text(0.09, 0.33, "Risk Ratio of event:" + str(np.round(rrobs, 1)), 
+            transform=ax.transAxes)
     #ax2.set_ylabel('Risk ratio', color='tab:red')
     #ax2.tick_params(axis='y', labelcolor='tab:red')
     
     #scale2upper1_axis(ax2)
     # Legends
-    if plot_name == 'Congo Basin':
-        ax.legend(loc='lower right')
+    
+    if plot_name == 'Northeast Amazonia':
+        ax.legend(loc='lower right', ncol = 2)
     #ax2.legend(loc='lower right')
 
 
