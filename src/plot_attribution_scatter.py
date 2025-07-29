@@ -298,7 +298,7 @@ def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = N
     mask = factual_flat > obs
     if (np.sum(mask) < 10):
         mask = factual_flat > np.sort(factual_flat)[-10]
-    percentile = [5, 50, 95]
+    percentile = [5, 25, 50, 75, 95]
     if np.sum(mask) == 0: 
         return
     
@@ -344,12 +344,16 @@ def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = N
               transform=ax.transAxes, axes = ax)
     
     for i in range(len(percentile_text)):
-        ax.text(0.3 + i*0.18, 0.2, percentile_text[i], transform=ax.transAxes)
-    ax.text(0.3, 0.09, "Risk Ratio:", transform=ax.transAxes)
-    ax.text(0.3, 0.02, rr, transform=ax.transAxes)
+        ax.text(0.3 + i*0.15, 0.2, percentile_text[i], transform=ax.transAxes)
+    #ax.text(0.3, 0.09, "Risk Ratio:", transform=ax.transAxes)
+    #ax.text(0.3, 0.02, rr, transform=ax.transAxes)
     
     ax.set_xlabel(" ")
-    ax.set_ylabel(plot_name)
+    
+    if len(regions) > 1:
+        ax.set_ylabel(plot_name)    
+    else:
+        ax.set_ylabel("Amplification Factor") 
     ax.grid(True, which='both', linestyle='--', linewidth=0.5)
 
     return effect_ratio[mask]
@@ -486,10 +490,14 @@ def plot_attribution_scatter(regions, figname, plot_FUN = plot_fact_vs_ratio,
                             *args, **kw))
         out.append(outi)
     
-    fig.text(0.05, 0.5, "Amplification Factor", ha='right', va='center', fontsize=12, rotation=90)
+    if len(regions) > 1:
+        fig.text(0.05, 0.5, "Amplification Factor", ha='right', va='center', 
+                 fontsize=12, rotation=90)
+        fig.text(0.5, 0.09, "Factual burned area (%)", ha='center', va='top', fontsize=12)
+    else:
+        fig.text(0.5, 0.04, "Factual burned area (%)", ha='center', va='top', fontsize=12)
     fig.text(0.33, 0.9, "Entire region", ha='center', va='bottom', fontsize=14)
     fig.text(0.73, 0.9, "High burnt areas", ha='center', va='bottom', fontsize=14)
-    fig.text(0.5, 0.09, "Factual burned area (%)", ha='center', va='top', fontsize=12)
     
     plt.savefig('figs/' + figname + ".png")
     return out
@@ -549,7 +557,7 @@ if __name__=="__main__":
     dir1 = "outputs/outputs_scratch/ConFLAME_nrt-attribution9/"
     dir2 = "-2425/time_series/_19-frac_points_0.5/"
 
-    regions = ["Amazon", "Pantanal",  "LA", "Congo"]
+    regions = ["Amazon"]#, "Pantanal",  "LA", "Congo"]
     region_names = ['Northeast Amazonia', 'Pantanal and Chiquitano', 
                     'Southern California','Congo Basin']
     #retgions = {key: regions_info[key] for key in region_names if key in regions_info}
