@@ -25,9 +25,13 @@ def load_ensemble(base_dir, run_dir, exp):
     file_paths = sorted(glob.glob(os.path.join(directory, "sample-pred*.nc")))
     skips = max([1, round(len(file_paths)/max_smaples)])
     file_paths = file_paths[::skips]
-    
-    cubes = iris.cube.CubeList([iris.load_cube(fp) for fp in file_paths])
-    return cubes.merge_cube()  # Merge along realization dimension if possible
+    cubes = [iris.load_cube(fp) for fp in file_paths]
+    try:
+        cubes = iris.cube.CubeList(cubes)
+        cubes = cubes.merge_cube()
+    except:
+        set_trace()
+    return cubes  # Merge along realization dimension if possible
 
 # Prepare figure
 
@@ -62,9 +66,11 @@ def plot_map(cube, title, cmap, levels, ax):
 from pdb import set_trace
 # Define the base directory
 base_dir = "outputs/outputs_scratch/ConFLAME_nrt-attribution9/Amazon-2425//samples/_19-frac_points_0.5//"
+base_dir = "outputs/outputs_scratch/ConFLAME_isimip_attribution-2324-noTree/Amazon-2425/samples/_16-frac_points_0.5/"
+
 run_dirs = ["factual-", "counterfactual-"] 
 # List of experiment subdirectories
-experiments = ["control", "Evaluate", "Standard_0", "Standard_1", "Standard_2", "Standard_3" , "Standard_4"]
+experiments = ["control", "Evaluate", "Standard_0", "Standard_1", "Standard_3"]
 
 same_levels = False
 max_smaples = 100
