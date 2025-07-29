@@ -43,7 +43,7 @@ def open_netcdf_and_find_clim(filename):
     last_year_constraint = iris.Constraint(
         time=lambda cell: last_date.replace(year=last_date.year - 1) <= cell.point <= last_date
     )
-    
+    set_trace()
     last_year_cube = cube.extract(last_year_constraint)[1:]
     
     anomaly = last_year_cube.copy()
@@ -62,13 +62,19 @@ def load_shapefile(shapefile_path):
 def plot_all_climatology(climatology, #title="Annual Mean Burnt Area per Month",
                          fig_id="burnt_area_climatology", cmap='Oranges', 
                          c_bins = [0, 0.1, 0.5, 1, 2, 5, 10], extend = 'max',
-                         Region_title = '', sub_months = None):
+                         Region_title = '', sub_months = None, extend_to_18 = False):
     
     title = "Burnt Area Anomaly "
     if sub_months is None:
-        title += "Mar 24 - Feb 25"
-        nrow = 3
-        ncol = 4
+        if extend_to_18:
+            title += "Sep 24 - Feb 25"
+            nrow = 5
+            ncol = 3
+            
+        else:
+            title += "Mar 24 - Feb 25"
+            nrow = 3
+            ncol = 4
     else:
         try:
             title += calendar.month_abbr[sub_months[0] + 1]
@@ -164,9 +170,10 @@ def plot_region(filename, shapefile_path, cmap, dcmap, levels, dlevels, *args, *
                                                     N = len(dlevels)-1)  
     custom_cmap.set_under(dcmap[0]) 
     custom_cmap.set_over(dcmap[-1])
+    
     plot_all_climatology(anomaly, "burnt_area_anaomoly",
                      cmap = custom_cmap, c_bins = dlevels,
-                     extend='both', *args, **kw)
+                     extend='both', extend_to_18 = True, *args, **kw)
 
 # Discrete colormap with same number of levels
 SoW_gradient_red = [
