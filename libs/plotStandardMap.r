@@ -6,7 +6,7 @@ library(plotrix)
 library(mapdata)
 library(mapplots)
 
-library(rgdal)
+#library(rgdal)
 
 #SA_ste <- readOGR(dsn = "data/South_America", layer = "South_America")
 #rivers <- readOGR(dsn = "data/majorrivers_0_0", layer = "MajorRivers")

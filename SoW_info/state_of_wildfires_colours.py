@@ -6,8 +6,10 @@ from pdb import set_trace
 # Each key in the dictionary represents a theme, and the corresponding value is a list of hex color codes.
 
 SoW_cmap = {
+    "categorial": ["#ee007f", "#0096a1", "#7a44ff", "#e98400", "#91c4ff", "#b50000", "#f597b0", "#c4b0ff"],
     "gradient_hues": ["#cfe9ff", "#fc6", "#f68373", "#c7384e", "#862976"],
-    
+    "gradient_reversed_hues": ["#ffe1e1", "#ffb380", "#f8c99c", "#7497d9", "#2670b2"],
+    "gredient_inverted_hues": ["#ffcfcf", "#6cf", "#73f6dc", "#38c77b", "#278662"],
     "gradient_hues_extended": [  # Extended version of gradient_hues with smoother transitions
         "#cfe9ff",   # very light blue
         "#fbc585",   # lighter orange

@@ -9,6 +9,10 @@ import matplotlib.pyplot as plt
 
 import datetime
 
+import sys
+sys.path.append('libs/')
+from climtatology_difference import *
+
 try:
     from concurrent.futures import ProcessPoolExecutor, as_completed
     from multiprocessing import get_context
@@ -47,6 +51,96 @@ def Potential_limitation(training_namelist, namelist,
                      name + '/Potential'+ str(controlID), extra_params, hyper = False,
                      *args, **kws)
 
+
+
+def Without_limitation(training_namelist, namelist,
+                        controlID, name, control_direction, *args, **kws):   
+    control_Directioni = np.array(control_direction.copy())
+    control_Directioni[controlID] = 0.0
+    
+    extra_params = {"control_Direction": control_Directioni}
+    
+    return call_eval(training_namelist, namelist,
+                     name + '/Without'+ str(controlID), extra_params, hyper = False,
+                     *args, **kws)
+
+def Potential_limitation(training_namelist, namelist,
+                        controlID, name, control_direction, *args, **kws):   
+    Others = Without_limitation(training_namelist, namelist,
+                              controlID, name, control_direction,
+                              *args, **kws)[0]   
+    Control = call_eval(training_namelist, namelist,
+                     name + '/control', hyper = False,
+                     *args, **kws)
+
+    def for_realization(r):
+        ens_no = Control.coord('realization').points[r]
+        filename = info['dir_outputs'] + '/samples/' + \
+                   info['filename_out'] + '/' + name + \
+                   '/Potential_' + str(controlID) + '/'
+        makeDir(filename) 
+        filename = filename  + 'sample-pred' + str(ens_no) + '.nc'
+        if os.path.exists(filename):
+            return iris.load_cube(filename)
+        
+        out = Other[r] - Control[r]
+        iris.save(out, filename)
+        return out
+    
+    outs = [for_realization(r) for r in range(Control.shape[0])]
+    outs = iris.cube.CubeList(outs).merge_cube()
+    
+    return  [outs]
+
+def Potential_climateology_limitation(training_namelist, namelist,
+                        controlID, name, control_direction, *args, **kws):   
+ 
+    info = read_variables_from_namelist(training_namelist) 
+    Control = Standard_limitation(training_namelist, namelist,
+                              controlID, name, control_direction,
+                              *args, **kws)[0]   
+
+    control_Directioni = np.array(control_direction.copy())
+    control_Directioni[controlID] = 0.0
+    
+    extra_params = {"control_Direction": control_Directioni}
+    
+    Others = Without_limitation(training_namelist, namelist,
+                              controlID, name, control_direction,
+                              *args, **kws)[0]   
+
+    def for_realization(r):
+        ens_no = Control.coord('realization').points[r]
+        filename = info['dir_outputs'] + '/samples/' + \
+                   info['filename_out'] + '/' + name + \
+                   '/Potential_climatology' + str(controlID) + '/'
+        makeDir(filename) 
+        filename = filename  + 'sample-pred' + str(ens_no) + '.nc'
+        if os.path.exists(filename):
+            return iris.load_cube(filename)
+
+        anomaly_cube = Control[r].copy()
+        Climateology = anomaly_cube.aggregated_by('month', iris.analysis.MEAN)
+        for month in range(1, 13):
+            # Make a mask for the current month
+            month_mask = anomaly_cube.coord('month').points == month
+            
+            # Get climatology slice for this month
+            clim_slice = Climateology.extract(iris.Constraint(month=month))
+            
+            # Subtract climatology from all matching time steps
+            anomaly_cube.data[month_mask, :] -= clim_slice.data[None, :, :]
+     
+        out = anomaly_cube * Others[r]
+        iris.save(out, filename)
+        return out
+    
+    outs = [for_realization(r) for r in range(Control.shape[0])]
+    outs = iris.cube.CubeList(outs).merge_cube()
+    
+    return [outs]
+
+
 def above_percentile_mean(cube, cube_assess = None, percentile = 0.95):
     if cube_assess is None: cube_assess = cube
     area_cube = iris.analysis.cartography.area_weights(cube_assess)
@@ -72,22 +166,19 @@ def above_percentile_mean(cube, cube_assess = None, percentile = 0.95):
     mask = (cube_assess.data >= threshold_value) & (~cube_assess.data.mask)
     return np.sum(cube.data[mask] * area_data_np[mask]) / np.sum(area_data_np[mask])
 
-    
+  
 def make_time_series(cube, name, output_path, percentile = None, cube_assess = None, 
                      grab_old = False, *args, **kw):
     print("finding " + str(percentile) + " for " + name + "\n\t into:" + output_path)
     print(datetime.datetime.now())
     if percentile is None or percentile == 0.0:        
         out_dir = output_path + '/mean/'
-        percentile_name = '0.0' 
     else:
         out_dir = output_path + '/pc-' + str(percentile) + '/'
-        percentile_name = str(percentile)
     
-    out_file_points = out_dir + 'points-' + name + '.csv'
-    out_file_TS = output_path + '/time_series-' + name + '-' + percentile_name + '.csv'
-    if os.path.isfile(out_file_TS) and os.path.isfile(out_file_points) and grab_old:    
-        return out_file_TS, out_file_points
+    lock_file = out_dir + '.txt'
+    if os.path.isfile(lock_file) and grab_old:    
+        return out_dir
     
     if cube_assess is None: cube_assess = cube
     cube = add_bounds(cube)
@@ -112,22 +203,35 @@ def make_time_series(cube, name, output_path, percentile = None, cube_assess = N
         area_weighted_mean = np.array([percentile_for_relization(cube, i) \
                                       for i in range(cube.shape[0])])      
     
+    climatology, anomaly, ratio = climtatology_difference(area_weighted_mean)
     makeDir(out_dir)
     def output_cube_to_csv(data, realizations, extra_dim,  filename): 
-        times = cube.coord('time').units.num2date(cube.coord('time').points)
+        times = cube.coord('time').units.num2date(cube.coord('time').points)[0:data.shape[1]]
         df = pd.DataFrame(data, index=realizations, columns=[t.isoformat() for t in times])
         df.index.name = extra_dim
         df.to_csv(filename)
         #np.savetxt(out_file_points, area_weighted_mean.data, delimiter=',')
-    output_cube_to_csv(area_weighted_mean, cube.coord('realization').points, 
-                       'realization', out_file_points)
-
-    percentiles = [5, 10, 25, 75, 90, 95]
-    TS = np.nanpercentile(area_weighted_mean,  percentiles, axis = 0)
     
-    output_cube_to_csv(TS, percentiles,  'percentiles', out_file_TS)
 
-    return out_file_TS, out_file_points
+    percentiles = [5, 10, 25, 50, 75, 90, 95]
+
+    def make_output_TS(data, dir = ''):
+        
+        out_file_points = out_dir + '/members/' + dir + '/'
+        out_file_TS = out_dir + '/percentles/' + dir + '/' 
+        makeDir(out_file_points)
+        makeDir(out_file_TS)
+        output_cube_to_csv(data, cube.coord('realization').points, 
+                       'realization', out_file_points  + name + '.csv')
+        TS = np.nanpercentile(data, percentiles, axis = 0)
+        output_cube_to_csv(TS, percentiles,  'percentiles', out_file_TS  + name + '.csv')
+    
+    make_output_TS(area_weighted_mean, 'absolute')
+    make_output_TS(climatology, 'climatology')
+    make_output_TS(anomaly, 'anomaly')
+    make_output_TS(ratio, 'ratio')
+    
+    return out_dir
 
 def make_both_time_series(percentiles, *args, **kw):
     if percentiles is None: return None
@@ -183,6 +287,8 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
             limitation_types_funs += [Standard_limitation]
         if 'potential' in limitation_types:
             limitation_types_funs += [Potential_limitation]
+        if 'potential_climateology' in limitation_types:
+            limitation_types_funs += [Potential_climateology_limitation]
     
         for ltype, FUN in zip(limitation_types,limitation_types_funs):
             limitation = [FUN(training_namelist, namelist, i, 
@@ -232,7 +338,7 @@ def run_ConFire(namelist):
     if subset_function_args_eval is None: subset_function_args_eval =subset_function_args 
     regions = select_from_info('regions')
     time_series_percentiles = select_from_info('time_series_percentiles')
-    
+     
     def run_for_regions(region = None):
         
         if region is None:
@@ -248,9 +354,9 @@ def run_ConFire(namelist):
                 else:
                     ssa['months_of_year'] = run_info['region_months'][region]
                 return ssa
-            
-            set_region_months(subset_function_args)
-            set_region_months(subset_function_args_eval)
+            if select_from_info('region_mnths') is not None:
+                set_region_months(subset_function_args)
+                set_region_months(subset_function_args_eval)
         model_title = run_info['model_title'].replace('<<region>>', region)
         dir_training = run_info['dir_training'].replace('<<region>>', region)
         dir_projecting = run_info['dir_projecting'].replace('<<region>>', region)
@@ -348,8 +454,6 @@ if __name__=="__main__":
         print("Usage: python run_ConFire.py <namelist_path>")
         sys.exit(1)
     namelist = sys.argv[1]
-    #namelist = 'namelists/isimip2425-test.txt'
-    #namelist = 'namelists/nrt2425.txt'
-    #namelist = "namelists/ar7_clean.txt"
+
     run_ConFire(namelist)
     

@@ -154,6 +154,7 @@ def sub_year_range(cube, year_range):
     Returns:
         cube of just years between to years provided.
     """
+    if len(year_range) == 1: year_range = [year_range[0], year_range[0]]
     
     try:
         icc.add_year(cube, 'time')
@@ -178,11 +179,19 @@ def sub_year_months(cube, months_of_year):
         icc.add_month_number(cube, 'time')
     except:
         pass  
-           
-    months_of_year = np.array(months_of_year)+1
+    if not isinstance(months_of_year, list): months_of_year = [months_of_year]
+    if isinstance(months_of_year[0], str):
+        months_of_year = np.array([int(month) for month in months_of_year])
+    else:
+        months_of_year = np.array(months_of_year)+1
     season = iris.Constraint(month_number = lambda cell, mnths = months_of_year: \
                              np.any(np.abs(mnths - cell[0])<0.5))
     return cube.extract(season)
+
+def constrain_to_time(cube, years, months_of_year):
+    cube = sub_year_range(cube, years)
+    cube = sub_year_months(cube, months_of_year)
+    return(cube)
 
 def constrain_cube_by_cube_and_numericIDs(cube, regions, region):
     """constrains a cube to region identifies in 'mask'

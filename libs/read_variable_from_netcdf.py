@@ -9,6 +9,20 @@ from constrain_cubes_standard import *
 from scipy.interpolate import RegularGridInterpolator
 import datetime
 
+from cf_units import Unit
+
+def find_most_likely_cube(filename):    
+    cubes = iris.load(filename)
+    
+    # Filter cubes that have both 'latitude' and 'longitude' coordinates
+    for cube in cubes:
+        coord_names = [coord.name() for coord in cube.coords()]
+        if 'latitude' in coord_names and 'longitude' in coord_names:
+            data_cube = cube
+            break  # Stop after finding the first matching cube
+    
+    return(data_cube)
+
 def read_variable_from_netcdf_from_dir(dir, filename, find_no_files = False, ens_no = None):
     print("Opening:")
     print(filename)
@@ -28,7 +42,7 @@ def read_variable_from_netcdf_from_dir(dir, filename, find_no_files = False, ens
 
     if filename[-3:] != '.nc': 
         filename = filename + '.nc'
-
+    
     try:
         if ens_no is not None and len(files) > 1:
             try:    
@@ -43,8 +57,54 @@ def read_variable_from_netcdf_from_dir(dir, filename, find_no_files = False, ens
         try:
             dataset = iris.load_cube(dir + filename)
         except:
-            dataset = None
+            try:
+                dataset = find_most_likely_cube(dir + filename)
+                
+                print("WARNING!: mutliple cubes in file.")
+                print("\t returning first with lats and lons")
+                
+            except:
+                dataset = None
     return dataset
+
+def convert_time_to_standard(time_coord, calendar = 'proleptic_gregorian'):
+    # Get the origin from the existing time coord
+    origin = time_coord.units.origin  # e.g. 'days since 1850-01-01'
+
+    # Create a new Unit with the desired calendar
+    new_units = Unit(origin, calendar = calendar)  # or 'proleptic_gregorian'
+
+    # Convert numeric time to datetimes using the old unit
+    datetimes = time_coord.units.num2date(time_coord.points)
+
+    # Assign new units
+    time_coord.units = new_units
+
+    # Convert datetime back to numeric time using new calendar
+    time_coord.points = new_units.date2num(datetimes)
+    return time_coord
+
+def interpolate_time(dataset, time_points):    
+    # Make a copy of your target time points
+    target_time = time_points.copy()
+    
+    if target_time.units != dataset.coord('time').units:
+        if target_time.units.calendar != dataset.coord('time').units.calendar:
+            target_time = convert_time_to_standard(target_time, 
+                                                   dataset.coord('time').units.calendar)
+        
+        # Get the time coordinate from the dataset
+        dataset_time = dataset.coord('time')
+    
+        # Convert target_time to the same units as dataset_time
+        target_time.convert_units(dataset_time.units)
+    
+    
+    # Now you can safely interpolate 
+    dataset_interp = dataset.interpolate([('time', target_time.points)], 
+                                         iris.analysis.Linear())
+
+    return dataset_interp
 
 def read_variable_from_netcdf(filename, dir = '', subset_function = None, 
                               make_flat = False, units = None, 
@@ -73,55 +133,55 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
     Returns:
         Y - if make_flat, a numpy vector of the target variable, otherwise returns iris cube
     """
-   
+    dir0 = dir
     dir = dir.split('||')
     i = 0
     dataset = None
     
-    while i <= len(dir) and dataset is None:
+    while i < len(dir) and dataset is None:
         dataset = read_variable_from_netcdf_from_dir(dir[i], filename, find_no_files,
                                                      ens_no = ens_no)
         i += 1
-    
+
     if dataset is None:
         print("==============\nERROR!")
         print("can't open data.")
-        print("Check directory (''" + dir + "''), filename (''" + filename + \
+        print("Check directory (''" + dir0 + "''), filename (''" + filename + \
               "'') or file format")
         print("==============")
-        set_trace()
     if find_no_files: return dataset
     coord_names = [coord.name() for coord in dataset.coords()]
     if time_points is not None:     
         if 'time' in coord_names:
-            dataset = dataset.interpolate([('time', time_points)], iris.analysis.Linear())
+            dataset = interpolate_time(dataset, time_points)
         else:   
             def addTime(time_point):
-                time = iris.coords.DimCoord(np.array([time_point]), standard_name='time',
-                                            units = 'days since 1661-01-01 00:00:00')
+                time = iris.coords.DimCoord(np.array([time_point.points]), standard_name='time',
+                                            units = time_points.units)
                 dataset_cp = dataset.copy()
                 dataset_cp.add_aux_coord(time)
                 return dataset_cp
 
-            dataset_time = [addTime(time_point) for time_point in time_points]
+            dataset_time = [addTime(time_point) for time_point in time_points.points]
             dataset = iris.cube.CubeList(dataset_time).merge_cube()
-            dataset0 = dataset.copy()
     if extent is not None:
         dataset = dataset.regrid(extent, iris.analysis.Linear())
-        dataset0 = dataset.copy()
     
     if units is not None: dataset.units = units
     if subset_function is not None:
         if isinstance(subset_function, list):
-            for FUN, args in zip(subset_function, subset_function_args):
+            for FUN, sfargs in zip(subset_function, subset_function_args):
                 try:    
-                    dataset = FUN(dataset, **args)
+                    dataset = FUN(dataset, **sfargs)
                 except:
+                    set_trace()
                     print("Warning! function: " + FUN.__name__ + " not applied to file: " + \
                           dir + filename)
         else:      
             dataset = subset_function(dataset, **subset_function_args) 
-    if return_time_points: time_points = dataset.coord('time').points 
+    if return_time_points: 
+        time_points = dataset.coord('time')
+        
     
     if return_extent:
         extent = dataset[0]

@@ -105,7 +105,8 @@ class MaxEnt(object):
         #logp_global = mean_y * tt.log(mean_fx) + (1 - mean_y) * tt.log(1 - mean_fx)
         return prob + logp_global/Ncells #tt.sum(prob)
     
-    def define_qSpread_param(self, params, param_names, inference = True, sigma = None):
+    def define_qSpread_param(self, params, param_names, inference = True, sigma = None,
+                             size = 1):
         #set_trace()
         if any_in(param_names, 'qSpread_mu'):
             mu = element_ref(params, param_names, 'qSpread_mu')[0]
@@ -117,7 +118,7 @@ class MaxEnt(object):
                 if inference:
                     qSpread = pm.LogNormal("qSpread", mu = mu, sigma = sigma)
                 else:
-                    qSpread = np.random.lognormal(mu, sigma, 1)
+                    qSpread = np.random.lognormal(mu, sigma, size)
         elif any_in(param_names, 'qSpread'):
             qSpread =  element_ref(params, param_names, 'qSpread')[0]
         else:
@@ -209,9 +210,9 @@ class MaxEnt(object):
         #return mod
         param_names = params.keys()
         params = params.values()
-        qSpread = self.define_qSpread_param(params, param_names, False)
+        qSpread = self.define_qSpread_param(params, param_names, False, size = len(mod))
         detection_epslion = self.define_detection_efficency_param(params, param_names, False)
-        #set_trace()
+        
         return overlap_inverse(mod, qSpread)
     
     def sample_given_(self, Y, X, *args, **kw):
