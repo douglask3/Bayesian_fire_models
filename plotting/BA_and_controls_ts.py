@@ -11,12 +11,14 @@ sys.path.append('SoW_info/')
 from state_of_wildfires_colours  import SoW_cmap
 from state_of_wildfires_region_info  import get_region_info
 from plot_attribution_scatter import *
+from datetime import datetime
 
 # --- Load data ---
 # Model ensemble data
 
 def plot_anaomly_vs_obs(ensemble_matched, obs_ratio_matched, common_times, scale, unit, ax, 
-                        color = '#b50000', last12 = True, add_xticks = False):
+                        color = '#b50000', start_date = None, end_date = None,
+                        last12 = True, add_xticks = False):
     # Compute percentiles across the ensemble members
     if scale is not None:
         ensemble_matched = ensemble_matched.mul(scale, axis = 0)
@@ -34,7 +36,7 @@ def plot_anaomly_vs_obs(ensemble_matched, obs_ratio_matched, common_times, scale
     if obs_ratio_matched is not None:
         if unit == 'ratio':
             obs_ratio_matched = scale2upper1(obs_ratio_matched)
-        ax.plot(common_times, obs_ratio_matched, color='blue', lw=2, label='Observed')#, marker='o'
+        ax.plot(common_times, obs_ratio_matched, color='blue', lw=0.5, label='Observed')#, marker='o'
     if unit == 'ratio':
         ax.axhline(0.5, color='k', linestyle='--')#, label='No Change (Ratio = 1)')
     ax.fill_between(common_times, pcs[0], pcs[-1], color=color, alpha=0.2, label='10-90% range')
@@ -45,32 +47,38 @@ def plot_anaomly_vs_obs(ensemble_matched, obs_ratio_matched, common_times, scale
 
     # Plot observations
     if obs_ratio_matched is not None:
-        ax.plot(common_times, obs_ratio_matched, color='blue', lw=1)#, marker='o'
-    if last12:
-        end_date = common_times[-1]
-        # Get start date 1 year before
-        start_date = end_date - pd.DateOffset(years=2)
+        ax.plot(common_times, obs_ratio_matched, color='blue', lw=0.5, linestyle='--')#, marker='o'
     
+    if end_date is None:
+        end_date = common_times[-1]
+    if start_date is None:
+        if last12:
+            set_trace()
+            # Get start date 1 year before
+            start_date = end_date - pd.DateOffset(years=2)
+        elif start_date is None:
+            start_date = common_times[0]
+        
     # Set x-axis limits
         
-        ax.set_xlim(start_date, end_date)
+    ax.set_xlim(start_date, end_date)
         
-        mask = (common_times >= start_date) & (common_times <= end_date)
+    mask = (common_times >= start_date) & (common_times <= end_date)
     
-        # Get model bounds over that period
-        ymin = np.min(pcs[0][mask])
-        ymax = np.max(pcs[-1][mask])
-        
-        if obs_ratio_matched is not None:
-            # Also check obs if you want to include that in the range
-            obs_min = np.min(obs_ratio_matched[mask])
-            obs_max = np.max(obs_ratio_matched[mask])
+    # Get model bounds over that period
+    ymin = np.min(pcs[0][mask])
+    ymax = np.max(pcs[-1][mask])
     
-            # Combine
-            ymin = min(ymin, obs_min)
-            ymax = max(ymax, obs_max)
+    if obs_ratio_matched is not None:
+        # Also check obs if you want to include that in the range
+        obs_min = np.min(obs_ratio_matched[mask])
+        obs_max = np.max(obs_ratio_matched[mask])
+    
+        # Combine
+        ymin = min(ymin, obs_min)
+        ymax = max(ymax, obs_max)
         
-        ax.set_ylim(ymin, ymax)
+    ax.set_ylim(ymin, ymax)
     #set_trace()
     if unit == 'ratio':
         scale2upper1_axis(ax, ylim = [min(ymin, 1-ymax)])
@@ -82,7 +90,7 @@ def plot_anaomly_vs_obs(ensemble_matched, obs_ratio_matched, common_times, scale
     return ensemble_matched
 
 
-def for_region(dir1, dir2, obs_dir, obs_var, region, region_size,
+def for_region(dir1, dir2, obs_dir, obs_var, region, region_date, region_size,
                controls, contol_names, unit, axes):
     mod_dir = dir1 + region + dir2
     obs_file = obs_dir + region + "/burnt_area_data.csv"
@@ -108,7 +116,10 @@ def for_region(dir1, dir2, obs_dir, obs_var, region, region_size,
     ensemble_matched = ensemble_df[common_times]
     obs_ratio_matched = obs_df.loc[common_times, obs_var]
     if unit == 'anomaly' or unit == 'absolute':
-        obs_ratio_matched = region_size * obs_ratio_matched/100.0
+        try:
+            obs_ratio_matched = region_size * obs_ratio_matched/100.0
+        except:         
+            set_trace()
         scale = np.mean(np.abs(ensemble_matched), axis = 1)
         scale = np.mean(np.abs(obs_ratio_matched))/scale
 
@@ -116,7 +127,8 @@ def for_region(dir1, dir2, obs_dir, obs_var, region, region_size,
         scale = None
         region_size = 1.0
     
-    dfp = plot_anaomly_vs_obs(ensemble_matched, obs_ratio_matched, common_times, scale, unit, axes[0])
+    dfp = plot_anaomly_vs_obs(ensemble_matched, obs_ratio_matched, common_times, scale, unit, 
+                              axes[0], start_date = region_date[0], end_date = region_date[1])
     file_out = mod_dir + "/" + unit + "/Burnt_Area-rescaled4plot.csv"
     dfp.to_csv(file_out)
     percentiles = [10, 25, 50, 75, 90]
@@ -166,7 +178,8 @@ def for_region(dir1, dir2, obs_dir, obs_var, region, region_size,
         axi = i + 1
         add_xticks = axi == (len(axes)-1)
         dfp = plot_anaomly_vs_obs(df , None, common_times, scale, unit, 
-                            axes[axi], colors[i], add_xticks = add_xticks)
+                            axes[axi], colors[i], add_xticks = add_xticks,
+                            start_date = region_date[0], end_date = region_date[1])
         file_out = mod_dir + "/" + unit + "/" + controls[i][:-4] + '-rescaled4plot.csv'
         
         dfp.to_csv(file_out)
@@ -195,6 +208,10 @@ obs_dir = "data/data/driving_data2425/"
 regions = ['Amazon', 'Pantanal', 'LA',  'Congo']
 region_names = ['Northeast Amazonia', 'Pantanal and Chiquitano', 
                     'Southern California','Congo Basin']
+region_dates = [[pd.Timestamp(datetime(2002, 1, 15)), pd.Timestamp(datetime(2025, 3, 15))],
+              [pd.Timestamp(datetime(2002, 1, 15)), pd.Timestamp(datetime(2025, 3, 15))],
+              [pd.Timestamp(datetime(2002, 1, 15)), pd.Timestamp(datetime(2025, 3, 15))],
+              [pd.Timestamp(datetime(2002, 1, 15)), pd.Timestamp(datetime(2025, 3, 15))]]
 regions = ['Amazon', 'Pantanal', 'LA',  'Congo']
 region_sizes = [3592.46844, 1063.64005, 95.11927, 2678.12835]
 controls = ['standard-Fuel.csv', 'standard-Moisture.csv', 'standard-Weather.csv', 'standard-Wind.csv', 'standard-Ignition.csv', 'standard-Suppression.csv']
@@ -205,7 +222,7 @@ contol_names = ['Fuel', 'Moisture', 'Weather', 'Wind', 'Ignition', 'Suppression'
 colors = ['#e98400', '#e98400', '#ee007f', '#ee007f', '#0096a1', '#0096a1']
 
 def run_regions_controls(regions, controls, contol_names, unit = 'ratio'):
-    fig, axes = plt.subplots(len(controls) + 1, len(regions), figsize=(4*len(regions), 1.53*(len(controls) + 1)))
+    fig, axes = plt.subplots(len(controls) + 1, len(regions), figsize=(6*len(regions), 1.53*(len(controls) + 1)))
     
     for i, region in enumerate(regions):
         print(i)
@@ -213,8 +230,8 @@ def run_regions_controls(regions, controls, contol_names, unit = 'ratio'):
             axesi = axes
         else:
             axesi = axes[:, i] 
-        for_region(dir1, dir2[0], obs_dir, 'mean_burnt_area_' + unit, region, region_sizes[i],
-                   controls, contol_names, unit, axesi)
+        for_region(dir1, dir2[1], obs_dir, 'mean_burnt_area_' + unit, region, region_dates[i],
+                   region_sizes[i], controls, contol_names, unit, axesi)
         
         if len(regions) == 1:
             axesi[0].set_title('Burned Area Anomoly')
@@ -238,7 +255,9 @@ def run_regions_controls(regions, controls, contol_names, unit = 'ratio'):
                 '-' + unit + '.pdf')
 #plt.show()
 #set_trace()
+run_regions_controls(regions, controls, contol_names, 'ratio')
 run_regions_controls(regions, controls, contol_names, 'anomaly')
+run_regions_controls(regions, controls, contol_names, 'absolute')
 controls = ['potential_climateology-Fuel-Moisture.csv', 'potential_climateology-Weather-Wind.csv', 'potential_climateology-Suppression-Ignition.csv']
 contol_names = ['Fuel', 'Weather', 'Ignitions/Humans']
 colors = ['#e98400', '#0096a1','#ee007f']
