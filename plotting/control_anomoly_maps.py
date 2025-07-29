@@ -177,15 +177,15 @@ def get_positive_count_layer(anom_list, threshold=0.1):
     count_cube.data = np.ma.masked_array(data, mask=cube.data.mask)
     return count_cube
 
-def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 100, 
+def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 5, 
                   diff_type = 'anomoly', sow_controls = False, *args, **kw):
 
     rdir = region_info['dir']
     year = region_info['years'][0]
     mnths = region_info['mnths']
-    
+     
     # Load control and each perturbed scenario
-    base_path = f"outputs/outputs_scratch/ConFLAME_nrt-drivers3/" + \
+    base_path = f"outputs/outputs_scratch/ConFLAME_nrt-drivers9/" + \
                 rdir + "-2425/samples/_21-frac_points_0.5/baseline-"
 
     temp_path = "temp2/control_anom_maps6/"
@@ -200,7 +200,7 @@ def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 100,
     
     temp_path = temp_path + extra_path + '.pckl'
     #set_trace()
-    if os.path.isfile(temp_path):
+    if os.path.isfile(temp_path) and False:
         obs_anomaly, mod_pcs, mod_pvs, obs_pos, anom_summery, anom_summery_sow, \
             count_pos, count_neg \
             = pickle.load(open(temp_path,"rb"))
@@ -366,7 +366,7 @@ def show_main_control(region, control_names, cmaps, dcmaps, *args, **kw):
             extra_path, temp_path = open_mod_data(region_info, 
                                                   limitation_type = "Standard_",
                                                   diff_type = "ratio", *args, **kw)
-
+     
     fig, axes = set_up_sow_plot_windows(5, 3, mod_pcs[0], size_scale = 6)
     levels_BA_obs = region_info['Ratio_levels']
 
@@ -379,12 +379,12 @@ def show_main_control(region, control_names, cmaps, dcmaps, *args, **kw):
                      overlay_value = 1.0, overlay_col = "#ffffff", *args, **kw)
      
     plot_BA(obs_anomaly, "Observed Burned Area", 0)
-    plot_BA(mod_pcs[1], "Observed Burned Area", 1, cube_pvs = mod_pvs)
+    plot_BA(mod_pcs[1], "Simulated Burned Area", 1, cube_pvs = mod_pvs)
 
     obs_anomaly, mod_pcs, mod_pvs, obs_pos, anom_summery, \
             count_pos, count_neg, \
             extra_path, temp_path = open_mod_data(region_info, 
-                                                  limitation_type = "Standard_",
+                                                  limitation_type = "Potential_climatology",
                                                   diff_type = "anomoly", *args, **kw)
     
     plot_map_sow(count_pos, "Number of positive fire indicators", 
@@ -426,11 +426,12 @@ def show_main_control(region, control_names, cmaps, dcmaps, *args, **kw):
             extra_path, temp_path = open_mod_data(region_info, 
                                                   limitation_type = "Standard_",
                                                   diff_type = "ratio", *args, **kw)
-    
+    set_trace()
     for i in range(len(anom_summery)):
-        plot_control(i, 100, 3 + len(anom_summery),
-                     [-100, -60, -40, -20, -10, -5, -2, -1, 0, 2, 5, 10, 20, 40, 60, 100],
-                     overlay_value = 0.0, overlay_col = "#ffffff", extend = 'both') 
+        plot_control(i, 1, 3 + len(anom_summery),
+                     #[-100, -60, -40, -20, -10, -5, -2, -1, 0, 2, 5, 10, 20, 40, 60, 100],
+                     [1/10, 1/5, 1/2 , 1, 2, 5, 10],
+                     overlay_value = 1.0, overlay_col = "#ffffff", extend = 'both') 
 
     fname = "figs/control_maps_for/" + region_info['dir'] + '/' + extra_path.split('/')[-1]  + "-contol_summery.png"
     
@@ -438,7 +439,7 @@ def show_main_control(region, control_names, cmaps, dcmaps, *args, **kw):
     plt.savefig(fname,  dpi=300)
 
 levels_controls = [[1, 2, 5, 10, 20, 50, 80, 90, 95, 98, 99], None, None]
-regions = ["Congo", "Amazon", "Pantanal", "LA"]
+regions = ["Amazon", "Pantanal", "LA", "Congo"]
 regions_info = get_region_info(regions)
 
 
@@ -457,8 +458,8 @@ dcmaps = [SoW_cmap['diverging_GreenPink'].reversed(),
           SoW_cmap['diverging_GreenPurple'], 
           SoW_cmap['diverging_GreenPurple']]
 
-for region in regions:
-    show_main_control(region, control_names, cmaps, dcmaps, sow_controls = False)
+#for region in regions:
+#    show_main_control(region, control_names, cmaps, dcmaps, sow_controls = False)
 
 control_names = ['Fuel', 'Weather', 'Human & Ignitions']
 cmaps = [SoW_cmap['gradient_teal'], 
@@ -476,7 +477,7 @@ set_trace()
 for consistent in [False, True]:
     for region in regions:
         for diff_type, levels_control in zip(['ratio', 'absolute', 'anomoly'], levels_controls):
-            for limitation_type in ["Standard_", "Potential"]:
+            for limitation_type in ["Standard_", "Potential_climateology"]:
                 tfile = run_for_region(regions_info[region], diff_type = diff_type, 
                                limitation_type = limitation_type, 
                                levels_controls = levels_control,
