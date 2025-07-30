@@ -7,56 +7,37 @@ source("libs/add_date_time.r")
 path = 'data/data/vcf/VCF_MOD44B_250m/'
 temp_path = 'temp2/regrid_vcf/'
 output_path = 'data/data/driving_data2425/'
-example_file = 'data/wwf_terr_ecos_0p5.nc'
+output_path = 'data/data/driving_data_base/'
 newproj = "+proj=longlat +datum=WGS84"
 example_file = 'data/wwf_terr_ecos_0p5.nc'
 
 # for global set to NULL
-shape_file = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
-shape_names = list("northeast India",
-                   "Alberta",
-                   "Los Angeles",
-                   "Congo basin",
-                   "Amazon and Rio Negro rivers",
-                   "Pantanal basin")
+shape_dir = "data/BASE_shapes/"
+shape_names = list("Amazon", "Pantanal")
 
 # for global set to NULL
-hvs = list(cbind(c(22, 5), c(23, 5), c(24, 5),
-                 c(22, 6), c(23, 6), c(24, 6), c(25, 6), c(26, 6),
-                 c(22, 7), c(23, 7), c(24, 7), c(25, 7), c(26, 7)),
-           cbind(c(10, 2), c(11, 2),
-                 c(9, 3), c(10, 3), c(11, 3), c(12, 3),
-                 c(8, 4), c(9, 4), c(10, 4), c(11, 4)),          
+hv = rbind(rep(7:14, each = 8), 7:14)
 
-           cbind(c(8, 4), c(8, 5)),
-           cbind(c(18, 8), c(19, 8), c(20, 8), c(21, 8),
-                 c(18, 9), c(19, 9), c(20, 9), c(21, 9)),
-           cbind(c(10, 8), c(11, 8), c(12, 8), c(13, 8),
-                 c(10, 9), c(11, 9), c(12, 9), c(13, 9)),
-           cbind(c(10, 9), c(11, 9), c(12, 9),
-                 c(10,10), c(11,10), c(12,10),
-                 c(10,11), c(11,11), c(12,11)))
-
-area_names = c('NWIndia', 'Alberta', 'LA', 'Congo', 'Amazon', 'Pantanal')
+area_names = c("Amazon", "Pantanal")
 
 variables = c("tree" = 1, "nontree" = 2, "nonveg" = 3)
 correct_tov6 = FALSE
 
 ### open up global files
-if (is.null(shape_file)) shp = NULL  else shp = vect(shape_file)
+
 eg_raster = rast(example_file)
 eg_raster[!is.na(eg_raster)] = 1
 
-forRegion <- function(area_name, shape_name, hv) {
-
-    if (is.null(shp)) {
+forRegion <- function(area_name, shape_name) {
+    if (is.null(shape_dir)) {
         shp_rgn = NULL
         extend = c(-180, 180, -90, 90)
     } else {
-        shp_rgn = shp[grep(shape_name, shp$name, ignore.case = TRUE), ]  
-        extent = ext(shp_rgn)
+        shp = vect(paste0(shape_dir, shape_name, '/', shape_name, '.shp'))
+        #shp_rgn = shp[grep(shape_name, shp$name, ignore.case = TRUE), ]  
+        extent = ext(shp)
         eg_raster = crop(eg_raster, extent)
-        eg_raster = mask(eg_raster, shp_rgn)
+        eg_raster = mask(eg_raster, shp)
     }
     
     extent = as.vector(extent)
@@ -68,7 +49,7 @@ forRegion <- function(area_name, shape_name, hv) {
         if (is.null(extc)) return(FALSE)
         return((extc[2] > extc[1]) & (extc[4] > extc[3]))
     }
-      
+    
     temp_path = paste0(temp_path, '/', area_name, '-VCF/') 
     dir.create(temp_path, recursive = TRUE) 
     files = list.files(path, full.name = TRUE, recursive = TRUE)
@@ -80,7 +61,7 @@ forRegion <- function(area_name, shape_name, hv) {
     files_v = sapply(files_v, function(file) strsplit(file, '.', fixed = TRUE)[[1]][1])
     files_test = sapply(as.numeric(files_h), function(h) any(h == hv[1,])) & 
                  sapply(as.numeric(files_v), function(v) any(v == hv[2,]))
-
+    
     files = files[files_test]
     
     years = sapply(files, function(file) substr(strsplit(file, 'MOD44B.A')[[1]][2], 1, 4))
@@ -93,9 +74,10 @@ forRegion <- function(area_name, shape_name, hv) {
         out_info0 = gsub('/', '', strsplit(file, path)[[1]][2], fixed = TRUE)
         temp_path = paste0(temp_path, '/', name, '/')
         dir.create(temp_path, recursive = TRUE) 
-    
+        
         out_info = paste0(temp_path, '-', band, '-', 
                           gsub('.hdf', '.txt', out_info0, fixed = TRUE))
+        
         if (file.exists(out_info) && grab_cache) {
             info = read.table(out_info)[1,1]
             if (info == 'NoOverlap') return(NULL)
@@ -107,13 +89,15 @@ forRegion <- function(area_name, shape_name, hv) {
         if (!all(extent == c(-180, 180, -90, 90))) {
             test = project(aggregate(dat, 100), newproj)
             overlap = test_if_overlap(test, eg_raster)
-        } else overlap = TRUE
-        
+        } else {
+            overlap = TRUE
+            
+        }
         if (!overlap || (length(unique(dat)) == 1 && length(unique(dat[[1]])[[1]])==1)) {
             writeLines('NoOverlap', out_info)
             return(NULL)
         }
-    
+        
         dat = terra::project(dat, newproj)
     
         out_raster = crop(eg_raster, ext(dat) + 0.5)#+ c(-0.5, 0.5, -0.5, 0.5))
@@ -258,4 +242,4 @@ forRegion <- function(area_name, shape_name, hv) {
     }
 }
 
-mapply(forRegion, area_names, shape_names, hvs)
+mapply(forRegion, area_names, shape_names)
