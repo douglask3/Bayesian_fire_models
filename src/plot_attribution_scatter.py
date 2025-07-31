@@ -84,10 +84,13 @@ def signif(x, p):
     return np.round(x * mags) / mags
 
 def scale2upper1(y):
-    return 1-np.exp(-y * (-np.log(0.5)))
+    #set_trace()
+    return y/(1.0 + y)
+    #return 1-np.exp(-y * (-np.log(0.5)))
 
 def scale2upper1_inverse(z):
-    return -np.log(1 - z) / np.log(2)
+    return z/(1.0 - z)
+    #return -np.log(1 - z) / np.log(2)
 
 def scale2upper1_labels(ytick_labels):
     # Compute difference from 1
@@ -103,15 +106,19 @@ def scale2upper1_labels(ytick_labels):
             magnitude = abs(d)
             formatted_labels.append(f"1 {sign} {magnitude:.6f}")
     return formatted_labels
+
 def scale2upper1_axis(ax, ytick_labels = None, ylim = None):
     ax.set_yticks([])          # remove ticks
     ax.set_yticklabels([])     # remove tick labels
+    ytick_labels_txt = None
+    
     if ytick_labels is None:
         if ylim is None or ylim[0] < 0.2:
             ylim = [0,1]
             ytick_labels = np.array([0, 0.2, 0.5, 1, 2, 5])
+            ytick_labels_txt = np.array(['0', '1/5', '1/2', 'no\nchange\n', '2', '5', ' '])
         else:
-                
+             
             y0 = signif(1-scale2upper1_inverse(ylim[0]), 1)
             ytick_labels = np.array([-y0, -y0/2, 0, y0/2, y0]) + 1
             
@@ -127,14 +134,15 @@ def scale2upper1_axis(ax, ytick_labels = None, ylim = None):
     yticks_transformed = np.append(yticks_transformed, 1)
     
     # Step 2: Invert to get original y values (for labeling)
-    ytick_labels_txt = [f"{v:.2f}" for v in ytick_labels] + ['']
+    if ytick_labels_txt is None: 
+        ytick_labels_txt = [f"{v:.2f}" for v in ytick_labels] + ['']
     if len(np.unique(ytick_labels_txt)) < len(ytick_labels):
         ytick_labels_txt = scale2upper1_labels(ytick_labels) + ['']
     
     # Step 3: Apply to plot
     try:
         ax.set_yticks(yticks_transformed)
-        ax.set_yticklabels(ytick_labels_txt)
+        ax.set_yticklabels(ytick_labels_txt)#, ha = 'center')#, rotation = 90
     except:
         set_trace()
     ax.set_ylim(ylim)
@@ -542,10 +550,26 @@ def add_violin_plot(df, df_type, ax, title):
         x_center = verts[:, 0].mean()
         positions.append(x_center)
         source_idx = i // len(region_order)
+        region_idx = i % len(region_order)
+        print(i)
+        print(source_idx)
+        print(region_idx)
         #source_label = source_order[source_idx]
         
         coll.set_edgecolors(source_colors[source_idx])
         coll.set_facecolor(source_colors[source_idx] + '99')
+
+        dat = data[(data['Source'] == sources[source_idx]) & \
+                  (data['Region'] == regions[region_idx])]
+        
+        ypnts = np.percentile(dat['Amplification Factor'], [5, 50, 95])
+        if ypnts[2] > 0.99: ypnts[2] = 0.99
+        ax.plot(np.array([x_center, x_center]), ypnts[[0, 2]], '#333333')
+        for y in ypnts[[0,2]]:
+            line, = ax.plot([x_center-0.03, x_center + 0.03], [y, y], '#333333')
+            line.set_clip_on(False)
+        ax.plot(x_center, ypnts[1], '#333333', marker = 'o', markersize = 5)
+        
     #tick_positions = range(len(ax.get_xticks()))
     #tick_labels = ax.get_xticklabels()
     #arr = data["likelihood"].values
@@ -553,7 +577,7 @@ def add_violin_plot(df, df_type, ax, title):
     idx = np.unique(data['Region'] + data['Source'], return_index = True)[1] 
     custom_labels = data["likelihood"].values[np.sort(idx)]
     custom_labels = np.round(custom_labels*100)
-    set_trace()
+    
     y_min = 0.0#data["Amplification Factor"].min()
     for x, label in zip(positions, custom_labels):
         if label > 99:
@@ -678,8 +702,8 @@ if __name__=="__main__":
     sns.set(style="whitegrid")
     fig, axes = plt.subplots(2, 1, figsize=(11, 7), sharex=True)
     
-    add_violin_plot(df, "Mean", axes[0], "All Region")
-    xpos = add_violin_plot(df, "Extreme", axes[1], "Sub-regional extremes")
+    add_violin_plot(df, "Mean", axes[0], "Regional Burned Area Total")
+    xpos = add_violin_plot(df, "Extreme", axes[1], "Regional Burned Area Total")
     axes[0].legend_.remove()
     axes[1].legend_.remove()
     #axes[1].text(0.25, 0.0, '0.25')
@@ -688,7 +712,7 @@ if __name__=="__main__":
     region_names = ['Northeast\nAmazonia', 'Pantanal &\nChiquitano', 
                     'Southern\nCalifornia','Congo\nBasin']
     for nme, pos in zip(region_names * 2, xpos):
-        axes[1].text(pos, 0.05, nme, ha = 'center', fontsize = 9, bbox=dict(facecolor="white", edgecolor="none", boxstyle="round,pad=0.3"))
+        axes[1].text(pos, 0.03, nme, ha = 'center', fontsize = 9, bbox=dict(facecolor="white", edgecolor="none", boxstyle="round,pad=0.3"))
     fig.text(0.063, 0.5, 'Amplification Factor', va='center', rotation='vertical', fontsize=12)
     
     
