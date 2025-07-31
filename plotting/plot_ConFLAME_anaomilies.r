@@ -12,7 +12,7 @@ region = 'NW_Amazon'
 
 region.name = c('Canada' = 'Canada', 'Greece' = 'Greece', 'NW_Amazon' = 'Western Amazonia')
 
-BA_obs_file = paste0('data/data/driving_data/', region, '/nrt/period_2013_2023//burnt_area.nc')
+BA_obs_file = paste0('data/data/driving_data2425/', region, '/nrt/era5_monthly//burnt_area.nc')
 
 BA_mod_dir_alls = paste0('outputs/ConFire_', region, '-nrt-tuning10/samples/_12-frac_points_0.5/baseline-/', c('Evaluate', 'control'), '/')
 
