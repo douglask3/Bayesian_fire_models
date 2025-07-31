@@ -545,7 +545,7 @@ def add_confidence(cube_pvs, ax):
 def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_BlueRed'], 
              levels = None, extend = 'both', ax=None,
              cbar_label = '', overlay_value = None, overlay_col = "#cfe9ff",
-             cube_pvs = None, *args, **kw):
+             cube_pvs = None, add_cbar = True, *args, **kw):
     """
     Plot a SoW-style map of fire (or climate) data with optional overlays and confidence markers.
 
@@ -585,6 +585,7 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
     - Adds coastlines, rivers, borders, and land mask for context.
     - Observational contours and confidence patterns help interpret model results.
     """ 
+    
     cube.long_name = title
     cube.rename(title)
     is_catigorical =  np.issubdtype(cube.core_data().dtype, np.integer)
@@ -610,16 +611,17 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
 
     if cube_pvs is not None:
         add_confidence(cube_pvs, ax)
-    if is_catigorical:
-        tick_positions = np.array(levels) + 0.5
-        tick_labels = [str(level) for level in levels]
-        cbar = plt.colorbar(img, ax=ax, orientation='horizontal',
-                            ticks=tick_positions)
-        cbar.ax.set_xticklabels(tick_labels) 
-    else:
-        cbar = plt.colorbar(img, ax=ax, ticks=levels, orientation='horizontal')
-    cbar.set_label(cbar_label, labelpad=10, loc='center')
-    cbar.ax.xaxis.set_label_position('top')
+    if add_cbar:
+        if is_catigorical:
+            tick_positions = np.array(levels) + 0.5
+            tick_labels = [str(level) for level in levels]
+            cbar = plt.colorbar(img, ax=ax, orientation='horizontal',
+                                ticks=tick_positions)
+            cbar.ax.set_xticklabels(tick_labels) 
+        else:
+            cbar = plt.colorbar(img, ax=ax, ticks=levels, orientation='horizontal')
+        cbar.set_label(cbar_label, labelpad=10, loc='center')
+        cbar.ax.xaxis.set_label_position('top')
      
     # Add boundaries
     ax.add_feature(cfeature.COASTLINE, linewidth=0.5)
@@ -632,6 +634,6 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
         qplt.contour(contour_obs, levels=[0], colors='#8a3b00', linewidths=1, axes=ax)
 
     print(title)
-    ax.set_title(title)
+    ax.set_title(title, fontsize = 12)
     return img
 
