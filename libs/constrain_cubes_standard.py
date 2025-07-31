@@ -311,6 +311,21 @@ def contrain_to_shape(cube, geom, constrain = True):
     
     return masked_cube
 
+def contrain_to_shapefile(cube, shp_filename, name = None, *args, **kw):
+    shp = gp.read_file(shp_filename)
+    shp["geometry"] = shp["geometry"].buffer(0)
+    
+    if name is None:
+        geom = shp.geometry.unary_union
+    else:
+        try:
+            geom = shp[shp['name'].str.contains(name, case=False, na=False)].geometry.unary_union
+        except:
+            if name in shp_filename:
+                print("WARNING: name ''" + name + "'' not a shape in ''" + shp_filename + \
+                      "''. Using all shapes instead")
+                geom = shp.geometry.unary_union
+    return contrain_to_shape(cube, geom, *args, **kw)
 
 def contrain_to_sow_shapefile(cube, shp_filename, name, *args, **kw):
     shp = gp.read_file(shp_filename)
