@@ -3,6 +3,7 @@ from pdb import set_trace
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.collections import PolyCollection
 import seaborn as sns
 import fnmatch
 import pickle
@@ -353,7 +354,7 @@ def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = N
     if len(regions) > 1:
         ax.set_ylabel(plot_name)    
     else:
-        ax.set_ylabel("Amplification Factor") 
+        ax.set_ylabel(" ") 
     ax.grid(True, which='both', linestyle='--', linewidth=0.5)
 
     return effect_ratio[mask]
@@ -491,8 +492,8 @@ def plot_attribution_scatter(regions, figname, plot_FUN = plot_fact_vs_ratio,
         out.append(outi)
     
     if len(regions) > 1:
-        fig.text(0.05, 0.5, "Amplification Factor", ha='right', va='center', 
-                 fontsize=12, rotation=90)
+        #fig.text(0.05, 0.5, "Amplification Factor", ha='right', va='center', 
+        #         fontsize=12, rotation=90)
         fig.text(0.5, 0.09, "Factual burned area (%)", ha='center', va='top', fontsize=12)
     else:
         fig.text(0.5, 0.04, "Factual burned area (%)", ha='center', va='top', fontsize=12)
@@ -507,11 +508,14 @@ def add_violin_plot(df, df_type, ax, title):
     sns.violinplot(
         data=data,
         cut = 0.0,
-        x="Region", y="Amplification Factor", hue="Source",
-        split=False, inner="quartile", palette=["#f68373", "#c7384e", "#fc6",  "#862976", "#cfe9ff"], 
+        x="Source", y="Amplification Factor", hue="Region",
+        split=False, inner=None, density_norm = 'width', fill = False,
+        #inner_kws=dict(box_width=5, whis_width=2, color=".8"),    
+        palette = ['#999999'],
+        #palette=["#f68373", "#c7384e", "#fc6", "#862976", "#cfe9ff"], 
         ax=ax
-    )
-    
+    )   
+    ax.set_ylabel('')
     ax.set_title(title)
     ax.set_xlabel('')
     ax.axhline(0.5, color="gray", linestyle="--", linewidth=1)
@@ -526,19 +530,30 @@ def add_violin_plot(df, df_type, ax, title):
     n_sources = len(sources)
 
     # 2. Calculate position offsets for sub-violins within each Region group
+    
+    source_order = data["Source"].astype("category").cat.categories
+    region_order = data["Region"].astype("category").cat.categories
+    source_colors = ["#ee007f", "#0096a1"]
+    
+    violin_collections = [c for c in ax.collections if isinstance(c, PolyCollection)]
     positions = []
-    for i, region in enumerate(regions):
-        for j in range(n_sources):
-            offset = -0.3 + j * (0.6 / (n_sources - 1))  # Spread violins within 0.8 width
-            positions.append(i + offset)
-
+    for i, coll in enumerate(violin_collections):
+        verts = coll.get_paths()[0].vertices
+        x_center = verts[:, 0].mean()
+        positions.append(x_center)
+        source_idx = i // len(region_order)
+        #source_label = source_order[source_idx]
+        
+        coll.set_edgecolors(source_colors[source_idx])
+        coll.set_facecolor(source_colors[source_idx] + '99')
     #tick_positions = range(len(ax.get_xticks()))
     #tick_labels = ax.get_xticklabels()
-    arr = data["likelihood"].values
-    custom_labels, idx = np.unique(arr, return_index=True)    
-    custom_labels = custom_labels[np.argsort(idx)]
+    #arr = data["likelihood"].values
+    #custom_labels, idx = np.unique(arr, return_index=True)  
+    idx = np.unique(data['Region'] + data['Source'], return_index = True)[1] 
+    custom_labels = data["likelihood"].values[np.sort(idx)]
     custom_labels = np.round(custom_labels*100)
-    
+    set_trace()
     y_min = 0.0#data["Amplification Factor"].min()
     for x, label in zip(positions, custom_labels):
         if label > 99:
@@ -547,7 +562,7 @@ def add_violin_plot(df, df_type, ax, title):
             label_str = str(label)[0:2] + '%'
         ax.text(x-0.05, 0.4, label_str, ha='center', va='top', fontsize=8, rotation=45)
     
-    
+    return positions
 #    for i, label in enumerate(custom_labels):
 #        ax.text(i, y_min, str(label)[0:2] + '%', ha='center', va='top', fontsize=10, color='black')
     
@@ -557,13 +572,13 @@ if __name__=="__main__":
     dir1 = "outputs/outputs_scratch/ConFLAME_nrt-attribution9/"
     dir2 = "-2425/time_series/_19-frac_points_0.5/"
 
-    regions = ["Amazon"]#, "Pantanal",  "LA", "Congo"]
+    regions = ["Amazon", "Pantanal",  "LA", "Congo"]
     region_names = ['Northeast Amazonia', 'Pantanal and Chiquitano', 
                     'Southern California','Congo Basin']
     #retgions = {key: regions_info[key] for key in region_names if key in regions_info}
     obs_dir = 'data/data/driving_data2425//'
     obs_file = 'burnt_area_data.csv'
-    
+    '''
     outs_era5 = plot_attribution_scatter(regions, "attribution_scatter_era5_2425",
                              dir1 = dir1, dir2 = dir2,
                              obs_dir = obs_dir, obs_file = obs_file) 
@@ -619,7 +634,7 @@ if __name__=="__main__":
     f = open('temp/store.pckl', 'wb')
     pickle.dump([outs_era5, outs_era52, outs_isimip, outs_combined, outs_human, outs_all], f)
     f.close()
-    
+    '''
     f = open('temp/store.pckl', 'rb')
     outs_era5, outs_era52, outs_isimip, outs_combined, outs_human, outs_all = pickle.load(f)
     f.close()
@@ -627,17 +642,18 @@ if __name__=="__main__":
     # Example labels for the sources
     sources = ['Anthropogenic climate forcing', 
               # 'Climate (ERA5 HadGEM means)',
-               'Total climate forcing', #'Climate (Combined)', 
+               #'Total climate forcing', #'Climate (Combined)', 
                'Socio-economic factors',
-               'All forcings']
+               ]#'All forcings']
 
     # Group data
     all_sources = [outs_era5, outs_isimip, outs_human, outs_all]
-
+    all_sources = [outs_era5, outs_human]
     # Flatten into long-form dataframe for seaborn
     records = []
-    for region_idx, region in enumerate(region_names):
-        for source_idx, source_name in enumerate(sources):
+    
+    for source_idx, source_name in enumerate(sources):
+        for region_idx, region in enumerate(region_names):
             for kind_idx, kind in enumerate(["Mean", "Extreme"]):  # 0 = mean, 1 = extreme
                 samples = all_sources[source_idx][kind_idx][region_idx]
                 
@@ -660,14 +676,23 @@ if __name__=="__main__":
     
     # Set up the plot
     sns.set(style="whitegrid")
-    fig, axes = plt.subplots(2, 1, figsize=(12, 6), sharex=True)
-
-    add_violin_plot(df, "Mean", axes[0], "Regional burned areas")
-    add_violin_plot(df, "Extreme", axes[1], "Sub-regional extremes")
+    fig, axes = plt.subplots(2, 1, figsize=(11, 7), sharex=True)
+    
+    add_violin_plot(df, "Mean", axes[0], "All Region")
+    xpos = add_violin_plot(df, "Extreme", axes[1], "Sub-regional extremes")
     axes[0].legend_.remove()
-    axes[1].legend(loc="lower left", ncol = 2)
-
+    axes[1].legend_.remove()
+    #axes[1].text(0.25, 0.0, '0.25')
+    #axes[1].text(-0.3, 0.0, '-0.3')
+    #axes[1].legend(loc="lower left", ncol = 2)
+    region_names = ['Northeast\nAmazonia', 'Pantanal &\nChiquitano', 
+                    'Southern\nCalifornia','Congo\nBasin']
+    for nme, pos in zip(region_names * 2, xpos):
+        axes[1].text(pos, 0.05, nme, ha = 'center', fontsize = 9, bbox=dict(facecolor="white", edgecolor="none", boxstyle="round,pad=0.3"))
+    fig.text(0.063, 0.5, 'Amplification Factor', va='center', rotation='vertical', fontsize=12)
+    
+    
     # Tidy up
-    plt.tight_layout()
+    #plt.tight_layout()
     plt.savefig("figs/attribution-summery.png")
     
