@@ -1,6 +1,6 @@
 ## model info
-regions:: ['Amazon', 'Pantanal', 'Congo', 'LA', 'Alberta', 'NEIndia']
-model_title::  'ConFLAME_nrt-drivers9/<<region>>-2425'
+regions:: ['Congo', 'LA', 'Amazon', 'Pantanal', 'Alberta', 'NEIndia']
+model_title::  'ConFLAME_nrt-drivers10/<<region>>-2425'
 
 ## input data paths and filenames
 dir_training:: "data/data/driving_data2425/<<region>>/nrt/era5_monthly/"
@@ -56,12 +56,12 @@ sample_for_plot:: 1000
 control_names:: ['Fuel', 'Weather', 'Moisture', 'Wind', 'Ignition', 'Suppression']
 levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
 dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
-cmap:: 'OrRd'
-dcmap:: 'RdBu_r'
+cmap:: 'gradient_red' 
+dcmap:: 'diverging_TealOrange'
 dir_projecting:: "data/data/driving_data2425/<<region>>/nrt/era5_monthly/"
 parallelize:: True
 
 ## experiment info
 limitation_types:: ['potential_climateology', 'standard', 'potential']
 controls_to_plot:: [0, 1, 2, 3, 4, 5]
-time_series_percentiles:: [0.0, 95.0]
+time_series_percentiles:: [5.0, 95.0]
