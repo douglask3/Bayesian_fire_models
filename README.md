@@ -20,8 +20,9 @@ This repository contains a series of Bayesian-based fire models. These models an
 
 ### Models 
 At the moment, we have two models that target burned area:
-*	[ConFire](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/ConFire.md), has been tested and is working as expected.
+*	[ConFire](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/ConFire.md), has been tested and was working as expected at version [v0.1](https://github.com/douglask3/Bayesian_fire_models/releases/tag/SoW23_v0.1), though will need testing again now.
 *	[FLAME](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/FLAME.md), is also operational but is located in a separate repository. It needs to undergo testing in our current environment. You can find it at https://github.com/malu-barbosa/FLAME.
+*	[ConFLAME](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/ConFLAME.md), tested and working.
   
 Additionally, we are in the process of working on INFERNO, which is derived from JULES-ES-INFERNO ([Mangeon et al. 2016]( https://gmd.copernicus.org/articles/9/2685/2016/)) and working on a  fireMIP ensemble optimisation scheme. We are also extending these two models to cover other aspects of fire regimes beyond burned area.
 
@@ -44,11 +45,12 @@ Follow these steps to install the necessary software and dependencies:
     ```bash
     git clone https://github.com/douglask3/Bayesian_fire_models.git
     ```
-2. Navigate into the project directory:
+    or download the latest version from Zenodo: xxxxxxx
+3. Navigate into the project directory:
     ```bash
     cd Bayesian_fire_models
     ```
-3. Install the required packages:
+4. Install the required packages:
     
     ```bash
     conda env create -f environment.yml
@@ -59,7 +61,7 @@ Follow these steps to install the necessary software and dependencies:
 The driving data required for the models are listed [here](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/Datasets). Once you have downloaded the dataset you want, save it to the `data/data/driving_data/` directory within the project folder or update the path in the corresponding configuration file (see below) to its location.
 
 ## Configuration Settings
-Configuration settings can be found in the text files in `namelists\` dir. [namelists/nrt-evaluation.txt](https://github.com/douglask3/Bayesian_fire_models/blob/main/namelists/nrt-evaluation.txt) is quite a good simple example that works for [ConFire](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/ConFire.md). There are some model speific parameters, so you'll have to check specific under [Model Setup](#model-setup). But this is common to all models.
+Configuration settings can be found in the text files in `namelists\` dir. [namelists/nrt-evaluation.txt](https://github.com/douglask3/Bayesian_fire_models/blob/main/namelists/Pantanal_example.txt) is quite a good simple example that works for [ConFLAME](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/ConFLAME.md). There are some model speific parameters, so you'll have to check specific under [Model Setup](#model-setup). But this is common to all models.
 
 Each parameter is set using `parameter_name:: parameter_value'. "parameter_name" is a parameter or setting used by the framework. "parameter_value" covers most common Python objects (ints, floats, string, lists, common function or class objects) and some extra objects from sync or this repo. Some fields allow wildcard entries that are set as a list within another parameter and looped over, thereby saving lines in the configuration file. These are indicated in the example, but wildcards are never compulsory. 
 
