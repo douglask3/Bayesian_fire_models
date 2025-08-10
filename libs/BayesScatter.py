@@ -99,8 +99,8 @@ def Bayes_benchmark(filename_out, fig_dir, Y, X, lmask, logXmin = None, logYmin 
     plt.clf()
     plt.close()
 
-    pos = pos[X > 0]
-    X = X[X>0]
+    #pos = pos[X > 0]
+    #X = X[X>0]
     scatter_metric_overall_and_percentiles(X, pos)
     plt.savefig(fig_dir + filename_out + '-posterior-position.png')
     plt.clf()
