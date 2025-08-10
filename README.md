@@ -145,6 +145,12 @@ The State of Wildfires report has been a major driver of this development. Here'
 To reproduce results in the State of Wildfire's 2023/24 report, make sure you have the version at tag SoW24_v0.21. Driving data is available from [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15721435.svg)](https://doi.org/10.5281/zenodo.15721435), and outputs are stored in [State of Wildfires Zenodo Community](https://zenodo.org/communities/stateofwildfiresproject/).
 The results from this paper were obtained using the [Running the Models](#running-the-models) commands above.
 
+The results from this paper were obtained using the Running the Models command as applied in version v0.1. It uses the following namelists in the `namelists`. Note some paths within the namlists will need updating for your own local runs:
+
+* `imip2425.txt`  - used for isimip based attribution and future projections
+* `nrt-drivers-2425.txt` - used for 2024/25 fire season driver analysis
+* `nrt-attribution-2425.txt` - used for 2024/25 fire season attribution analysis
+
 ### 2023/24
 To reproduce results in the State of Wildfire's 2023/24 report, make sure you have the version at tag SoW23_v0.1. Or download the Zenodo archived code that can be found with the paper: https://doi.org/10.5194/essd-2024-218, along with dataset information. The achived driving and output data is [https://doi.org/10.5281/zenodo.11420743](https://doi.org/10.5281/zenodo.11420743).
 
