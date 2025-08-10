@@ -1,5 +1,5 @@
 ## model info
-regions:: ['LA', 'Amazon', 'Pantanal', 'Congo',  'Alberta', 'NEIndia']
+regions:: ['Congo', 'LA', 'Amazon','Pantanal',  'Alberta', 'NEIndia']
 model_title::  'ConFLAME_nrt-attribution9/<<region>>-2425'
 
 ## input data paths and filenames
@@ -34,10 +34,10 @@ priors:: {'pname': "powers",'np': 6, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.
 ### optimization info
 inference_step_type:: "metropolis"
 link_func_class:: MaxEnt
-niterations:: 100
+niterations:: 1000
 cores:: 10
-fraction_data_for_sample:: 0.05
-min_data_points_for_sample:: 400
+fraction_data_for_sample:: 0.5
+min_data_points_for_sample:: 4000
 subset_function:: sub_year_months
 subset_function:: sub_year_range
 subset_function_args:: {'months_of_year': [0, 1, 2, 3, 11]}
@@ -58,8 +58,8 @@ sample_for_plot:: 5000
 control_names:: ['Moisture', 'Wind', 'Ignition', 'Suppression']
 levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
 dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
-cmap:: 'OrRd'
-dcmap:: 'RdBu_r'
+cmap:: 'gradient_red' 
+dcmap:: 'diverging_TealOrange'
 dir_projecting:: "data/data/driving_data2425/<<region>>/nrt/era5_monthly/"
 parallelize:: True
 
