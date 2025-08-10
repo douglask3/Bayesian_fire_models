@@ -8,7 +8,7 @@ from ConFire import ConFire
 from BayesScatter import *
 from response_curves import *
 from jackknife import *
-
+from state_of_wildfires_colours  import SoW_cmap
 #from train import *
 from extend_np_range import *
 
@@ -18,6 +18,8 @@ from namelist_functions import *
 from pymc_extras import *
 from plot_maps import *
 from parameter_mapping import *
+from flatten_list import *
+from apply_consistent_mask_from_best_slice import *
 
 import os
 from   io     import StringIO
@@ -35,9 +37,6 @@ from scipy.optimize import linear_sum_assignment
 
 from pdb import set_trace
 
-
-def flatten(xss):
-    return [x for xs in xss for x in xs]
 
 def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Ncols = 2,
                                      figure_filename = None):
@@ -63,6 +62,7 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
     #set_trace()
     #pvf0 = 10**pvf0
     plot_id = ax.hist2d(Xf0, pvf0, bins=100, cmap='afmhot_r', norm=mpl.colors.LogNorm())
+    
     y_min, y_max = plt.ylim()
 
     # Define the padding (e.g., 10% of the data range)
@@ -70,17 +70,8 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
 
     #  Set new y-axis limits with the padding
     plt.ylim(y_min - padding, y_max + padding)
-
-    #plt.gcf().colorbar(plot_id[3], ax=ax)
-    #try:
-    #    plt.gcf().colorbar(plot_id[3], ax=ax)
-    #except ValueError as e:
-    #    print("Error creating colorbar:")
-    #    print("plot_id[3] min:", np.nanmin(plot_id[3].get_array()))
-    #    print("plot_id[3] max:", np.nanmax(plot_id[3].get_array()))
-    #    print(np.min(Xf0))
-    #    print(np.max(Xf0))
-    #    raise e
+    plt.xlabel('Observed')
+    plt.ylabel('P(Obs|model')
     print("Starting colorbar creation...")
     try:
         data = plot_id[3].get_array()
@@ -109,7 +100,7 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
             print(f"Adjusted range for colorbar: vmin = {vmin}, vmax = {vmax}")
         
         print(f"Final vmin: {vmin}, vmax: {vmax}")
-        norm = colors.Normalize(vmin=vmin, vmax=vmax)
+        norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
         
         print("Updating colormap of the plot...")
         plot_id[3].set_norm(norm)
@@ -141,23 +132,29 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
     #labels = np.array([0, 0.3, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99])
     #plt.yticks(10**labels, labels)
     
-    try:
-        Sim[1].data.mask[Sim[1].data == 0] = True
-    except:
-        pass
+    #try:
+    #    Sim[1].data.mask[Sim[1].data == 0] = True
+    #except:
+    #    pass
     
-    plot_BayesModel_maps(Sim[1], [0.0, 0.5, 0.75, 0.9, 0.95, 0.99, 1.0], 'copper', '', None, 
-                         Nrows = Nrows, Ncols = Ncols, plot0 = plot_n, collapse_dim = 'time',
-                         scale = 1, figure_filename = figure_filename + 'obs_liklihood')
+    Sim_p = Sim[1].copy()
+    Sim_p.data[Obs.data == 0] = np.nan
+    
+    plot_BayesModel_maps(Sim_p, [0.0, 0.5, 0.75, 0.9, 0.95, 0.99, 1.0], 
+                        'gradient_teal', '', None, 
+                         Nrows = Nrows, Ncols = Ncols, plot0 = plot_n, 
+                         collapse_dim = 'time',scale = 1, 
+                         extend = 'neither',
+                         figure_filename = figure_filename + 'obs_liklihood')
     
     ax = plt.subplot(Nrows, Ncols, plot_n + 3)
-
+    
     BayesScatter(Obs, Sim[0], lmask,  0.000001, 0.000001, ax, 
                  figure_filename = figure_filename + 'Scatter')
 
     
     pos = np.mean(X[np.newaxis, :, :] > Y, axis = 0)
-    pos[X == 0] = np.nan
+    #pos[X == 0] = np.nan
     sameness_test = np.nanmean(pos, axis = 0) == np.nanmin(pos, axis = 0)
     pos[:, sameness_test] = np.nan
     
@@ -168,14 +165,16 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
     mask = lmask.reshape([ X.shape[0], int(lmask.shape[0]/X.shape[0])])[0]
     apos_cube = insert_data_into_cube(apos, Obs[0], mask)
     p_value_cube = insert_data_into_cube(p_value, Obs[0], mask)
-
+    
     plot_annual_mean(apos_cube,[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], 
-                     'RdYlBu_r',  plot_name = "mean bias", 
+                     'diverging_TealPurple',  plot_name = "mean bias", 
+                     extend = 'neither',
                      Nrows = Nrows, Ncols = Ncols, plot_n = plot_n + 4,
                      figure_filename = figure_filename + 'obs_post-Position.nc')
 
-    plot_annual_mean(p_value_cube, np.array([0, 0.01, 0.05, 0.1, 0.5, 1.0]), 'copper',   
+    plot_annual_mean(p_value_cube, np.array([0, 0.01, 0.05, 0.1, 0.5, 1.0]), 'gradient_hues',   
                      plot_name = "mean bias p-value", 
+                     extend = 'neither',
                      Nrows = Nrows, Ncols = Ncols, plot_n = plot_n + 5,
                      figure_filename = figure_filename + 'obs_post-Pvalue.nc')
     
@@ -213,10 +212,15 @@ def compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, levels, cmap
     figure_dir =  combine_path_and_make_dir(figure_filename)
     
     #Sim[0].data = 100 * Sim[0].data
-   # Obs.data = Obs.data * 100
-    plot_BayesModel_maps(Sim[0], None, cmap, '', Obs, Nrows = 3, Ncols = 3, scale = 100,
-                         figure_filename = figure_dir)
+    #Obs.data = Obs.data * 100
     
+    plot_BayesModel_maps(Sim[0].collapsed('time', iris.analysis.MEAN), 
+                         None, cmap, '', 
+                         Obs.collapsed('time', iris.analysis.MEAN), 
+                         Nrows = 3, Ncols = 3, scale = 100,
+                         extend = 'max',
+                         figure_filename = figure_dir)
+     
     plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 4, Nrows = 3, Ncols = 3,
                                      figure_filename = figure_dir)
     
@@ -407,7 +411,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
         'grab_old_trace': grab_old_trace}
     
     Sim = runSim_MaxEntFire(**common_args, run_name = control_run_name, test_eg_cube = True)
-     
+    run_only = True
     if run_only: 
         if return_inputs: 
             return Sim, Y, X, lmask, scalers 
@@ -416,9 +420,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
     #plot_limitation_maps(fig_dir, filename_out, **common_args)
     
     common_args['Sim'] = Sim[0]
-
-     
-
+    
     filename_out += filename_out_ext 
     compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, *args, **kw)
     Bayes_benchmark(filename_out, fig_dir, Sim, Obs, lmask)

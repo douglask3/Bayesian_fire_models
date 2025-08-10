@@ -141,7 +141,9 @@ def load_ensemble_summary(paths, year  = 2024, mnths = ['06' , '07'], diff_type 
         maskv = 1.0
         nullv = 1.0
         scale = 1.0
+        
         if compare_vs is not None:
+            
             anomaly = anomaly - 1.0
             scale = load_ensemble_summary(compare_vs, year, mnths, diff_type,  nensemble,                                                 compare_vs = None, return_ensemble = True) - 1.0
             mask = scale.data < 0
@@ -177,7 +179,7 @@ def get_positive_count_layer(anom_list, threshold=0.1):
     count_cube.data = np.ma.masked_array(data, mask=cube.data.mask)
     return count_cube
 
-def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 5, 
+def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 100, 
                   diff_type = 'anomoly', sow_controls = False, *args, **kw):
 
     rdir = region_info['dir']
@@ -185,10 +187,10 @@ def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 5,
     mnths = region_info['mnths']
      
     # Load control and each perturbed scenario
-    base_path = f"outputs/outputs_scratch/ConFLAME_nrt-drivers9/" + \
+    base_path = f"outputs/outputs_scratch/ConFLAME_nrt-drivers10/" + \
                 rdir + "-2425/samples/_21-frac_points_0.5/baseline-"
 
-    temp_path = "temp2/control_anom_maps6/"
+    temp_path = "temp2/control_anom_maps7/"
     os.makedirs(temp_path, exist_ok=True)
     
     extra_path = rdir + '/' + limitation_type + '/' + str(diff_type) + '/'
@@ -200,7 +202,7 @@ def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 5,
     
     temp_path = temp_path + extra_path + '.pckl'
     #set_trace()
-    if os.path.isfile(temp_path) and False:
+    if os.path.isfile(temp_path):# and False:
         obs_anomaly, mod_pcs, mod_pvs, obs_pos, anom_summery, anom_summery_sow, \
             count_pos, count_neg \
             = pickle.load(open(temp_path,"rb"))
@@ -223,7 +225,7 @@ def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 5,
                                                      year, mnths, diff_type, nensemble,
                                                      compare_vs = f"{base_path}/Evaluate",
                                                      *args, **kw) \
-                                                    for i,j in zip([0, 1, 4], [2, 3, 5])]
+                                                    for i,j in zip([0, 2, 4], [1, 3, 5])]
         
         pvs = [anom[1] for anom in anom_summery]
         count_pos = get_positive_count_layer(pvs, 0.1)
@@ -379,6 +381,7 @@ def show_main_control(region, control_names, cmaps, dcmaps, *args, **kw):
                      overlay_value = 1.0, overlay_col = "#ffffff", *args, **kw)
      
     plot_BA(obs_anomaly, "Observed Burned Area", 0)
+    
     plot_BA(mod_pcs[1], "Simulated Burned Area", 1, cube_pvs = mod_pvs)
 
     obs_anomaly, mod_pcs, mod_pvs, obs_pos, anom_summery, \
@@ -397,27 +400,39 @@ def show_main_control(region, control_names, cmaps, dcmaps, *args, **kw):
                                                   limitation_type = "Standard_",
                                                   diff_type = "absolute", *args, **kw)   
 
-    def plot_control(i, scale, axis_diff, levels, extend = 'max', *args, **kw):
+    def plot_control(i, scale, axis_diff, levels, extend = 'max', shift = 0.0, powr = 1.0, 
+                     custom_pv = False, *args, **kw):
         cube2plot = anom_summery[i][0][1] 
         cube2plot.data *= scale
+        cube2plot.data += shift
+        cube2plot.data = cube2plot.data**powr
+        
+        if custom_pv:
+            cube_pvs = (anom_summery[i][0][2]-anom_summery[i][0][0])/anom_summery[i][0][1]
+            cube_pvs.data =  (100.0-cube_pvs.data)/100
+            #set_trace()
+        else:
+            cube_pvs = anom_summery[i][1] 
+
         if extend == 'max':
-            cube_pvs = None
             if np.nanmean(cube2plot.data>90) > 0.5:
                 levels = 100 - np.array(levels)
                 levels = np.sort(levels)
                 extend = 'min'
-            elif extend == 'max' and np.nanmean(cube2plot.data>10) > 0.5:
+            elif  np.nanmean(cube2plot.data>50) > 0.5:
                 levels = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
                 extend = 'neither'
-        else:
-            cube_pvs = anom_summery[i][1] 
+        levels = None
         #set_trace()
         plot_map_sow(cube2plot, control_names[i], 
                     cmap=cmaps[i], levels=levels, cube_pvs = cube_pvs,
-                    ax=axes[i + axis_diff], extend = extend, *args, **kw)
+                    ax=axes[i + axis_diff], extend = extend, levels_greater_zero = True,
+                    *args, **kw)
     for i in range(len(anom_summery)):
-        plot_control(i, 1, 3, 
-                     [0, 0.1, 0.2, 0.4, 0.8, 1, 2, 5, 10, 20, 50])
+        plot_control(i, 1, 3,
+                     #[0, 0.1, 0.2, 0.4, 0.8, 1, 2, 5, 10, 20, 50],
+                     [0, 0.5, 1, 5, 10, 15, 20, 30, 40, 50],
+                     custom_pv = True)
 
     cmaps = dcmaps
 
@@ -426,12 +441,14 @@ def show_main_control(region, control_names, cmaps, dcmaps, *args, **kw):
             extra_path, temp_path = open_mod_data(region_info, 
                                                   limitation_type = "Standard_",
                                                   diff_type = "ratio", *args, **kw)
-    set_trace()
+      
     for i in range(len(anom_summery)):
         plot_control(i, 1, 3 + len(anom_summery),
                      #[-100, -60, -40, -20, -10, -5, -2, -1, 0, 2, 5, 10, 20, 40, 60, 100],
-                     [1/10, 1/5, 1/2 , 1, 2, 5, 10],
-                     overlay_value = 1.0, overlay_col = "#ffffff", extend = 'both') 
+                     [0, 1/8, 1/5, 1/4, 1/2 , 1, 2, 4, 5, 8],
+                     shift = 1.0,
+                     powr = 6.0, custom_pv = False, 
+                     overlay_value = 1.0, overlay_col = "#ffffff", extend = 'max') 
 
     fname = "figs/control_maps_for/" + region_info['dir'] + '/' + extra_path.split('/')[-1]  + "-contol_summery.png"
     
@@ -458,8 +475,8 @@ dcmaps = [SoW_cmap['diverging_GreenPink'].reversed(),
           SoW_cmap['diverging_GreenPurple'], 
           SoW_cmap['diverging_GreenPurple']]
 
-#for region in regions:
-#    show_main_control(region, control_names, cmaps, dcmaps, sow_controls = False)
+for region in regions:
+    show_main_control(region, control_names, cmaps, dcmaps, sow_controls = False)
 
 control_names = ['Fuel', 'Weather', 'Human & Ignitions']
 cmaps = [SoW_cmap['gradient_teal'], 

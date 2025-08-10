@@ -94,20 +94,18 @@ def Potential_limitation(training_namelist, namelist,
 
 def Potential_climateology_limitation(training_namelist, namelist,
                         controlID, name, control_direction, *args, **kws):   
- 
+    
     info = read_variables_from_namelist(training_namelist) 
     Control = Standard_limitation(training_namelist, namelist,
-                              controlID, name, control_direction,
-                              *args, **kws)[0]   
+                                  controlID, name, control_direction,
+                                  *args, **kws)[0]   
 
     control_Directioni = np.array(control_direction.copy())
     control_Directioni[controlID] = 0.0
     
     extra_params = {"control_Direction": control_Directioni}
     
-    Others = Without_limitation(training_namelist, namelist,
-                              controlID, name, control_direction,
-                              *args, **kws)[0]   
+    Others = Without_limitation(training_namelist, namelist, controlID, name, control_direction,*args, **kws)[0]   
 
     def for_realization(r):
         ens_no = Control.coord('realization').points[r]
@@ -283,13 +281,14 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
         if control_names is None: 
             control_names = [srt(i) for i in controls_to_plot]
         limitation_types_funs = []
-        if 'standard' in limitation_types:
-            limitation_types_funs += [Standard_limitation]
-        if 'potential' in limitation_types:
-            limitation_types_funs += [Potential_limitation]
-        if 'potential_climateology' in limitation_types:
-            limitation_types_funs += [Potential_climateology_limitation]
-    
+        for ltype in limitation_types:
+            if ltype == 'standard':
+                limitation_types_funs += [Standard_limitation]
+            if ltype == 'potential':
+                limitation_types_funs += [Potential_limitation]
+            if ltype == 'potential_climateology':
+                limitation_types_funs += [Potential_climateology_limitation]
+         
         for ltype, FUN in zip(limitation_types,limitation_types_funs):
             limitation = [FUN(training_namelist, namelist, i, 
                           name, control_direction, *args, 
@@ -430,7 +429,7 @@ def run_ConFire(namelist):
                          )
                     for name, dir, expt, yfile in zip(names_all, dirs_all, exp_type, y_filen)
                 ]
-        args_list.reverse()
+        #args_list.reverse()
         if len(args_list) > 1 and select_from_info('parallelize', True): 
             try:
                 with get_context("spawn").Pool(processes=4) as pool:

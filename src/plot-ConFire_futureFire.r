@@ -35,7 +35,7 @@ dir = paste0("outputs/ConFire_", region, "-2425-attempt2/samples/_13-frac_points
 dir = paste0("outputs/outputs_scratch/ConFLAME_nrt-isimip_large/ConFLAME_", region, "-2425/samples/_15-frac_points_0.5/")
 #eg_rast = raster(paste0("outputs/ConFire_", region, "-final/samples/_13-frac_points_0.5/baseline-/control/sample-pred0.nc"))
 eg_rast = raster(paste0("outputs/outputs_scratch/ConFLAME_nrt-isimip_large/ConFLAME_", region, "-2425/samples/_15-frac_points_0.5/baseline-/control/sample-pred0.nc"))
-plt_width = c('Amazon' = 1, 'Pantanal' = 1, 'LA' = 0.8, 'NW_Amazon' = 1, 'Congo' = 1.0, 'Greece' = 0.67)[region]
+plt_width = c('Amazon' = 1, 'Pantanal' = 1, 'LA' = 1, 'NW_Amazon' = 1, 'Congo' = 1.0, 'Greece' = 0.67)[region]
 plt_height = plt_width*nrow(eg_rast)/ncol(eg_rast)
 
 
@@ -189,20 +189,27 @@ plot_controls <- function(years, runs, control, name) {
     plot_ssp <- function(run) {
         dats = plot_control(run, control, name, c(2010, 2019), cols, levels, 
                             extend_min = F, minLab = 0, addLab = T)
+
+        axisX <- function(i) {
+            at = seq(par("xaxp")[1], par("xaxp")[2], length.out = par("xaxp")[3])
+            labels = at
+            labels[length(labels)] = ''
+            axis(at = at, labels = labels, side = i)
+        }
         if (run == runs[1]) {
-            axis(3)
+            axisX(3)
             mtext(side = 3, '2010 - 2020', line = 2)
         }
-        if (run == tail(runs, 1)) axis(1)
+        if (run == tail(runs, 1)) axisX(1)
         mtext(side = 2, run, line = 2)
         axis(2)
 
         ddats = plot_control(run, control, name, years, dcols, dlevels, dats, extend_min = T)
         if (run == runs[1]) {
-            axis(3)
+            axisX(3)
             mtext(side = 3, paste(years[1], '-', years[2] + 1), line = 2)
         }
-        if (run == tail(runs, 1)) axis(1)
+        if (run == tail(runs, 1)) axisX(1)
         
         qx = logit(head(seq(0, 1, length.out = nlayers(dats)+2)[-1], -1))
         quantile_smooth <- function(x, qu = 0.99, na.rm = TRUE) {
@@ -242,9 +249,9 @@ plot_controls <- function(years, runs, control, name) {
         #contour(is.na(eg_rast), levels = 0.5, drawlabels=FALSE, add = TRUE)
         if (run == runs[1]) {
             mtext(side = 3, 'Change in\n1-in-100 event', line = 2)
-            axis(3)
+            axisX(3)
         }
-        if (run == tail(runs, 1)) axis(1)
+        if (run == tail(runs, 1)) axisX(1)
         axis(4)
     }
     lapply(runs, plot_ssp)
