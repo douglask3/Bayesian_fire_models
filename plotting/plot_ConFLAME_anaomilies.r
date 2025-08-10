@@ -1,33 +1,41 @@
 graphics.off()
 library(raster)
-source("libs/find_levels.r")
-source("../rasterextrafuns/rasterPlotFunctions/R/make_col_vector.r")
-source("../rasterextrafuns/rasterPlotFunctions/R/plot_raster_map.r")
-source("../rasterextrafuns/rasterExtras/R/layer.apply.r")
-source("../rasterextrafuns/rasterExtras/R/is.raster.class.r")
-source("../rasterextrafuns/rasterExtras/R/addLayer.ext.r")
-source("../LPX_equil/libs/legendColBar.r")
-source("../rasterextrafuns/rasterPlotFunctions/R/mtext.units.r")
-region = 'NW_Amazon'
-
-region.name = c('Canada' = 'Canada', 'Greece' = 'Greece', 'NW_Amazon' = 'Western Amazonia')
+source("libs/sourceAllLibs.r")
+sourceAllLibs("libs/")
+#source("libs/find_levels.r")
+#source("../rasterextrafuns/rasterPlotFunctions/R/make_col_vector.r")
+#source("../rasterextrafuns/rasterPlotFunctions/R/plot_raster_map.r")
+#source("../rasterextrafuns/rasterExtras/R/layer.apply.r")
+#source("../rasterextrafuns/rasterExtras/R/is.raster.class.r")
+#source("../rasterextrafuns/rasterExtras/R/addLayer.ext.r")
+#source("../LPX_equil/libs/legendColBar.r")
+#source("../rasterextrafuns/rasterPlotFunctions/R/mtext.units.r")
+region = 'Amazon'
+region = 'Congo'
+region = 'Pantanal'
+region = 'LA'
+region.name = c('Congo' = 'Congo Basin', 
+                'Pantanal' = 'Pantanal & Chiquitano', 
+                'LA' = 'Southern California', 
+                'Amazon' = 'Northeastern Amazonia')
 
 BA_obs_file = paste0('data/data/driving_data2425/', region, '/nrt/era5_monthly//burnt_area.nc')
 
-BA_mod_dir_alls = paste0('outputs/ConFire_', region, '-nrt-tuning10/samples/_12-frac_points_0.5/baseline-/', c('Evaluate', 'control'), '/')
-
-mn = 9:10
-
+BA_mod_dir_alls = paste0('outputs/outputs_scratch/ConFLAME_nrt-drivers9/', region, '-2425/samples/_21-frac_points_0.5/baseline-/', c('Evaluate', 'control'), '/')
+#outputs/outputs_scratch/ConFLAME_nrt-drivers9/Amazon/
+mn = 8:9
+mn = 7:8
+mn = 1
 cols = c('#ffffcc','#ffeda0','#fed976','#feb24c','#fd8d3c','#fc4e2a','#e31a1c','#bd0026','#800026')
 dcols = rev(c('#67001f','#b2182b','#d6604d','#f4a582','#fddbc7','#f7f7f7','#d1e5f0','#92c5de','#4393c3','#2166ac','#053061'))
 
 openFile <- function(file) {
     out = brick(file)
     dates = names(out)
-    clim_index = grepl(paste0('.0', mn, '.'), dates, fixed = TRUE) & substr(dates, 2, 5) > 2013
+    clim_index = grepl(paste0('.0', mn, '.'), dates, fixed = TRUE) & substr(dates, 2, 5) > 2002
     clim = mean(out[[which(clim_index)]])*100
     
-    index = grepl('2023', dates) & clim_index
+    index = grepl('2025', dates) & clim_index
     sow = out[[which(index)]]*100
     anom = sow/clim
     anom[anom<1] = 2-1/anom[anom<1]
@@ -130,6 +138,7 @@ plot_raster_image <- function(r, cols, levels = NULL, cntr = NULL, ..., plotFun 
     if (is.null(levels))  {
         levels =  find_levels_n(r, 6, TRUE)  
         levels = unique(sort(c(levels/10, levels)))
+        levels = levels[levels <= 100]
     }
     cols = make_col_vector(cols, ncols = length(levels) + 1)
     
@@ -169,24 +178,25 @@ par(mar = rep(0, 4))
 levels = plot_raster_image(BA_obs[[2]], cols)
 cntr = levels[[2]]; levels = levels[[1]]
 axis(3)
-mtext('2023 BA %', line = 2)
+mtext('2025 BA %', line = 2)
 mtext(line = 3.5, paste0(region.name[region], ' - ',paste0( month.name[mn], collapse = ', ')), 
       font = 2)
 plot_raster_image(BA_obs[[1]], cols, levels, cntr = cntr)
 axis(2); axis(3)
 mtext('Observations', side = 2, line = 2)
-mtext('Mean 2014-2023 BA %', line = 2)
+mtext('Mean 2014-2024 BA %', line = 2)
 dlevels = plot_raster_image(BA_obs[[3]]-1, dcols, cntr = cntr)[[1]]
 axis(3); axis(4)
-mtext('2023 BA: 2014-2023 BA', line = 2)
+mtext('2025 BA: 2014-2025 BA', line = 2)
 
 plot_dir <- function(BA_mod_dir_all, name) {
     BA_mod_files = list.files(BA_mod_dir_all, full.names = TRUE)
-    BA_mod_files = BA_mod_files[grepl('-pred', BA_mod_files)]
+    #browser()
+    BA_mod_files = BA_mod_files[grepl('-pred', BA_mod_files)]#[1:20]
     BA_mod = lapply(BA_mod_files, openFile)
-    BA_mod_clim = layer.apply(BA_mod, function(r) r[[1]])
-    BA_mod_sow  = layer.apply(BA_mod, function(r) r[[2]])
-    BA_mod_anom = layer.apply(BA_mod, function(r) r[[3]])
+    BA_mod_clim = layer.apply(BA_mod, function(r) r[[1]])*100
+    BA_mod_sow  = layer.apply(BA_mod, function(r) r[[2]])*100
+    BA_mod_anom = layer.apply(BA_mod, function(r) r[[3]])*100
     plot_raster_points(BA_mod_clim, cols, levels, cntr = cntr)
     axis(2)
     mtext(name, side = 2, line = 2)
