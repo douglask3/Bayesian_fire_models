@@ -83,6 +83,7 @@ Each parameter is set using `parameter_name:: parameter_value'. "parameter_name"
 |                         |                                                         |            | `{'pname': "x0", 'np': 6, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}`                       |
 |                         |  Sometime you want more certain priors (i.e, these are fixed and do not change  during optimization). For this, the only addition dict field you need is `value` and the value matches the python object required by that parameter in the model you are using    |            | `{'pname': "driver_Direction", 'value': [[1, 1], [1, 1], [1, 1, -1], [1, 1, 1], [1, 1, 1, 1], [1]]}`          |
  `niterations` | This is the number of iterations or samples the model is used when training the data. When sampling the optimised distribution, you won't be able to sample more than niterations x cores, so make sure the two parameters are set high enough                                          | Yes        | `1000`                                                                                         |
+| `inference_step_type`   | This is the type of step used for pymc sampler. If not provided, default is `NUTS`  | No        | `NUTS`. options can be found [here](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/pymc_step_options) |
 | `cores`                 | This is the number of chains (optimisation attempts) AND the number of computer cores on platforms where multicore-ing in a thing   | Yes        | `100`                                                                   |
 | `fraction_data_for_sample` | The fraction of the target data used for optimization | Yes        | `0.5`                                                                                        |
 | `subset_function`       | Function to subset the data. See [Subsetting data function](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/Subsetting_data_function.md) for options      | No, but you can have multiple too        | `sub_year_months`                                                                            |
@@ -99,8 +100,10 @@ Each parameter is set using `parameter_name:: parameter_value'. "parameter_name"
 | `cmap`                  | Colormap for plots                                            | Yes        | `'OrRd'`                                                                                     |
 | `dcmap`                 | Differential colormap for plots                               | Yes        | `'RdBu_r'`                                                                                   |
 
+
+
 ## Model options
-ConFire is working. FLAME works in the original repo: [https://github.com/malu-barbosa/FLAME](https://github.com/malu-barbosa/FLAME) but is untested here. Others are under develop,ent
+ConFire and ConFLAME are working. FLAME works in the original repo: [https://github.com/malu-barbosa/FLAME](https://github.com/malu-barbosa/FLAME) but is untested here. Others are under development
 
 Available models:
 * [ConFire](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/ConFire.md)
