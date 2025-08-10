@@ -120,16 +120,10 @@ There are a couple of link distributions.  Zero Inflated logit function works ju
 *	`normal` technical runs but is having issues.
 
 ## Running the Models
-Over the next few months, we will generalise the model's running so it works the same way for any more setups, and you define the name list at runtime. For now, though, we have basic model execution files for ConFire: one for near real-time studies (`run_ConFire-NRT.py`) and one for ISI-MIP-driven runs for attribution and future projections (`run_ConFire.py`). For each, open the file, under `__main__`, make sure the variable is set to your namelist, and then run:
+We have basic model execution files for ConFire - `run_ConFire.py`. You define which namelist at runtime
 
-* for isimip
 ```bash
-python run_ConFire.py
-```
-
-* for nrt
-```bash
-python run_ConFire-NRT.py
+python run_ConFire.py [namelist]
 ```
 
 ## Results
@@ -142,15 +136,19 @@ Contributions are welcome! Please read the [CONTRIBUTING.md](README/CONTRIBUTING
 This project is licensed under the  GNU GENERAL PUBLIC LICENSE version 3 License. See the [LICENSE](LICENSE) file for details.
 
 ## Contact
-Please contact [Dougas Kelley] at [doukel@ceh.ac.uk] for any questions or issues.
+Please contact [Dougas Kelley] at [doukel@ceh.ac.uk] or [Maria Lucia Ferreira Barbosa] at [marbar@ceh.ac.uk]  for any questions or issues.
 
 ## State of Wildfires report
 The State of Wildfires report has been a major driver of this development. Here's some info for anyone whose found their way here and wants to perform those runs again
 
-### 2023/24
-To reproduce results in the State of Wildfire's 2023/24 report, make sure you have the version at tag SoW23_v0.1 (0.1 because the paper is still in review). Or download the Zenodo archived code that can be found with the paper: https://doi.org/10.5194/essd-2024-218, along with dataset information. The achived driving and output data is [https://doi.org/10.5281/zenodo.11420743](https://doi.org/10.5281/zenodo.11420743).
+### 2024/25
+To reproduce results in the State of Wildfire's 2023/24 report, make sure you have the version at tag SoW24_v0.21. Driving data is available from [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15721435.svg)](https://doi.org/10.5281/zenodo.15721435), and outputs are stored in [State of Wildfires Zenodo Community](https://zenodo.org/communities/stateofwildfiresproject/).
+The results from this paper were obtained using the [Running the Models](#running-the-models) commands above.
 
-The results from this paper were obtained using the [Running the Models](#running-the-models) commands above. It combines [ConFire](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/ConFire.md) with the [zero inflated logit function](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/Zero_inflated_logit_function.md) logistic function The namelists are already set within these files, but you may need to update paths in the following in the `namelists` directory:
+### 2023/24
+To reproduce results in the State of Wildfire's 2023/24 report, make sure you have the version at tag SoW23_v0.1. Or download the Zenodo archived code that can be found with the paper: https://doi.org/10.5194/essd-2024-218, along with dataset information. The achived driving and output data is [https://doi.org/10.5281/zenodo.11420743](https://doi.org/10.5281/zenodo.11420743).
+
+The results from this paper were obtained using the [Running the Models](#running-the-models) command as applied in version [v0.1](https://github.com/douglask3/Bayesian_fire_models/releases/tag/SoW23_v0.1). It combines [ConFire](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/ConFire.md) with the [zero inflated logit function](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/Zero_inflated_logit_function.md) logistic function The namelists are already set within these files, but you may need to update paths in the following in the `namelists` directory:
 * `isimip.txt` - used for attribution and future projections
 * `isimip-evaluation.txt` used to evaluate the configuration for attribution and future projections
 * `nrt.txt` used for 2023 fire season driver analysis
