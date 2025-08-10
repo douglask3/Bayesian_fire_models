@@ -97,15 +97,18 @@ Each parameter is set using `parameter_name:: parameter_value'. "parameter_name"
 | `sample_for_plot`       | Number of samples from the optimised trace for evaluation and plotting                                | Yes        | `100`                                                                                        |
 | `levels`                | colourmap levels for burnt area maps                                      | Yes        | `[0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0]`                                                        |
 | `dlevels`               | colourmap levels for difference in burnt area maps                                 | Yes        | `[-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]`                                        |
-| `cmap`                  | Colormap for plots                                            | Yes        | `'OrRd'`                                                                                     |
-| `dcmap`                 | Differential colormap for plots                               | Yes        | `'RdBu_r'`                                                                                   |
-
+| `cmap`                  | Colormap for plots                                            | Yes        | `'OrRd'`  |
+| `dcmap`                 | Differential colormap for plots                               | Yes        | `'RdBu_r'` |
+| `limitation_types`      | The type of limitations that will be outputed                 | No         | current options are: `'standard'`, `'potential'`, `'potential_climateology'` |
+| `controls_to_plot`      | which control ids to analyes and plot                               | No        | `[0, 1]` |
+| `time_series_percentiles`| The percentile of BA of which to produce time series ocer (i.e 95.0 analysised gridcells with top 5% BA only) | No        | `[0.0, 95.0]` |
 
 
 ## Model options
 ConFire and ConFLAME are working. FLAME works in the original repo: [https://github.com/malu-barbosa/FLAME](https://github.com/malu-barbosa/FLAME) but is untested here. Others are under development
 
 Available models:
+* [ConFLAME](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/ConFLAME.md)
 * [ConFire](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/ConFire.md)
 * [FLAME](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/FLAME.md)
 
