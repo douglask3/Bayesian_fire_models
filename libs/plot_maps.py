@@ -28,7 +28,7 @@ from to_precision import *
 from state_of_wildfires_colours  import SoW_cmap
 from pdb import set_trace
 
-def plot_BayesModel_maps(Sim, levels, cmap, ylab = '', Obs = None, 
+def plot_BayesModel_maps(Sim, levels = None, cmap = 'gradient_reds', ylab = '', Obs = None, 
                          Nrows = 1, Ncols = 2, plot0 = 0, collapse_dim = 'realization',
                          scale = 1, figure_filename = None, set_traceT = False,
                          *args, **kw):
@@ -43,22 +43,38 @@ def plot_BayesModel_maps(Sim, levels, cmap, ylab = '', Obs = None,
     except:
         pass
     try:
-        Sim = Sim.collapsed(collapse_dim, iris.analysis.PERCENTILE, percent=[5, 95])
+        if Sim.dim_coords[0].name() == collapse_dim:
+            
+            pSim = Sim[0:2].copy()
+            pSim.data = np.nanpercentile(Sim.data, [10, 95], axis = 0)
+            Sim = pSim
+            #set_trace()
+            #Sim = Sim.collapsed(collapse_dim, iris.analysis.PERCENTILE, percent=[5, 95])
     except:
         set_trace()
+    
     Sim.data[Sim.data <0] = 0.0
     #levels = hist_limits(cube*scale, nlims = 7, symmetrical = False)[0]
     #levels = np.sort(np.append([0], levels[levels > 0.00001]))
-    if levels is None:
-        levels = np.append(hist_limits(Obs*scale, nlims = 6, symmetrical = False)[0], 
-                           hist_limits(Sim*scale, nlims = 6, symmetrical = False)[0])
-        levels = np.sort(np.append([0], levels[levels > 0.00001]))
+    #if levels is None:
+    #    levels = np.append(hist_limits(Obs*scale, nlims = 6, symmetrical = False)[0], 
+    #                       hist_limits(Sim*scale, nlims = 6, symmetrical = False)[0])
+    #    levels = np.sort(np.append([0], levels[levels > 0.00001]))
     #set_trace()   
     def plot_map(cube, plot_name, plot_n, **kw2):
-        levels = hist_limits(cube*scale, nlims = 6, symmetrical = False)[0]
-        plot_annual_mean(cube, levels, cmap, plot_name = plot_name, scale = scale, 
-                     Nrows = Nrows, Ncols = Ncols, plot_n = plot_n + plot0, *args, **kw, **kw2)
+        #levels = hist_limits(cube*scale, nlims = 6, symmetrical = False)[0]
         
+        #levels = auto_pretty_levels(cube.data, n_levels=7, ignore_v = 0.0)
+        #Nrows = 1, Ncols = 2
+        #ax = plt.subplot(Nrows, Ncols, plot_n, projection = ccrs.Robinson())
+        
+        #SoW_cmap['diverging_TealOrange'], 
+        #plot_map_sow(cube, plot_name,  cmap = SoW_cmap[cmap], levels=levels, ax=ax, cbar_label = "", **kw, **kw2)
+        #set_trace()
+        try:
+            plot_annual_mean(cube, levels, cmap, plot_name = plot_name, scale = scale,                      Nrows = Nrows, Ncols = Ncols, plot_n = plot_n + plot0, *args, **kw, **kw2)
+        except:
+            set_trace()
         if plot_n == 1:
             plt.gca().text(-0.1, 0.5, ylab, fontsize=12, rotation=90, va='center', ha='right',
                            transform=plt.gca().transAxes)
@@ -76,22 +92,35 @@ def plot_BayesModel_maps(Sim, levels, cmap, ylab = '', Obs = None,
     
     plot_map(Sim[0,:], "Simulation -  5%", plot_n, figure_filename = set_fig_fname('-sim05pc'))
     plot_map(Sim[1,:], "Simulation - 95%", plot_n+1, figure_filename = set_fig_fname('-sim95pc'))
+   
     #plot_map(Sim[2,:], "Simulation - 95%", plot_n+2, figure_filename = set_fig_fname('-sim95pc'))
     
     return levels
     
    
-def plot_annual_mean(cube, levels, cmap, plot_name = None, scale = None, 
-                     Nrows = 1, Ncols = 1, plot_n = 1, colourbar = True, *args, **kw):
+def plot_annual_mean(cube, levels = None, cmap = 'gradient_hues', plot_name = None, scale = None, 
+                     Nrows = 1, Ncols = 1, plot_n = 1, colourbar = True, add_level0 = True,
+                     *args, **kw):
+    #if plot_n == 5: set_trace()
     try:
         aa = cube.collapsed('time', iris.analysis.MEAN)
     except:
         aa = cube
+     
     if plot_name is not None: aa.long_name = plot_name
     if scale is not None: aa.data = aa.data * scale
+    if levels is None:
+        lower_bound = 10**(math.floor(math.log10(np.nanmax(aa.data))) -3)
+        levels = auto_pretty_levels(aa.data[np.abs(aa.data) > lower_bound], n_levels=7, ignore_v = 0.0)
+        if levels.min() > 0.0:
+            levels = np.append(0, levels)
     
-    plot_lonely_cube(aa, Nrows, Ncols, plot_n, levels = levels, cmap = cmap, 
-                     colourbar = colourbar, grayMask = True, *args, **kw)
+    ax = plt.subplot(Nrows, Ncols, plot_n, projection = ccrs.Robinson())
+    
+    plot_map_sow(aa, plot_name,  cmap = SoW_cmap[cmap], levels=levels, ax=ax,  cbar_label = "", add_cbar = colourbar, *args, **kw)
+    
+    #plot_lonely_cube(aa, Nrows, Ncols, plot_n, levels = levels, cmap = cmap, 
+    #                 colourbar = colourbar, grayMask = True, *args, **kw)
 
 
 
@@ -276,7 +305,7 @@ def concat_cube_data(cubes):
 
 
 def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = None, force0 = False,
-                      ignore_v = None):
+                      ignore_v = None, levels_greater_zero = False):
     """
     Generate 'pretty' contour levels that break the data into roughly equal-sized areas.
 
@@ -304,6 +333,8 @@ def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = None, force0 = Fal
     data = data[np.abs(data) < 9E9]
     if ignore_v is not None:
         data = data[data != ignore_v]
+    if levels_greater_zero:
+        data = data[data>=0]
     if data.mask.all():
         return np.array([-1, 0, 1])
         raise ValueError("No valid data found to calculate levels.")
@@ -545,7 +576,7 @@ def add_confidence(cube_pvs, ax):
 def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_BlueRed'], 
              levels = None, extend = 'both', ax=None,
              cbar_label = '', overlay_value = None, overlay_col = "#cfe9ff",
-             cube_pvs = None, *args, **kw):
+             cube_pvs = None, add_cbar = True, figure_filename = None, *args, **kw):
     """
     Plot a SoW-style map of fire (or climate) data with optional overlays and confidence markers.
 
@@ -585,6 +616,7 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
     - Adds coastlines, rivers, borders, and land mask for context.
     - Observational contours and confidence patterns help interpret model results.
     """ 
+    
     cube.long_name = title
     cube.rename(title)
     is_catigorical =  np.issubdtype(cube.core_data().dtype, np.integer)
@@ -593,6 +625,11 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
     # Main filled contour
     if levels is  None:
         levels = auto_pretty_levels(cube.data, *args, **kw)
+        
+        if extend == 'max' and levels[0]>0.0:
+            levels = np.append(0, levels[1:])
+        if extend == 'max'  and len(levels) > 2: levels = levels[:-1]
+            
     elif isinstance(levels, str) and levels == 'auto':
         levels = None
     if is_catigorical:
@@ -610,16 +647,17 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
 
     if cube_pvs is not None:
         add_confidence(cube_pvs, ax)
-    if is_catigorical:
-        tick_positions = np.array(levels) + 0.5
-        tick_labels = [str(level) for level in levels]
-        cbar = plt.colorbar(img, ax=ax, orientation='horizontal',
-                            ticks=tick_positions)
-        cbar.ax.set_xticklabels(tick_labels) 
-    else:
-        cbar = plt.colorbar(img, ax=ax, ticks=levels, orientation='horizontal')
-    cbar.set_label(cbar_label, labelpad=10, loc='center')
-    cbar.ax.xaxis.set_label_position('top')
+    if add_cbar:
+        if is_catigorical:
+            tick_positions = np.array(levels) + 0.5
+            tick_labels = [str(level) for level in levels]
+            cbar = plt.colorbar(img, ax=ax, orientation='vertical',
+                                ticks=tick_positions)
+            cbar.ax.set_yticklabels(tick_labels) 
+        else:
+            cbar = plt.colorbar(img, ax=ax, ticks=levels, orientation='vertical')
+        cbar.set_label(cbar_label, labelpad=10, loc='center')
+        cbar.ax.xaxis.set_label_position('top')
      
     # Add boundaries
     ax.add_feature(cfeature.COASTLINE, linewidth=0.5)
@@ -632,6 +670,12 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
         qplt.contour(contour_obs, levels=[0], colors='#8a3b00', linewidths=1, axes=ax)
 
     print(title)
-    ax.set_title(title)
+    ax.set_title(title, fontsize = 12)
+
+    if figure_filename is not None:
+        try:
+            iris.save(cube, figure_filename)
+        except:
+            set_trace()
     return img
 

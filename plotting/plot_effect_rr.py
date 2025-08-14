@@ -50,7 +50,7 @@ def effect_ratio_and_rr_over_range(factual_flat, counterfactual_flat,
     ax.axvline(obs, color='red', linestyle='--', label='Observed Burned Area')
     # Left axis labels
     ax.set_xlabel('')
-    ax.set_ylabel('', color='tab:blue')
+    #ax.set_ylabel('', color='tab:blue')
     scale2upper1_axis(ax)
     #ax.tick_params(axis='y')#, labelcolor='tab:blue')
     ax.grid(alpha=0.3)
@@ -62,7 +62,7 @@ def effect_ratio_and_rr_over_range(factual_flat, counterfactual_flat,
         ax.plot(xs, risk_ratio, color='tab:red', label='Risk ratio', linewidth=2)
         ax.text(0.09, 0.33, "Risk Ratio of event:" + str(np.round(rrobs, 1)), 
             transform=ax.transAxes)
-    #ax2.set_ylabel('Risk ratio', color='tab:red')
+    ax.set_ylabel(plot_name)#, color='tab:red')
     #ax2.tick_params(axis='y', labelcolor='tab:red')
     
     #scale2upper1_axis(ax2)
