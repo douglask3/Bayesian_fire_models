@@ -250,56 +250,6 @@ def evaluate_MaxEnt_model_from_namelist(training_namelist = None, evaluate_namel
      
     return evaluate_MaxEnt_model(**variables)
 
-def plot_limitation_maps(fig_dir, filename_out, **common_args):
-    limitations = [runSim_MaxEntFire(**common_args, run_name = "control_controls-" + str(i),  
-                                     test_eg_cube = False, out_index = i, 
-                                     method = 'burnt_area', return_limitations = True)  \
-                   for i in range(4)] 
-        
-    for i in range(len(limitations)):
-        coord = iris.coords.DimCoord(i, "model_level_number")
-        limitations[i].add_aux_coord(coord)
-    limitations = iris.cube.CubeList(limitations).merge_cube()
-    mn = np.mean(limitations.data, axis = tuple([2, 3, 4]))
-    std = np.std(limitations.data, axis = tuple([2, 3, 4]))
-    limitations = limitations-mn [:, :, None, None, None]
-    limitations = limitations/std[:, :, None, None, None]
-
-    def select_limitations(slice_B, slice_A):
-        dists = [np.sum(np.abs((slice_A[i] - slice_B).data), axis = tuple([1, 2, 3])) \
-                 for i in range(slice_A.shape[0])]
-        
-        dists = np.array(dists)            
-            
-        row_ind, col_ind = linear_sum_assignment(dists)
-            
-        return col_ind   
-
-    # Iterate through each B slice and apply the function
-    sorted_indices = []
-    for b_index in range(limitations.shape[1]):  # Loop through B dimension
-        print(b_index)
-        sorted_index = select_limitations(limitations[:, b_index, :], limitations[:, 0, :])
-        sorted_indices.append(sorted_index)
-    sorted_indices = np.transpose(np.array(sorted_indices))
-
-    sorted_lim = limitations.copy()
-    sorted_lim.data = np.take_along_axis(limitations.data, 
-                                         sorted_indices[:, :, None,None, None], axis=1)
-        
-    figName = fig_dir + filename_out + '-limitation_maps'
-    for i in range(sorted_lim.shape[0]):
-        plot_BayesModel_maps(sorted_lim[i], 
-                             [-2.5, -2.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0, 2.5], 
-                             'PiYG', '', None, 
-                             Nrows = 5, Ncols = 2, plot0 = i*2,
-                             scale = 1, figure_filename = figName)
-            
-    plt.gcf().set_size_inches(8, 12)
-    plt.gcf().tight_layout()
-    plt.savefig(figName + '.png')
-    plt.clf()
-    plt.close() 
 
 def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file, 
                           Y_scale = None,
@@ -417,7 +367,6 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
             return Sim, Y, X, lmask, scalers 
         else:
             return Sim
-    #plot_limitation_maps(fig_dir, filename_out, **common_args)
     
     common_args['Sim'] = Sim[0]
     
