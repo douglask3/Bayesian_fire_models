@@ -44,7 +44,7 @@ def print_diffs(cube1, cube2):
 
 
 def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, temp_dir, 
-                     region_names = None, shapefile_path = None):
+                     region_names = None, shapefile_path = None, region_in_shapefile = True):
     
     var_dir = dir  + '/' + experiment[0] + '/' + variable + '/' + sub_dir + '/'
     
@@ -116,21 +116,25 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
         else:
             cube = cube[0]
         print("yay")
-        def process_region(region_name, cube):
+        def process_region(cube, region_name):
             out_file = out_dir + '/' + region_name.replace(' ', '_') + \
                        '/HadGEM_' + experiment[1] + \
                        '/' + variable + '/' + member + '-' + str(start_year) + '-2.nc'
             #if os.path.isfile(out_file):
             #    return
+            
             os.makedirs(os.path.dirname(out_file), exist_ok=True)
             
             cube.coord("longitude").circular = True
             cube = cube.intersection(longitude=(-180, 180))
-            cube = contrain_to_sow_shapefile(cube, shapefile_path, region_name)
-            
+            if region_in_shapefile:
+                cube = contrain_to_sow_shapefile(cube, shapefile_path, region_name)
+            else:
+                cube = contrain_to_shapefile(cube, shapefile_path)
             iris.save(cube, out_file, local_keys=['calendar'])
-        [process_region(region_name, cube) for region_name in region_names]
-
+        
+        [process_region(cube, region_name) for region_name in region_names]
+            
         os.makedirs(os.path.dirname(completed_file), exist_ok=True)
         Path(completed_file).touch()
     [process_memember(member) for member in ensembles]
@@ -142,17 +146,24 @@ def process_variables(experiments, variables, *args, **kw):
         print(experiment)
         for variable in variables:
             process_variable(experiment, variable, *args, **kw)
+
+
+
+dir = "/data/users/opatt/HadGEM3-A-N216/"
+sub_dir = '/day/'  
+start_years = [2013, 2023]
+
+variables = ['pr', 'tasmax','hursmin', 'tas','sfcWind', 'uas', 'vas',  'mrros']
+experiments = [['historicalNatExt', 'NAT'], ['historicalExt', 'ALL']]
     
+
 if __name__=="__main__":
-    dir = "/data/users/opatt/HadGEM3-A-N216/"
-    sub_dir = '/day/'
+    
 
     temp_dir = "/data/scratch/douglas.kelley/Bayesian_fire_models/temp/hadgem_nrt2/"
     out_dir = "data/data/driving_data2425/nrt_attribution/"
-
-    start_years = [2013, 2023]
-
-    shapefile_path = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
+    
+    shapefile_path = "data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
     region_names = ["northeast India",
                    "Alberta",
                    "Los Angeles",
@@ -160,9 +171,7 @@ if __name__=="__main__":
                    "Amazon and Rio Negro rivers",
                    "Pantanal basin"]
 
-    variables = ['pr', 'tasmax','hursmin', 'tas','sfcWind', 'uas', 'vas',  'mrros']
-    experiments = [['historicalNatExt', 'NAT'], ['historicalExt', 'ALL']]
-    
+
     for start_year in start_years:
         process_variables(experiments, variables, start_year, dir, sub_dir,
                           out_dir, 
