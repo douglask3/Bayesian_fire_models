@@ -1,7 +1,7 @@
 import os.path
 import sys
 sys.path.append('.')
-sys.path.append('libs/make_input/nrt/')
+sys.path.append('make_input/nrt/')
 from HadGEM_extract import *
 
 
