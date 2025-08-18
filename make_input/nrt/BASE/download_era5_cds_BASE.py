@@ -6,7 +6,7 @@ from pdb import set_trace
 
 if __name__=="__main__":  
     temp_dir = "/data/users/douglas.kelley/Bayesian_fire_models/data-cds/era5_nrt/"
-    out_dir = "data/data/driving_data2425/nrt_attribution//"
+    out_dir = "data/data/driving_data_base/nrt_attribution//"
 
     shapefile_path = "data/BASE_shapes/"
     region_names = ["Amazon", "Pantanal"]
