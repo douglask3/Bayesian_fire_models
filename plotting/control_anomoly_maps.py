@@ -242,123 +242,6 @@ def open_mod_data(region_info, limitation_type = "Standard_", nensemble = 100,
                      count_pos, count_neg, extra_path, temp_path
 
 
-def run_for_region(region_info, diff_type = "anomoly",
-                   levels_mod = [-1, -0.1, -0.01, -0.001, 0.001, 0.01, 0.1, 1],
-                   levels_controls = None, 
-                   consistent = True, plot_stuff = True,
-                   *args, **kw):
-
-    obs_anomaly, mod_pcs, mod_pvs, obs_pos, anom_summery,\
-            count_pos, count_neg, \
-            extra_path, temp_path = open_mod_data(region_info, diff_type = diff_type,     
-                                                  *args, **kw)
-    
-    anom_p10 = [anom[0][0] for anom in anom_summery]
-    anom_p90 = [anom[0][-1] for anom in anom_summery]
-    rt = None
-    n_levels = 5
-    force0 = True
-    levels_BA_obs = None
-    if diff_type == "ratio":
-        rt = 1.0
-        levels_BA_obs = region_info['Ratio_levels']
-    if diff_type == "absolute":
-        n_levels = 7
-        force0 = False
-    if diff_type == "anomoly":
-        levels_BA_obs = region_info['Anomoly_levels']
-    
-    if consistent:
-        levels_BA = auto_pretty_levels([obs_anomaly, mod_pcs[0], mod_pcs[-1]], 
-                                       n_levels = n_levels + 3, ratio = rt) 
-        levels_BA_obs = levels_BA
-    else:
-        levels_BA = levels_BA_obs
-
-    
-    if levels_controls is None:
-        levels_controls = auto_pretty_levels(anom_p10 + anom_p90, n_levels = n_levels, 
-                                             ratio = rt)
-    
-    # Define grid shape
-    fig, axes = set_up_sow_plot_windows(5, 4, mod_pcs[0])
-
-    smoothed_obs = smooth_cube(obs_anomaly, sigma=2)
-    img = []
-   
-    img.append(plot_map_sow(obs_anomaly, "Observed Burned Area", 
-                    cmap=SoW_cmap['diverging_TealOrange'], 
-                    levels=levels_BA_obs,#region_info['Anomoly_levels'], 
-                    ax=axes[0], cbar_label = "Burned Area Anomaly (%)"))
-    
-    img.append(plot_map_sow(mod_pcs[0], "Simulated Burned Area (10th percentile)", 
-                    cmap=SoW_cmap['diverging_TealOrange'], levels=levels_BA,#levels_mod, 
-                    ax=axes[4]))
-
-    img.append(plot_map_sow(mod_pcs[-1], "Simulated Burned Area (90th percentile)",     
-                    cmap=SoW_cmap['diverging_TealOrange'], levels=levels_BA,#levels_mod, 
-                    ax=axes[5]))
-    
-    img.append(plot_map_sow(count_pos, "No. anonomlously high controls", 
-                        levels = range( count_pos.data.max() + 2), 
-                        cmap=SoW_cmap['gradient_hues'], extend = 'neither', ax = axes[6]))
-    img.append(plot_map_sow(count_neg, "No. anonomlously low controls", 
-                        levels = range( count_neg.data.max() + 2), 
-                        cmap=SoW_cmap['gradient_reversed_hues'], extend = 'neither', ax = axes[7]))
-
-    control_names = ['Fuel', 'Moisture', 'Weather', 'Wind', 'Ignitions', 'Suppression']
-    cmaps = [SoW_cmap['diverging_GreenPink'].reversed(), 
-            SoW_cmap['diverging_TealPurple'], 
-            SoW_cmap['diverging_BlueRed'], 
-            SoW_cmap['diverging_BlueRed'], 
-            SoW_cmap['diverging_GreenPurple'], SoW_cmap['diverging_GreenPurple']]
-    
-    for i in range(len(anom_p10)):
-        if not consistent: 
-            levels_controls = auto_pretty_levels(anom_p10[i].data, n_levels = n_levels+1, 
-                                                    ratio = rt, force0 = force0)
-        img.append(plot_map_sow(anom_p10[i], control_names[i] + " (10th percentile)", 
-                    cmap=cmaps[i], levels=levels_controls, 
-                    ax=axes[2*i+8]))
-
-        if not consistent: 
-            levels_controls = auto_pretty_levels(anom_p90[i].data, n_levels = n_levels+1, 
-                                                    ratio = rt, force0 = force0)
-
-        img.append(plot_map_sow(anom_p90[i], control_names[i] + " (90th percentile)", 
-                    cmap=cmaps[i], levels=levels_controls, 
-                    ax=axes[2*i+9]))
-
-    plt.tight_layout()
-    if not consistent:
-        extra_path = extra_path + 'own_levels'
-    fname = "figs/control_maps_for/" + extra_path + ".png"
-    path = Path(fname).parent.mkdir(parents=True, exist_ok=True)
-    
-    plt.savefig(fname, dpi=300)
-
-    fig, axes = set_up_sow_plot_windows(1, 3, mod_pcs[0])
-
-    img.append(plot_map_sow(obs_anomaly, "Burned Area", 
-                    cmap=SoW_cmap['diverging_TealOrange'], 
-                    levels=levels_BA_obs, 
-                    ax=axes[0], cbar_label = "Burned Area Anomaly (%)"))
-
-
-    img.append(plot_map_sow(count_pos, "Number of positive fire indicators", 
-                        levels = range( count_pos.data.max() + 2), 
-                        cmap=SoW_cmap['gradient_hues'], extend = 'neither', ax = axes[1]))
-
-    img.append(plot_map_sow(count_neg, "Number of negative fire indicators", 
-                        levels = range( count_neg.data.max() + 2), 
-                        cmap=SoW_cmap['gradient_reversed_hues'], extend = 'neither', ax = axes[2]))
-
-    plt.tight_layout()
-    
-    fname = "figs/control_maps_for/" + extra_path  + "-summer.png"
-    plt.savefig(fname,  dpi=300)
-    return temp_path
-
 
 def show_main_control(region, control_names, cmaps, dcmaps, *args, **kw):
     region_info = get_region_info(region)[region]
@@ -488,15 +371,7 @@ dcmaps = [SoW_cmap['diverging_GreenPink'].reversed(),
           SoW_cmap['diverging_GreenPurple']]
 
 for region in regions:
-    show_main_control(region, control_names, cmaps, dcmaps, sow_controls = True)
+    show_main_control(region, control_names, cmaps, dcmaps, sow_controls = False)
 
 set_trace()
-for consistent in [False, True]:
-    for region in regions:
-        for diff_type, levels_control in zip(['ratio', 'absolute', 'anomoly'], levels_controls):
-            for limitation_type in ["Standard_", "Potential_climateology"]:
-                tfile = run_for_region(regions_info[region], diff_type = diff_type, 
-                               limitation_type = limitation_type, 
-                               levels_controls = levels_control,
-                               consistent = consistent, plot_stuff = False)
 
