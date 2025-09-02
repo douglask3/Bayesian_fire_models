@@ -20,6 +20,7 @@ import matplotlib.colors as mcolors
 import math
 
 import sys
+import copy
 sys.path.append('../../libs/')
 sys.path.append('libs/')
 sys.path.append('SoW_info/')
@@ -46,7 +47,7 @@ def plot_BayesModel_maps(Sim, levels = None, cmap = 'gradient_reds', ylab = '', 
         if Sim.dim_coords[0].name() == collapse_dim:
             
             pSim = Sim[0:2].copy()
-            pSim.data = np.nanpercentile(Sim.data, [10, 95], axis = 0)
+            pSim.data = np.nanpercentile(Sim.data, [10, 90], axis = 0)
             Sim = pSim
             #set_trace()
             #Sim = Sim.collapsed(collapse_dim, iris.analysis.PERCENTILE, percent=[5, 95])
@@ -284,8 +285,6 @@ def hist_limits(dat, lims = None, nlims = 5, symmetrical = True):
     
     return (lims, extend)
 
-import numpy as np
-
 def concat_cube_data(cubes):
     """
     Concatenate data from a list of Iris cubes into one flat NumPy array,
@@ -325,6 +324,14 @@ def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = None, force0 = Fal
             data = data.data
         except:
             pass
+    
+    try:
+        data = data[data>data.min()]
+        data = data[data<data.max()]
+        data = data[data>np.percentile(data, 5)]
+        data = data[data<np.percentile(data, 95)]
+    except:
+        pass
     # Flatten data and mask NaNs
     try:
         data = np.ma.masked_invalid(np.ravel(data))
@@ -371,7 +378,12 @@ def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = None, force0 = Fal
         levels_rounded[levels_rounded < 1/1000.0] = 1/1000.0
         levels_rounded = np.log(levels_rounded) / ratio
         data =  np.log(data ) / ratio
-        
+    
+
+    power10 = 10 ** np.floor(np.log10(levels_rounded.max())) 
+    threshold = 0.0001 * power10   
+    #levels_rounded = levels_rounded[levels_rounded >= threshold]
+
     if force0 or (any(levels_rounded < 0) and any(data > 0)) or \
             (any(levels_rounded > 0) and any(data < 0)):
         levels_rounded = np.sort(np.unique(np.append(levels_rounded, - levels_rounded)))
@@ -389,26 +401,26 @@ def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = None, force0 = Fal
     #    set_trace()
     #if len(levels_rounded) < 4:
     #    set_trace()
+    
+    #if len(levels_rounded) == 2:
+    #set_trace() 
     if len(levels_rounded) < 2:
-        levels_rounded = levels_rounded + np.array([-0.001, 0, 0.001])
+        if levels_rounded == 100:
+            levels_rounded = np.array([99.9, 99.99, 100])        
+        else:
+            levels_rounded = levels_rounded + np.array([-0.001, 0, 0.001])
     return levels_rounded
 
-def add_overlay_value(cube, value, col, ax):
-    '''
-    import matplotlib.colors as mcolors
-    
-    ax.imshow((cube.data == 0), origin='lower', cmap=mcolors.ListedColormap(['none', 'black']), alpha=0.3,
-          extent=[cube.coord('longitude').points.min(), cube.coord('longitude').points.max(),
-                  cube.coord('latitude').points.min(), cube.coord('latitude').points.max()])
-    '''
-    
-
-
+def add_overlay_value(cube, value, col, ax):    
     # --- Create a binary mask for where cube == 0 ---
-    zero_mask = (cube.data == value)
     
+    if isinstance(value, list):
+        zero_mask = (cube.data  > value[0]) &  (cube.data < value[1])
+    else:
+        zero_mask = (cube.data == value)
+        
     # Create a new cube with 1 where data == 0, masked elsewhere
-    import copy
+    
     highlight_cube = copy.deepcopy(cube)
     highlight_cube.data = zero_mask.astype(float)
     highlight_cube.data[~zero_mask] = np.nan  # Mask non-zero
@@ -625,13 +637,27 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
     # Main filled contour
     if levels is  None:
         levels = auto_pretty_levels(cube.data, *args, **kw)
-        
+        if levels.max() > 10 and levels.min() > 0 and levels.min() < 0.01:
+            levels = np.append(0,  levels[levels > 0.01])
+        elif levels.max() > 1 and levels.min() > 0 and levels.min() < 0.001:
+            levels = np.append(0,  levels[levels > 0.001])
         if extend == 'max' and levels[0]>0.0:
             levels = np.append(0, levels[1:])
         if extend == 'max'  and len(levels) > 2: levels = levels[:-1]
             
     elif isinstance(levels, str) and levels == 'auto':
         levels = None
+    
+    if  extend is None:
+        if levels.max() == 100.0:
+            if levels.min() == 0.0:
+                extend = 'neither'
+            else:
+                extend = 'min'
+        elif levels.min() == 0.0:
+            extend = 'max'
+        else:
+            extend = 'both'
     if is_catigorical:
         norm = BoundaryNorm(boundaries=np.array(levels) + 0.5, ncolors=cmap.N)
     elif levels is not None:   
@@ -658,7 +684,7 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
             cbar = plt.colorbar(img, ax=ax, ticks=levels, orientation='vertical')
         cbar.set_label(cbar_label, labelpad=10, loc='center')
         cbar.ax.xaxis.set_label_position('top')
-     
+         
     # Add boundaries
     ax.add_feature(cfeature.COASTLINE, linewidth=0.5)
     ax.add_feature(cfeature.RIVERS, linewidth=0.5)
