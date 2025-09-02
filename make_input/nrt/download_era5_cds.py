@@ -152,7 +152,8 @@ def download_era5(variables, years = [1940], months = range(13),
         #           '_years' +  str(years[0]) + '-' + str(years[-1]) 
         out_file = out_dir + '/' + region_name.replace(' ', '_') + \
                        '/Era5_' + dataset + \
-                       '/' + variable_out + '/_years' +  str(years[0]) + '-' + str(years[-1]) 
+                       '/' + variable_out + '/_years' +  str(years[0]) + '-' + str(years[-1])
+        print(out_file) 
         os.makedirs(os.path.dirname(out_file), exist_ok=True)
         if (yr_now is not None and years[-1] == yr_now):
             out_file = out_file + str(mnth_now)
