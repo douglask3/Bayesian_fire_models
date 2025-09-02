@@ -64,8 +64,8 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
         print(member)
         completed_file = temp_dir + experiment[1] + variable + member + str(start_year) + shapefile_path.replace('/', '-') + '.txt'
         
-        #if os.path.isfile(completed_file) and False:
-        #    return
+        if os.path.isfile(completed_file):# and False:
+            return
         mfiles = [file for file in files if member in file]
         mfiles = [file for file in mfiles if int(file[-9:-5]) >= start_year]
         mfiles.sort()
@@ -75,6 +75,8 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
             set_trace()
         
         cube = iris.load(mfiles)
+        #except:
+        #    set_trace()
         for cb in cube:
             cb.coord('time').bounds = None
         for i in range(len(cube)):
@@ -122,7 +124,7 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
                        '/' + variable + '/' + member + '-' + str(start_year) + '-2.nc'
             #if os.path.isfile(out_file):
             #    return
-            
+            print(out_file) 
             os.makedirs(os.path.dirname(out_file), exist_ok=True)
             
             cube.coord("longitude").circular = True
@@ -137,7 +139,13 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
             
         os.makedirs(os.path.dirname(completed_file), exist_ok=True)
         Path(completed_file).touch()
-    [process_memember(member) for member in ensembles]
+
+    def process_memember_try(*args, **kw):
+        try:
+            process_memember(*args, **kw)
+        except:
+            pass 
+    [process_memember_try(member) for member in ensembles]
     
 
 
@@ -154,7 +162,9 @@ sub_dir = '/day/'
 start_years = [2013, 2023]
 
 variables = ['pr', 'tasmax','hursmin', 'tas','sfcWind', 'uas', 'vas',  'mrros']
-experiments = [['historicalNatExt', 'NAT'], ['historicalExt', 'ALL']]
+variables = ['tas','sfcWind', 'uas', 'vas',  'mrros']
+variables = ['sfcWind', 'uas', 'vas',  'mrros']
+experiments = [['historicalExt', 'ALL'], ['historicalNatExt', 'NAT']]
     
 
 if __name__=="__main__":
