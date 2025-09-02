@@ -3,11 +3,11 @@ from pathlib import Path
 import re
 from collections import defaultdict
 from pdb import set_trace
-def run_for_region(region):
+def run_for_region(region, dir = 'data/data/driving_data2425/'):
 
     # Input and output directories
-    base_dir = Path('data/data/driving_data2425/' + region + '/nrt/era5_monthly/CF/')
-    output_dir = Path('data/data/driving_data2425/' + region + '/nrt/era5_monthly/CF_mean/')
+    base_dir = Path(dir + region + '/nrt/era5_monthly/CF/')
+    output_dir = Path(dir + region + '/nrt/era5_monthly/CF_mean/')
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # Gather all .nc files recursively
@@ -44,6 +44,8 @@ def run_for_region(region):
         for ds in ds_list:
             ds.close()
 
-regions = ['Amazon', 'Congo', 'LA', 'Pantanal']
-for region in regions: 
-    run_for_region(region)
+
+if __name__=="__main__":
+    regions = ['Amazon', 'Congo', 'LA', 'Pantanal']
+    for region in regions: 
+        run_for_region(region)
