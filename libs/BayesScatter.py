@@ -185,7 +185,7 @@ def BayesScatter(X, Y, lmask = None, logXmin = None, logYmin = None, ax = None,
     ncols = int(Y.shape[1]/2)
     line_widths = np.linspace(0.2, 2, ncols)
     
-    alpha = 1.0/(Y.shape[1])
+    alpha = 0.5/(Y.shape[1])
 
     for i in range(ncols):        
         ax.vlines(X, ymin = Y[:,i], ymax = Y[:, -i-1],
@@ -202,5 +202,5 @@ def BayesScatter(X, Y, lmask = None, logXmin = None, logYmin = None, ax = None,
     plt.yticks(labels)
     plt.xticks(labels)
 
-    plt.xlabel("Observation")
-    plt.ylabel("Simulation")
+    plt.xlabel("Observed BA (frac)")
+    plt.ylabel("Simulation BA (frac)")
