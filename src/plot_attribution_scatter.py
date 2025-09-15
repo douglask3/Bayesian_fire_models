@@ -240,7 +240,8 @@ def estimate_tail_prob_gpd(obs, threshold, params):
     excess = obs - threshold
     return genpareto.sf(excess, *params)
 
-def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = None):
+def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, 
+                       set_Ylab = True, ax = None):
     """
     Plots a 2D KDE of Factual Burned Area vs. Relative Effect Ratio, quantifying the 
     percentage change in burned area due to climate change or other factors.
@@ -359,7 +360,7 @@ def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, ax = N
     
     ax.set_xlabel(" ")
     
-    if len(regions) > 1:
+    if set_Ylab:
         ax.set_ylabel(plot_name)    
     else:
         ax.set_ylabel(" ") 
@@ -386,6 +387,7 @@ def plot_for_region(region, metric, plot_FUN,
         counterfactual = pd.read_csv(dir + counterfactual_name + \
                               "-/" + metric + "/members/absolute/Evaluate.csv")
     except:
+        set_trace()
         factual = pd.read_csv(dir + factual_name + "-/" + metric + \
                                      "/points-Evaluate.csv")
         counterfactual = pd.read_csv(dir + counterfactual_name + \
@@ -496,7 +498,7 @@ def plot_attribution_scatter(regions, figname, plot_FUN = plot_fact_vs_ratio,
                 ax = axes[j, i]
             print(region)
             outi.append(plot_for_region(region, metric, plot_FUN = plot_FUN, ax = ax, 
-                            *args, **kw))
+                                        set_Ylab = len(regions) > 1, *args, **kw))
         out.append(outi)
     
     if len(regions) > 1:
