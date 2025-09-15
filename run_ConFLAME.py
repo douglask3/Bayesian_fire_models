@@ -429,7 +429,7 @@ def run_ConFire(namelist):
                          )
                     for name, dir, expt, yfile in zip(names_all, dirs_all, exp_type, y_filen)
                 ]
-        #args_list.reverse()
+        args_list.reverse()
         if len(args_list) > 1 and select_from_info('parallelize', True): 
             try:
                 with get_context("spawn").Pool(processes=4) as pool:
