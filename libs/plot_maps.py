@@ -488,11 +488,14 @@ def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, figsize = None, size_scale 
     fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize, 
                              subplot_kw={'projection': ccrs.PlateCarree()})
     
-    for ax in axes.flat:
-        ax.set_extent(extent, crs=ccrs.PlateCarree())
-
-    # Flatten axes for easy indexing
-    if flatten: axes = axes.flatten()
+    try:
+        for ax in axes.flat:
+            ax.set_extent(extent, crs=ccrs.PlateCarree())
+        # Flatten axes for easy indexing
+        if flatten: axes = axes.flatten()
+    except: 
+        axes.set_extent(extent, crs=ccrs.PlateCarree())
+    
     return fig, axes
  
 
