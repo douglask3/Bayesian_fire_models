@@ -101,8 +101,11 @@ def interpolate_time(dataset, time_points):
     
     
     # Now you can safely interpolate 
-    dataset_interp = dataset.interpolate([('time', target_time.points)], 
+    try:
+        dataset_interp = dataset.interpolate([('time', target_time.points)], 
                                          iris.analysis.Linear())
+    except:
+        set_trace()
 
     return dataset_interp
 
@@ -144,6 +147,7 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
         i += 1
 
     if dataset is None:
+        set_trace()
         print("==============\nERROR!")
         print("can't open data.")
         print("Check directory (''" + dir0 + "''), filename (''" + filename + \
@@ -164,6 +168,7 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
 
             dataset_time = [addTime(time_point) for time_point in time_points.points]
             dataset = iris.cube.CubeList(dataset_time).merge_cube()
+    dataset0 = dataset.copy()
     if extent is not None:
         dataset = dataset.regrid(extent, iris.analysis.Linear())
     
@@ -338,10 +343,14 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None,
         nfs = np.unique(nfs[nfs >1])
         if len(nfs) == 0:
             output = open_ensemble_member(None, Y, scalers, frac_random_sample)
-        elif len(nfs) == 1:
+        else:
+            if len(nfs) == 1:
+                nfs = int(nfs[0])
+            else:
+                nfs = int(nfs.min() )
             xOut = []
             cells_we_want = None
-            for i in range(nfs[0]): 
+            for i in range(nfs): 
                 print(i)
                 out_file = dir_driving_data + 'ens_no-' + str(i) + '.npy'
                 if not os.path.isfile(out_file) or i == 0:
@@ -355,8 +364,7 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None,
             y = list(output)
             y[1] = xOut
             output = tuple(y)         
-        else:
-            set_trace()
+        
     else:
         output = open_ensemble_member(None, Y, scalers, frac_random_sample)
     return output
