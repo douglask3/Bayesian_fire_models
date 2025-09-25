@@ -16,7 +16,7 @@ from pdb import set_trace
 
 def for_region(region, i, fig, axes, time = None, filename_extra = '', csv_dir_out = ''):
     # Load the data
-    cube = iris.load_cube("data/data/driving_data2425/" + region + "/burnt_area.nc")
+    cube = iris.load_cube("data/data/driving_data_base/" + region + "/burnt_area.nc")
     
     
     if time is not None:
@@ -121,8 +121,8 @@ def run_both_mean_and_event(regions, mnths, *args, **kw):
 
 if __name__=="__main__":
     # List of regions
-    regions = ["Amazon", "Congo", "LA", "Pantanal", "NEIndia", "Alberta"]
-    csv_dir_out = 'data/data/driving_data2425/'
+    regions = ["Pantanal", "Amazon"]#, "Congo", "LA", "Pantanal", "NEIndia", "Alberta"]
+    csv_dir_out = 'data/data/driving_data_base/'
     mnths = [[0, 1, 2], [5, 6, 7], [0], [5, 6, 7], [3], [6]]
 
     run_both_mean_and_event(regions, mnths, csv_dir_out = csv_dir_out)
