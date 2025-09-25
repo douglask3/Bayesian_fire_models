@@ -22,9 +22,6 @@ dat = rast(files)
 ext(dat) = c(-180, 180, -90, 90)
 fact = res/res(dat)
 
-#
-
-
 if (any(fact) != 1) {
     dat = aggregate(dat, fact)
     dat = dat * fact[1] * fact[2] * 100000/cellSize(dat[[1]])
