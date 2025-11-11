@@ -386,6 +386,7 @@ def plot_for_region(region, metric, plot_FUN,
         counterfactual = pd.read_csv(dir + counterfactual_name + \
                               "-/" + metric + "/members/absolute/Evaluate.csv")
     except:
+        set_trace()
         factual = pd.read_csv(dir + factual_name + "-/" + metric + \
                                      "/points-Evaluate.csv")
         counterfactual = pd.read_csv(dir + counterfactual_name + \
@@ -602,7 +603,7 @@ if __name__=="__main__":
     #retgions = {key: regions_info[key] for key in region_names if key in regions_info}
     obs_dir = 'data/data/driving_data2425//'
     obs_file = 'burnt_area_data.csv'
-    '''
+    
     outs_era5 = plot_attribution_scatter(regions, "attribution_scatter_era5_2425",
                              dir1 = dir1, dir2 = dir2,
                              obs_dir = obs_dir, obs_file = obs_file) 
@@ -614,9 +615,11 @@ if __name__=="__main__":
     
     dir1 = "outputs/outputs_scratch/ConFLAME_isimip_attribution/ConFLAME_"
     dir2 = "-2425/time_series/_15-frac_points_0.5/"
-    dir1 = "outputs/outputs_scratch/ConFLAME_nrt-isimip_large/ConFLAME_"
-    dir2 = "-2425/time_series/_16-frac_points_0.5/"
-    dir1 = "outputs/outputs_scratch/ConFLAME_isimip_attribution-LUC2/"
+    #dir1 = "outputs/outputs_scratch/ConFLAME_nrt-isimip_large/ConFLAME_"
+    #dir2 = "-2425/time_series/_16-frac_points_0.5/"
+    #dir1 = "outputs/outputs_scratch/ConFLAME_isimip_attribution-LUC2/"
+    #dir1 = "outputs/outputs_scratch/ConFLAME_isimip_attribution-pd-large/"
+    #dir2 = "-2425/time_series/_18-frac_points_0.5/"
 
     outs_isimip = plot_attribution_scatter(regions, 
                              "attribution_scatter_isimip_2425",
@@ -655,14 +658,14 @@ if __name__=="__main__":
         outs_combined.append(outi)
 
     
-    f = open('temp/store.pckl', 'wb')
+    '''f = open('temp/store-pd.pckl', 'wb')
     pickle.dump([outs_era5, outs_era52, outs_isimip, outs_combined, outs_human, outs_all], f)
     f.close()
-    '''
-    f = open('temp/store.pckl', 'rb')
+    
+    f = open('temp/store-pd.pckl', 'rb')
     outs_era5, outs_era52, outs_isimip, outs_combined, outs_human, outs_all = pickle.load(f)
     f.close()
-
+    '''
     # Example labels for the sources
     sources = ['Anthropogenic climate forcing', 
               # 'Climate (ERA5 HadGEM means)',
@@ -702,8 +705,8 @@ if __name__=="__main__":
     sns.set(style="whitegrid")
     fig, axes = plt.subplots(2, 1, figsize=(11, 7), sharex=True)
     
-    add_violin_plot(df, "Mean", axes[0], "Regional Burned Area Total")
-    xpos = add_violin_plot(df, "Extreme", axes[1], "Regional Burned Area Total")
+    add_violin_plot(df, "Mean", axes[0], "Regional Burned Area")
+    xpos = add_violin_plot(df, "Extreme", axes[1], "Sub-Regional Extreme Burned Area")
     axes[0].legend_.remove()
     axes[1].legend_.remove()
     #axes[1].text(0.25, 0.0, '0.25')
