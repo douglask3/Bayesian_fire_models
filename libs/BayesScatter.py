@@ -90,7 +90,7 @@ def Bayes_benchmark(filename_out, fig_dir, Y, X, lmask, logXmin = None, logYmin 
     plt.legend()
 
     percentiles = [0, 1, 5, 10, 25, 75, 90, 95, 99, 100]
-
+    
     for i in range(len(percentiles) - 1):
         plt.subplot(6, 3, i + 10)
         run_NME_over_subset(X, Y, percentiles[i:(i+2)])
@@ -135,7 +135,7 @@ def scatter_metric_overall_and_percentiles(X, pos, xlabel = 'Burnt Area',
         plot0 = 10 #if i > 7 else 11
         plt.subplot(6, 3, i + plot0)  # Create subplots in the bottom row
         lower = np.percentile(X, percentiles[i])
-        upper = np.percentile(X, percentiles[i + 1])
+        upper = np.percentile(X, percentiles[-1])
         y_subset = pos[(X >= lower) & (X <= upper)]
         plt.hist(y_subset, bins=30, alpha=0.7)
     
@@ -143,7 +143,7 @@ def scatter_metric_overall_and_percentiles(X, pos, xlabel = 'Burnt Area',
         plt.text(0.05, 0.7, f'Mean Y: {mean_y:.2f}', transform=plt.gca().transAxes)
         
         #plt.xlabel(f'Y ({percentiles[i]}-{percentiles[i+1]}% X)')
-        plt.text(0.05, 0.85, f'Obs ({percentiles[i]}-{percentiles[i+1]}%):', 
+        plt.text(0.05, 0.85, f'Obs ({percentiles[i]}-{percentiles[-1]}%):', 
                  transform=plt.gca().transAxes)
     
         #if i == 0 or i == 5: plt.ylabel('Frequency')
@@ -156,7 +156,7 @@ def BayesScatter(X, Y, lmask = None, logXmin = None, logYmin = None, ax = None,
                  figure_filename = None):
     pc_size = 10
     percentiles = np.arange(pc_size, 100, pc_size) 
-    percentiles = np.array([1, 2, 5, 10, 25, 75, 90, 95, 99])
+    percentiles = np.array([0, 1, 2, 5, 10, 25, 75, 90, 95, 99, 100])
     #import iris.plot as iplt
     #import iris.quickplot as qplt 
     #set_trace()  
@@ -167,8 +167,8 @@ def BayesScatter(X, Y, lmask = None, logXmin = None, logYmin = None, ax = None,
         Y = Y.collapsed('realization', iris.analysis.PERCENTILE, percent = percentiles)
         Y = np.array([Y[i].data.flatten()[lmask] for i in range(Y.shape[0])]).T
     
-    if len(X) > 5000:
-        select = np.random.choice(len(X), 1000)
+    if len(X) > 2000:
+        select = np.random.choice(len(X), 2000)
         X = X[select]
         Y = Y[select, :]
 
@@ -202,5 +202,5 @@ def BayesScatter(X, Y, lmask = None, logXmin = None, logYmin = None, ax = None,
     plt.yticks(labels)
     plt.xticks(labels)
 
-    plt.xlabel("Observation")
-    plt.ylabel("Simulation")
+    plt.xlabel("Observed BA (%)")
+    plt.ylabel("Simulatated BA (%)")
