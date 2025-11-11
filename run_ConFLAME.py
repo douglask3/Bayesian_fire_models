@@ -334,11 +334,12 @@ def run_ConFire(namelist):
     subset_function_args = select_from_info('subset_function_args')
     subset_function_eval = select_from_info('subset_function_eval')
     subset_function_args_eval = select_from_info('subset_function_args_eval')
+    
     if subset_function_args_eval is None: subset_function_args_eval =subset_function_args 
     regions = select_from_info('regions')
     time_series_percentiles = select_from_info('time_series_percentiles')
      
-    def run_for_regions(region = None):
+    def run_for_regions(subset_function_args, subset_function_args_eval, region = None):
         
         if region is None:
             region = '<<region>>'
@@ -346,16 +347,19 @@ def run_ConFire(namelist):
             def set_region_months(ssa):
                 if isinstance(ssa, list):
                     for i in range(len(ssa)):
-                        try:
-                            ssa['months_of_year'] = run_info['region_months'][region]
-                        except:
-                            pass
+                        if 'months_of_year' in ssa[i]:
+                            ssa[i]['months_of_year'] = run_info['region_months'][region]
+                        #except:
+                        #    pass
                 else:
-                    ssa['months_of_year'] = run_info['region_months'][region]
+                    if 'months_of_year' in ssa:
+                        ssa['months_of_year'] = run_info['region_months'][region]
+                
                 return ssa
-            if select_from_info('region_mnths') is not None:
-                set_region_months(subset_function_args)
-                set_region_months(subset_function_args_eval)
+            if select_from_info('region_months') is not None:
+                subset_function_args = set_region_months(subset_function_args)
+                subset_function_args_eval = set_region_months(subset_function_args_eval)
+        
         model_title = run_info['model_title'].replace('<<region>>', region)
         dir_training = run_info['dir_training'].replace('<<region>>', region)
         dir_projecting = run_info['dir_projecting'].replace('<<region>>', region)
@@ -442,9 +446,10 @@ def run_ConFire(namelist):
                 run_experiment_wrapper(args)
 
     if regions is None:
-        run_for_regions(None)
+        run_for_regions(subset_function_args, subset_function_args_eval, None)
     else:
-        for region in regions: run_for_regions(region)
+        for region in regions:
+            run_for_regions(subset_function_args, subset_function_args_eval, region)
 
 if __name__=="__main__":
     import sys
