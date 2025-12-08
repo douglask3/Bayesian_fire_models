@@ -1,10 +1,11 @@
 ## model info
 regions:: ['Amazon']
-model_title::  'ConFLAME_nrt-attribution-base-2/<<region>>'
+model_title::  'ConFLAME_nrt-attribution-base-localBA-data/<<region>>'
 
 ## input data paths and filenames
 dir_training:: "data/data/driving_data_base/<<region>>/nrt/era5_monthly/"
-y_filen:: "burnt_area.nc"
+#y_filen:: "burnt_area.nc"
+y_filen:: "Fire_fraction_Amazonia.nc"
 CA_filen:: None
 x_filen_list:: ["precip", "dry_days", "max_consec_dry", "tas_max", "hurs_min", "hurs_mean", "wind_max", "cropland_regridded_to_era5", "pasture_regridded_to_era5", "rural_population_regridded_to_era5", "total_irrigated_regridded_to_era5", "urban_area_regridded_to_era5", "urban_population_regridded_to_era5", "cvh_.nc", "cvl_.nc", "month_laih.nc", "month_lail.nc", "TV_CFUEL_CORRECTED_MAP.nc", "LI_2003_2025.nc"]
 #0: "precip", 1:"dry_days", 2:"max_consec_dry", 3:"tas_max", 4:"hurs_min", 5:"hurs_mean", 6:"wind_max", 7:"cropland_regridded_to_era5", 8:"pasture_regridded_to_era5", 9:"rural_population_regridded_to_era5", 10:"total_irrigated_regridded_to_era5", 11:"urban_area_regridded_to_era5", 12:"urban_population_regridded_to_era5", 13:"cvh_.nc", 14:"cvl_.nc", 15:"month_laih.nc", 16:"month_lail.nc", 17:"TV_CFUEL_CORRECTED_MAP.nc", 18:"cg_strokes.nc"
@@ -37,8 +38,8 @@ inference_step_type:: "metropolis"
 link_func_class:: MaxEnt
 niterations:: 1000
 cores:: 10
-fraction_data_for_sample:: 0.2
-min_data_points_for_sample:: 5000
+fraction_data_for_sample:: 0.00001
+min_data_points_for_sample:: 100
 subset_function:: sub_year_months
 subset_function:: sub_year_range
 subset_function_args:: {'months_of_year': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]}
@@ -54,7 +55,7 @@ y_filen_eval:: 'burnt_area.nc'
 subset_function_eval:: [sub_year_range]
 subset_function_args_eval:: [{'year_range': [2024, 2026]}]
 
-sample_for_plot:: 1000
+sample_for_plot:: 10
 
 control_names:: ['Moisture', 'Wind', 'Ignition', 'Suppression']
 levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
@@ -71,3 +72,4 @@ experiment_dir:: ["data/data/driving_data_base/<<region>>/nrt/era5_monthly/", "d
 experiment_type:: ['single', 'single', 'ensemble-single']
 experiment_names:: ["factual", "counterfactual-metmean", "counterfactual"]
 time_series_percentiles:: [0.0, 95.0]
+
