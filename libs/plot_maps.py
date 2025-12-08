@@ -443,7 +443,7 @@ def get_cube_extent(cube):
     return [lon_min, lon_max, lat_min, lat_max]
 
 def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, figsize = None, size_scale = 4,
-                            flatten = True):
+                            flatten = True, transpose = False):
     """
     Creates a grid of Cartopy map subplots with a consistent geographic extent.
 
@@ -487,7 +487,7 @@ def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, figsize = None, size_scale 
         
     fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize, 
                              subplot_kw={'projection': ccrs.PlateCarree()})
-    
+    if transpose: axes = np.transpose(axes)
     try:
         for ax in axes.flat:
             ax.set_extent(extent, crs=ccrs.PlateCarree())
