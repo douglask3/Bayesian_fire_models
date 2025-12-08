@@ -123,7 +123,7 @@ There are a couple of link distributions.  Zero Inflated logit function works ju
 We have basic model execution files for ConFire - `run_ConFire.py`. You define which namelist at runtime
 
 ```bash
-python run_ConFire.py [namelist]
+python run_ConFLAME.py [namelist]
 ```
 
 ## Results
