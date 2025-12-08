@@ -72,10 +72,8 @@ def plot_BayesModel_maps(Sim, levels = None, cmap = 'gradient_reds', ylab = '', 
         #SoW_cmap['diverging_TealOrange'], 
         #plot_map_sow(cube, plot_name,  cmap = SoW_cmap[cmap], levels=levels, ax=ax, cbar_label = "", **kw, **kw2)
         #set_trace()
-        try:
-            plot_annual_mean(cube, levels, cmap, plot_name = plot_name, scale = scale,                      Nrows = Nrows, Ncols = Ncols, plot_n = plot_n + plot0, *args, **kw, **kw2)
-        except:
-            set_trace()
+        plot_annual_mean(cube, levels, cmap, plot_name = plot_name, scale = scale,                                       Nrows = Nrows, Ncols = Ncols, plot_n = plot_n + plot0, *args, **kw, **kw2)
+        
         if plot_n == 1:
             plt.gca().text(-0.1, 0.5, ylab, fontsize=12, rotation=90, va='center', ha='right',
                            transform=plt.gca().transAxes)
