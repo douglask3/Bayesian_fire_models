@@ -1,7 +1,8 @@
 import iris
 import numpy as np
 import cftime
-
+from iris.analysis import Nearest, Linear
+from pdb import set_trace
 # Function to convert a cftime object to a decimal year
 def to_decimal_year(dt):
     year = dt.year
@@ -15,7 +16,7 @@ def to_decimal_year(dt):
 def regrid_hyde_cube(hyde_file, target_file, hyde_dir = "", target_dir = ""):
     hyde_cube = iris.load_cube(hyde_dir + hyde_file)
     era5_cube = iris.load_cube(target_dir + target_file)
-
+    
     # Extract time coordinates
     hyde_time_coord = hyde_cube.coord('time')
     era5_time_coord = era5_cube.coord('time')
@@ -51,6 +52,10 @@ def regrid_hyde_cube(hyde_file, target_file, hyde_dir = "", target_dir = ""):
 
     # Regrid HYDE to match ERA5 using bilinear interpolation
     hyde_regridded = hyde_cube_cropped.regrid(era5_cube, iris.analysis.Linear())
+    hyde_regridded_mask = hyde_regridded.data.mask.copy()
+    hyde_regridded.data.mask[:] = False
+    set_trace()
+    hyde_filled = hyde_regridded.regrid(hyde_regridded, Linear(extrapolation_mode='extrapolate'))
     
     # Optional: Save output
     iris.save(hyde_regridded, target_dir + hyde_file[:-3] + "_regridded_to_era5.nc")
