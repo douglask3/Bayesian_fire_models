@@ -160,8 +160,11 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
             dataset = interpolate_time(dataset, time_points)
         else:   
             def addTime(time_point):
-                time = iris.coords.DimCoord(np.array([time_point.points]), standard_name='time',
-                                            units = time_points.units)
+                try:
+                    time = iris.coords.DimCoord(np.array([time_point.points]), standard_name='time', units = time_points.units)
+                except:
+                    time = iris.coords.DimCoord(np.array([time_point]), standard_name='time', units = time_points.units)
+                    #set_trace()    
                 dataset_cp = dataset.copy()
                 dataset_cp.add_aux_coord(time)
                 return dataset_cp

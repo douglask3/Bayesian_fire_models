@@ -143,14 +143,14 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None,
         else:
             step_method = get_step_method(inference_step_type) 
         
-        graph = pm.model_to_graphviz(max_ent_model) 
-        graph.render(dir_outputs + "/model_graph", format="png")  # Saves and opens
+        #graph = pm.model_to_graphviz(max_ent_model) 
+        #graph.render(dir_outputs + "/model_graph", format="png")  # Saves and opens
         trace = pm.sample(niterations, step = step_method(), return_inferencedata = True, 
                           callback = trace_callback,#  init="jitter+adapt_diag",
                           *arg, **kw)
         ppc = pm.sample_posterior_predictive(trace, var_names=["fx_pred"])
 
-    posterior_predictive_plot(ppc, Y, dir_outputs)
+    #posterior_predictive_plot(ppc, Y, dir_outputs)
     
     def filter_dict_elements_by_type(my_dict, included_types):
         def is_numeric(value):
