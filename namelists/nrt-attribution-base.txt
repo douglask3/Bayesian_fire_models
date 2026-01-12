@@ -43,7 +43,7 @@ min_data_points_for_sample:: 100
 subset_function:: sub_year_months
 subset_function:: sub_year_range
 subset_function_args:: {'months_of_year': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]}
-subset_function_args:: {'year_range': [2019, 2026]}
+subset_function_args:: {'year_range': [2019, 2020]}
 region_months:: {'Pantanal': [5, 6, 7, 8], 'Amazon': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]}
 grab_old_trace::  True # set to True till you get the code running. 
                       # Then set to False when you start adding in new response curves
