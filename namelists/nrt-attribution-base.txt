@@ -18,7 +18,9 @@ CA_filen:: None
 
 
 #x_filen_list:: ["precip", "dry_days", "max_consec_dry", "tas_max", "hurs_min", "hurs_mean", "wind_max", "Agriculture_fraction_Amazonia", "Pasture_fraction_Amazonia", "Forest_fraction_Amazonia", "Grassland_fraction_Amazonia", "Savanna_fraction_Amazonia", "rural_population_regridded_to_era5", "urban_area_regridded_to_era5", "TV_CFUEL_CORRECTED_MAP", "LI_2003_2025", "roadDensity"]
-x_filen_list:: ["precip", "dry_days", "max_consec_dry", "tas_max", "hurs_min", "hurs_mean", "wind_max", "Agriculture_fraction_Amazonia", "Pasture_fraction_Amazonia", "Forest_fraction_Amazonia", "Grassland_fraction_Amazonia", "Savanna_fraction_Amazonia", "TV_CFUEL_CORRECTED_MAP", "LI_2003_2025"]
+
+x_filen_list:: ["precip", "dry_days", "max_consec_dry", "tas_max", "hurs_min", "hurs_mean", "wind_max", "Agriculture_fraction_Amazonia", "Pasture_fraction_Amazonia", "Forest_fraction_Amazonia", "Grassland_fraction_Amazonia", "Savanna_fraction_Amazonia", "TV_CFUEL_CORRECTED_MAP", "LI_2003_2025", "rural_population_regridded_to_era5", "urban_area_regridded_to_era5", "roadDensity"]
+
 
 Y_scale:: 0.01
 
@@ -31,24 +33,31 @@ priors:: {'pname': "link-qSpread_sigma",'np': 1, 'dist': 'HalfNormal', 'sigma': 
 #priors:: {'pname': "driver_Direction", 'value': [[1, 1, 1, 1, 1], [1, -1, -1, -1], [1], [1, 1, 1, 1,  1, 1], [1, 1, 1, 1, 1, 1]]}
 #priors:: {'pname': "control_Direction", 'value': [1, -1, 1, 1, 1, -1]}
 
-priors:: {'pname': "controlID", 'value': [[0, 1, 2, 4, 3, 6], [7, 8, 13], [7, 8], [9, 10, 11, 12]]}
-
-priors:: {'pname': "driver_Direction", 'value': [[-1, -1, -1, -1, 1,1], [1, 1, 1], [-1, -1], [1,1,1,1]]}
+#with new variables , weather , ignition, suppression and fuel
+priors:: {'pname': "controlID", 'value': [[0, 1, 2, 4, 3, 6], [7, 8, 13, 14, 16], [7, 8, 14, 15, 16], [9, 10, 11, 12]]}
+priors:: {'pname': "driver_Direction", 'value': [[-1, 1, 1, 1, -1,-1], [1, 1, 1, 1, 1], [-1, -1, -1, -1,-1], [-1,1,1,1]]}
 
 priors:: {'pname': "control_Direction", 'value': [1, 1, -1, 1]}
 
 #priors:: {'pname': "Fmax",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 1.0}
 #priors:: {'pname': 'lin_correct', 'np': 1, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 4.0}
-priors:: {'pname': "x0",'np': 6, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
-priors:: {'pname': "betas",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
-priors:: {'pname': "betas",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+
+priors:: {'pname': "x0",'np': 4, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
+
+#betas
+priors:: {'pname': "betas",'np': 6, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas",'np': 5, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas",'np': 5, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+
 #priors:: {'pname': "betas",'np': 6, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
-#priors:: {'pname': "betas",'np': 6, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+
+#powers
 priors:: {'pname': "powers",'np': 6, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
-priors:: {'pname': "powers",'np': 3, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
-priors:: {'pname': "powers",'np': 2, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 5, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 5, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+
 #priors:: {'pname': "powers",'np': 6, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 
 ### optimization info
@@ -56,18 +65,21 @@ inference_step_type:: "metropolis"
 link_func_class:: MaxEnt
 niterations:: 1000
 cores:: 10
-<<<<<<< HEAD
-#fraction_data_for_sample:: 0.2
-fraction_data_for_sample:: 0.000002
-#min_data_points_for_sample:: 5000
 
-min_data_points_for_sample:: 100
+fraction_data_for_sample:: 0.2
+min_data_points_for_sample:: 5000
+
+#for testing purposes
+#fraction_data_for_sample:: 0.000002
+#min_data_points_for_sample:: 100
+
 subset_function:: sub_year_months
 subset_function:: sub_year_range
 subset_function_args:: {'months_of_year': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]}
-subset_function_args:: {'year_range': [2019, 2026]}
+#training period
+subset_function_args:: {'year_range': [2010, 2026]}
 region_months:: {'Pantanal': [5, 6, 7, 8], 'Amazon': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]}
-grab_old_trace::  True # set to True till you get the code running. 
+grab_old_trace::  False # set to True till you get the code running. 
                       # Then set to False when you start adding in new response curves
 ### output info
 dir_outputs:: 'outputs/'
@@ -80,7 +92,7 @@ subset_function_args_eval:: [{'year_range': [2024, 2026]}]
 
 sample_for_plot:: 10
 
-control_names:: ['Moisture', 'Wind', 'Ignition', 'Suppression']
+control_names:: ['Moisture','Ignition', 'Suppression', 'Fuel']
 levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
 dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
 cmap:: 'gradient_red' 
@@ -91,7 +103,7 @@ parallelize:: False
 
 ## experiment info
 limitation_types:: ['standard']
-controls_to_plot:: [0, 1, 2, 3, 4]
+controls_to_plot:: [0, 1, 2, 3]
 #experiment_dir:: ["data/data/driving_data_base/<<region>>/nrt/era5_monthly/", "data/data/driving_data_base/<<region>>/nrt/era5_monthly/CF_mean/||data/data/driving_data_base/<<region>>/nrt/era5_monthly/","data/data/driving_data_base/<<region>>/nrt/era5_monthly/CF/||data/data/driving_data_base/<<region>>/nrt/era5_monthly/"]
 #experiment_type:: ['single', 'single', 'ensemble-single']
 #experiment_names:: ["factual", "counterfactual-metmean", "counterfactual"]
