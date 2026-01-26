@@ -39,8 +39,8 @@ priors:: {'pname': "link-qSpread_sigma",'np': 1, 'dist': 'HalfNormal', 'sigma': 
 
 
 #Pantanal (weather, ignition, suppression and fuel)
-priors:: {'pname': "controlID", 'value': [[0, 1, 2, 3], [4, 5, 10, 12], [4, 5, 10, 11, 12,13], [6, 7, 8, 9]]}
-priors:: {'pname': "driver_Direction", 'value': [[-1, 1, 1, -1], [1, 1, 1, 1], [1, 1, 1, 1,1,1], [1,1,1,1]]}
+priors:: {'pname': "controlID", 'value': [[0, 1, 2, 3], [4, 5, 10, 12], [4, 5, 10, 11, 12,13], [6, 7, 8, 9, 13]]}
+priors:: {'pname': "driver_Direction", 'value': [[-1, 1, 1, -1], [1, 1, 1, 1], [1, 1, 1, 1,1,1], [1,1,1,1,1]]}
 priors:: {'pname': "control_Direction", 'value': [1, 1, -1, 1]}
 
 
@@ -53,7 +53,7 @@ priors:: {'pname': "x0",'np': 4, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
 priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "betas",'np': 6, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
-priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas",'np': 5, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 
 #priors:: {'pname': "betas",'np': 6, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 
@@ -61,7 +61,7 @@ priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0
 priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 priors:: {'pname': "powers",'np': 6, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
-priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 5, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 
 #priors:: {'pname': "powers",'np': 6, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 
@@ -148,3 +148,4 @@ experiment_names:: ["factual", "counterfactual"]
 time_series_percentiles:: [0.0, 95.0]
 
 
+#python run_ConFLAME.py namelists/nrt-attribution-base.txt
