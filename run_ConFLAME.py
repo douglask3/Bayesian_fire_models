@@ -205,7 +205,12 @@ def make_time_series(cube, name, output_path, percentile = None, cube_assess = N
     makeDir(out_dir)
     def output_cube_to_csv(data, realizations, extra_dim,  filename): 
         times = cube.coord('time').units.num2date(cube.coord('time').points)[0:data.shape[1]]
-        df = pd.DataFrame(data, index=realizations, columns=[t.isoformat() for t in times])
+        try:
+            df = pd.DataFrame(data, index=realizations, columns=[t.isoformat() for t in times])
+        except:
+            df = pd.DataFrame(data[:,0:len(times)], 
+                              index=realizations, columns=[t.isoformat() for t in times])
+            
         df.index.name = extra_dim
         df.to_csv(filename)
         #np.savetxt(out_file_points, area_weighted_mean.data, delimiter=',')
@@ -295,6 +300,8 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
                           Y = Y, X = X, lmask = lmask, scalers = scalers, 
                               cube_assess = Control[0], **kws) \
                         for i in controls_to_plot]
+
+            
             limitation_TS = np.array([make_both_time_series(time_series_percentiles, \
                                                         cube[0], \
                                                         ltype + '-' + name, out_dir_ts, \
@@ -429,7 +436,7 @@ def run_ConFire(namelist):
                          )
                     for name, dir, expt, yfile in zip(names_all, dirs_all, exp_type, y_filen)
                 ]
-        args_list.reverse()
+        #args_list.reverse()
         if len(args_list) > 1 and select_from_info('parallelize', True): 
             try:
                 with get_context("spawn").Pool(processes=4) as pool:
@@ -447,7 +454,6 @@ def run_ConFire(namelist):
         for region in regions: run_for_regions(region)
 
 if __name__=="__main__":
-    import sys
 
     if len(sys.argv) < 2:
         print("Usage: python run_ConFire.py <namelist_path>")
