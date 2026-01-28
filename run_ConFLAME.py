@@ -245,7 +245,7 @@ def make_both_time_series(percentiles, *args, **kw):
 
 
 def run_experiment(training_namelist, namelist, control_direction,
-                   control_names, control_colours,
+                   control_names, control_colours, plot_control_maps,
                    output_dir, output_file, 
                    name = '', time_series_percentiles = None, 
                    limitation_types = None, controls_to_plot = None,*args, **kws):
@@ -304,10 +304,12 @@ def run_experiment(training_namelist, namelist, control_direction,
                               cube_assess = Control[0], **kws) \
                         for i in controls_to_plot]
             
-            
-            plot_ensemble_maps(limitation, titles = control_names,
-                               control_colours = control_colours,
-                               output_path = output_dir + '/figs/' + ltype + 'controls_maps.png')
+            if plot_control_maps:
+                plot_ensemble_maps(limitation, titles = control_names,
+                                   control_colours = control_colours,
+                                   output_path = output_dir + '/figs/' + \
+                                            ltype + 'controls_maps.png')
+
             limitation_TS = np.array([make_both_time_series(time_series_percentiles, \
                                                         cube[0], \
                                                         ltype + '-' + name, out_dir_ts, \
@@ -387,6 +389,7 @@ def run_ConFire(namelist):
     
     control_names = select_from_info('control_names')
     control_colours = select_from_info('control_colours')
+    plot_control_maps = select_from_info('plot_control_maps', False)
     subset_function_args = select_from_info('subset_function_args')
     subset_function_eval = select_from_info('subset_function_eval')
     subset_function_args_eval = select_from_info('subset_function_args_eval')
@@ -471,6 +474,7 @@ def run_ConFire(namelist):
                           control_direction=control_direction,
                           control_names=control_names,
                           control_colours=control_colours,
+                          plot_control_maps = plot_control_maps,
                           output_dir=output_dir,
                           output_file=output_file,
                           name=name,
