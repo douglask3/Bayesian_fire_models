@@ -258,6 +258,8 @@ def train_MaxEnt_model(y_filen, x_filen_list, CA_filen = None, model_class = FLA
 
     if plot_drivers:
         plot_netcdf_files([y_filen] + x_filen_list, dir, 
+                          dir_outputs_figs + '/drivers_mask.png', False, True)
+        plot_netcdf_files([y_filen] + x_filen_list, dir, 
                           dir_outputs_figs + '/drivers_annual_average.png')
         plot_netcdf_files([y_filen] + x_filen_list, dir, 
                           dir_outputs_figs + '/drivers_when_max_fire.png', True)

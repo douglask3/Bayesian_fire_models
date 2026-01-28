@@ -11,7 +11,50 @@ import numpy as np
 from pdb import set_trace
 
 
-def plot_netcdf_files(nc_files, dir, output_path, whenMax = False):
+def fine_max_indicies(cube):
+    max_indices = np.argmax(cube.data, axis=0)
+    max_cube = cube[0].copy()
+    max_cube.data = max_indices
+    return max_cube
+
+def return_time_index_value(cube, index_cube, example_cube = None):
+         
+    if example_cube is not None:
+        cube = cube.regrid(example_cube, iris.analysis.Linear())
+        time_points = [('time', example_cube.coord('time').points)]
+        cube = cube.interpolate(time_points, iris.analysis.Linear())
+    else:
+        example_cube = cube.copy()
+    ntime, nlat, nlon = cube.shape
+    lat_idx, lon_idx = np.indices((nlat, nlon))
+    
+    extracted_data = cube.data[index_cube.data, lat_idx, lon_idx]
+               
+    cube_out = cube[0].copy()
+    cube_out.data = extracted_data
+    return cube_out
+
+def find_none_masked_time(cube):
+    # 1. Define what "valid data" means for your cube
+    def is_valid(data):
+        # Returns True for values that are finite (not NaN/Inf) AND not masked
+        return np.isfinite(data)
+
+    # 2. Collapse the time dimension using the COUNT aggregator
+    # This will return a 2D (lat, lon) cube where each cell is the count of valid times
+    valid_counts_cube = cube.collapsed(
+        'time', 
+        iris.analysis.COUNT, 
+        function=is_valid
+    )
+
+    # Optional: Rename the cube to reflect its new meaning
+    valid_counts_cube.rename('count_of_valid_fire_fraction_times')
+    valid_counts_cube.units = '1'
+    return valid_counts_cube
+
+def plot_netcdf_files(nc_files, dir, output_path, 
+                      whenMax = False, plot_mask = False):
     
     def open_nc(f):
         if f[-3:] != '.nc': f = f + '.nc'
@@ -23,74 +66,40 @@ def plot_netcdf_files(nc_files, dir, output_path, whenMax = False):
         if cube.coords("time"):
             if whenMax:
                 if 'max_cube' not in locals():
-                    max_indices = np.argmax(cube.data, axis=0)
-                    max_cube = cube[0].copy()
-                    max_cube.data = max_indices
+                    max_cube = fine_max_indicies(cube)
                     cube0 = cube.copy()
-        
-                cube = cube.regrid(cube0, iris.analysis.Linear())
-                time_points = [('time', cube0.coord('time').points)]
-                cube = cube.interpolate(time_points, iris.analysis.Linear())
-                ntime, nlat, nlon = cube.shape
-                lat_idx, lon_idx = np.indices((nlat, nlon))
-                try:
-                    extracted_data = cube.data[max_indices, lat_idx, lon_idx]
-                except:
-                    set_trace()
-                cube_out = cube[0].copy()
-                cube_out.data = extracted_data
+                cube_out = return_time_index_value(cube, max_cube, cube0)
+            elif plot_mask:
+                cube_out = find_none_masked_time(cube)
             else:
                 cube_out = cube.collapsed("time", iris.analysis.MEAN)
         processed_cubes.append(cube_out)
+    plot_maps(processed_cubes, nc_files, output_path)
 
+def plot_maps(cubes, titles, output_path):
     # Step 3: Set up subplots with Cartopy
     # Determine number of rows and columns
-    n_plots = len(processed_cubes)
-    n_rows = int(np.ceil(np.sqrt(n_plots)))
-    n_cols = int(np.ceil(n_plots/n_rows))
     
-    fig, axes = set_up_sow_plot_windows(n_rows, n_cols, processed_cubes[0], size_scale = 3)
+    n_plots = len(cubes)
+    n_rows  = int(np.ceil(np.sqrt(n_plots)))
+    n_cols  = int(np.ceil(n_plots/n_rows))
     
-    for cube, ttl, ax in zip(processed_cubes, nc_files, axes):
-        
+    fig, axes = set_up_sow_plot_windows(n_rows, n_cols, cubes[0], 
+                                        size_scale = 3)
+    
+    for cube, ttl, ax in zip(cubes, titles, axes):
         try:
             plot_map_sow(cube, ttl, cmap=SoW_cmap['gradient_hues'], ax = ax)
         except:
             if cube.shape[0] == 1:
-                plot_map_sow(cube[0], ttl, cmap=SoW_cmap['gradient_hues'], ax = ax)
+                plot_map_sow(cube[0], ttl, cmap=SoW_cmap['gradient_hues'], 
+                             ax = ax)
             else:
-                exit()
+                set_trace()
     
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
-    return()
-    #n_rows, n_cols = 3, 3  # Adjust based on the number of plots needed
+
     
-
-    #fig, axes = plt.subplots(n_rows, n_cols, figsize=(12, 7), 
-    #                         subplot_kw={'projection': ccrs.PlateCarree()}, 
-    #                         constrained_layout=True)
-
-    # Flatten the axes array for easy iteration
-    #axes = axes.flatten()
-    
-    # Loop through the data and plot
-    for i, (ax, cube, title) in enumerate(zip(axes, processed_cubes, nc_files)):
-        ax.set_title(title)
-        ax.coastlines()
-        
-        # Plot the cube
-        im = iplt.pcolormesh(cube, axes=ax)
-        
-        # Add a colorbar
-        fig.colorbar(im, ax=ax, orientation="vertical")
-    
-    # Hide any unused subplots if fewer than 9 plots
-    for j in range(i+1, len(axes)):
-        fig.delaxes(axes[j])
-    set_trace()
-    fig.savefig("outputs/outputs/ar7_annual_averages.png", dpi=300, bbox_inches="tight")
-
-
 if __name__=="__main__":
     # Step 1: Load all NetCDF files
     
