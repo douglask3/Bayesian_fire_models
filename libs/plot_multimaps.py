@@ -109,3 +109,46 @@ if __name__=="__main__":
                 "Total_cover_vcf.nc", "vpd_mean.nc", "cveg.nc", "burnt_area.nc"]  
 
     plot_netcdf_files(nc_files, dir)
+
+
+
+def plot_ensemble_maps(cubes, titles = None, 
+                       control_colours = None, 
+                       output_path = 'figs/unnamed-ensemble.png',
+                       percentiles = [5, 95], *args, **kw):
+    
+    def get_percentiles(cube):
+        if isinstance(cube, list) or isinstance(cube, tuple):
+            cube = cube[0]
+        out = cube.collapsed('time', iris.analysis.PERCENTILE, 
+                             percent = percentiles)
+        out = out.collapsed('realization', 
+                             iris.analysis.PERCENTILE, 
+                             percent = percentiles)
+        return out
+    
+    cube_pc = [get_percentiles(cube) for cube in cubes]
+    
+    n_plots = len(cubes)
+    
+    n_rows = int(np.ceil(np.sqrt(n_plots)))
+    n_cols = len(percentiles) * int(np.ceil(n_plots/n_rows))
+    n_rows *= len(percentiles)
+
+    fig, axes = set_up_sow_plot_windows(n_rows, n_cols, cubes[0][0][0], size_scale = 3)
+    nplt = 0
+    if control_colours is None:
+       control_colours = ['gradient_hues'] * len(cubes)
+
+    for cube, cmap, ttl in zip(cube_pc, control_colours, titles):
+        for i in range(len(percentiles)):
+            for j in range(len(percentiles)):
+                title = ttl + ' ' + str(percentiles[i]) + \
+                        '%ile\nof the ' + \
+                        str(percentiles[j]) + '%ile over time'
+                
+                plot_map_sow(cube[i][j], title, cmap=SoW_cmap[cmap],  ax = axes[nplt])
+                nplt += 1
+
+    fig.savefig(output_path, dpi=300, bbox_inches="tight")
+

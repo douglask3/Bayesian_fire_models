@@ -17,7 +17,7 @@ from namelist_functions import *
 from pymc_extras import *
 from plot_scatters import *
 from prior_posterior_predictive import *
-from plot_netcdf_files import *
+from plot_multimaps import *
 
 import os
 from   io     import StringIO
