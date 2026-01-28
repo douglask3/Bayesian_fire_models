@@ -1,6 +1,6 @@
 ## model info
 regions:: ['Pantanal']
-model_title::  'ConFLAME_nrt-attribution-base-localBA-data/<<region>>'
+model_title::  'ConFLAME_nrt-attribution-base-localBA-data-2/<<region>>'
 
 ## input data paths and filenames
 
@@ -125,6 +125,7 @@ subset_function_args_eval:: [{'year_range': [2024, 2026]}, {'months_of_year': [4
 sample_for_plot:: 1000
 #if it doenst work delte the sample folder and generate again
 
+plot_control_maps:: True
 control_names:: ['Weather','Ignition', 'Suppression', 'Fuel']
 levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
 dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
