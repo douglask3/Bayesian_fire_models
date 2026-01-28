@@ -12,6 +12,8 @@ import datetime
 import sys
 sys.path.append('libs/')
 from climtatology_difference import *
+from plot_maps import *
+from plot_netcdf_files import *
 
 try:
     from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -242,7 +244,8 @@ def make_both_time_series(percentiles, *args, **kw):
         make_time_series(*args, **kw, percentile = percentile) 
 
 
-def run_experiment(training_namelist, namelist, control_direction, control_names, 
+def run_experiment(training_namelist, namelist, control_direction,
+                   control_names, control_colours,
                    output_dir, output_file, 
                    name = '', time_series_percentiles = None, 
                    limitation_types = None, controls_to_plot = None,*args, **kws):
@@ -300,8 +303,11 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
                           Y = Y, X = X, lmask = lmask, scalers = scalers, 
                               cube_assess = Control[0], **kws) \
                         for i in controls_to_plot]
-
             
+            
+            plot_ensemble_maps(limitation, titles = control_names,
+                               control_colours = control_colours,
+                               output_path = output_dir + '/figs/' + ltype + 'controls_maps.png')
             limitation_TS = np.array([make_both_time_series(time_series_percentiles, \
                                                         cube[0], \
                                                         ltype + '-' + name, out_dir_ts, \
@@ -310,7 +316,49 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
         
     open(temp_file, 'a').close() 
 
+def plot_ensemble_maps(cubes, titles = None, 
+                       control_colours = None, 
+                       output_path = 'figs/unnamed-ensemble.png',
+                       percentiles = [5, 95], *args, **kw):
+    
+    def get_percentiles(cube):
+        if isinstance(cube, list) or isinstance(cube, tuple):
+            cube = cube[0]
+        out = cube.collapsed('time', iris.analysis.PERCENTILE, 
+                             percent = percentiles)
+        out = out.collapsed('realization', 
+                             iris.analysis.PERCENTILE, 
+                             percent = percentiles)
+        return out
+    
+    cube_pc = [get_percentiles(cube) for cube in cubes]
+    
+    n_plots = len(cubes)
+    
+    n_rows = int(np.ceil(np.sqrt(n_plots)))
+    n_cols = len(percentiles) * int(np.ceil(n_plots/n_rows))
+    n_rows *= len(percentiles)
+
+    fig, axes = set_up_sow_plot_windows(n_rows, n_cols, cubes[0][0][0], size_scale = 3)
+    nplt = 0
+    if control_colours in None:
+       control_colours = ['gradient_hues'] * len(cubes)
+
+    for cube, cmap, ttl in zip(cube_pc, control_colours, titles):
+        for i in range(len(percentiles)):
+            for j in range(len(percentiles)):
+                title = ttl + ' ' + str(percentiles[i]) + \
+                        '%ile\nof the ' + \
+                        str(percentiles[j]) + '%ile over time'
+                
+                plot_map_sow(cube[i][j], title, cmap=SoW_cmap[cmap],  ax = axes[nplt])
+                nplt += 1
+
+    fig.savefig(output_path, dpi=300, bbox_inches="tight")
+    
+
 def run_experiment_wrapper(kwargs):
+    run_experiment(**kwargs)
     try:
         run_experiment(**kwargs)
         return (kwargs, "success")
@@ -338,6 +386,7 @@ def run_ConFire(namelist):
                              if param['pname'] == 'control_Direction'][-1]
     
     control_names = select_from_info('control_names')
+    control_colours = select_from_info('control_colours')
     subset_function_args = select_from_info('subset_function_args')
     subset_function_eval = select_from_info('subset_function_eval')
     subset_function_args_eval = select_from_info('subset_function_args_eval')
@@ -421,6 +470,7 @@ def run_ConFire(namelist):
                           namelist=namelist,
                           control_direction=control_direction,
                           control_names=control_names,
+                          control_colours=control_colours,
                           output_dir=output_dir,
                           output_file=output_file,
                           name=name,
