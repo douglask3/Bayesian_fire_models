@@ -143,11 +143,11 @@ def plot_ensemble_maps(cubes, titles = None,
     for cube, cmap, ttl in zip(cube_pc, control_colours, titles):
         for i in range(len(percentiles)):
             for j in range(len(percentiles)):
-                title = ttl + ' ' + str(percentiles[i]) + \
+                title = ttl + ' ' + str(percentiles[j]) + \
                         '%ile\nof the ' + \
-                        str(percentiles[j]) + '%ile over time'
+                        str(percentiles[i]) + '%ile over time'
                 
-                plot_map_sow(cube[i][j], title, cmap=SoW_cmap[cmap],  ax = axes[nplt])
+                plot_map_sow(cube[j][i], title, cmap=SoW_cmap[cmap],  ax = axes[nplt])
                 nplt += 1
 
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
