@@ -36,22 +36,22 @@ priors:: {'pname': "link-qSpread_sigma",'np': 1, 'dist': 'HalfNormal', 'sigma': 
 
 
 #Amazonia (weather, ignition, suppression and fuel)
-priors:: {'pname': "controlID", 'value': [[0, 1, 2, 3], [4, 5, 10, 12], [4, 5, 11,12,13], [6, 7, 8, 9]]}
-priors:: {'pname': "driver_Direction", 'value': [[-1, 1, 1, -1], [1, 1, 1, 1], [1, 1, 1,1,1], [1,1,1,1]]}
-priors:: {'pname': "control_Direction", 'value': [1, 1, -1, 1]}
-priors:: {'pname': "x0",'np': 4, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
+priors:: {'pname': "controlID", 'value': [[0, 1, 2, 3], [4, 5, 10, 11,13], [6, 7, 8, 9]]}
+priors:: {'pname': "driver_Direction", 'value': [[-1, 1, 1, -1], [1, 1, 1, 1,1], [1,1,1,1]]}
+priors:: {'pname': "control_Direction", 'value': [1, 1, 1]}
+priors:: {'pname': "x0",'np': 3, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
 
 #betas
 priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
-priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "betas",'np': 5, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+#priors:: {'pname': "betas",'np': 5, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 
 
 #powers
 priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
-priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 priors:: {'pname': "powers",'np': 5, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+#priors:: {'pname': "powers",'np': 5, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 
 
@@ -92,7 +92,7 @@ subset_function_args_eval:: [{'year_range': [2024, 2026]}, {'months_of_year': [4
 sample_for_plot:: 1000
 #if it doenst work delte the sample folder and generate again
 
-control_names:: ['Weather','Ignition', 'Suppression', 'Fuel']
+control_names:: ['Weather','Ignition','Fuel']
 levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
 dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
 cmap:: 'gradient_red' 
@@ -103,7 +103,7 @@ parallelize:: False
 
 ## experiment info
 limitation_types:: ['standard']
-controls_to_plot:: [0, 1, 2, 3]
+controls_to_plot:: [0, 1, 2]
 #experiment_dir:: ["data/data/driving_data_base/<<region>>/nrt/era5_monthly/", "data/data/driving_data_base/<<region>>/nrt/era5_monthly/CF_mean/||data/data/driving_data_base/<<region>>/nrt/era5_monthly/","data/data/driving_data_base/<<region>>/nrt/era5_monthly/CF/||data/data/driving_data_base/<<region>>/nrt/era5_monthly/"]
 #experiment_type:: ['single', 'single', 'ensemble-single']
 #experiment_names:: ["factual", "counterfactual-metmean", "counterfactual"]
@@ -115,4 +115,4 @@ experiment_names:: ["factual", "counterfactual"]
 time_series_percentiles:: [0.0, 95.0]
 
 
-#python run_ConFLAME.py namelists/nrt-attribution-base.txt
+#python run_ConFLAME.py namelists/nrt-attribution-base-Amazon.txt
