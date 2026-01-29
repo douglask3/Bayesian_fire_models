@@ -1,6 +1,6 @@
 ## model info
 regions:: ['Pantanal']
-model_title::  'attribution-base-localBA-data-SuperSlimmed-11/<<region>>'
+model_title::  'attribution-base-localBA-data-SuperSlimmed-13/<<region>>'
 
 ## input data paths and filenames
 
@@ -16,7 +16,7 @@ y_filen:: "Fire_fraction_Pantanal.nc"
 CA_filen:: None
 
 #Pantanal
-x_filen_list:: ["precip", "max_consec_dry", "tas_max", "hurs_min", "Agriculture_fraction_Pantanal", "Pasture_fraction_Pantanal", "Forest_fraction_Pantanal", "Grassland_fraction_Pantanal", "Savanna_fraction_Pantanal", "TV_CFUEL_CORRECTED_MAP", "rural_population_regridded_to_era5", "urban_area_regridded_to_era5", "roadDensity", "Wetland_fraction_Pantanal", "monthly_cg_strokes", "change_Wetland_fraction_Pantanal.nc", "change_Forest_fraction_Pantanal.nc"]
+x_filen_list:: ["precip", "max_consec_dry", "tas_max", "hurs_min", "Agriculture_fraction_Pantanal", "Pasture_fraction_Pantanal", "Forest_fraction_Pantanal", "Grassland_fraction_Pantanal", "Savanna_fraction_Pantanal", "TV_CFUEL_CORRECTED_MAP", "rural_population_regridded_to_era5", "urban_area_regridded_to_era5",  "Wetland_fraction_Pantanal", "monthly_cg_strokes", "change_Wetland_fraction_Pantanal.nc", "change_Forest_fraction_Pantanal.nc"] #"roadDensity",
 #dry_days, hurs_mean and wind
 Y_scale:: 0.01
 
@@ -27,18 +27,18 @@ priors:: {'pname': "link-qSpread_sigma",'np': 1, 'dist': 'HalfNormal', 'sigma': 
 
 control_names:: ['Fuel','Moisture', 'Suppression', 'Ignitions']
 priors:: {'pname': "control_Direction", 'value': [1, 1, 1, 1]}
-priors:: {'pname': "controlID", 'value': [[7, 8, 13], [2, 15], [4], [4, 5, 14]]}
-priors:: {'pname': "driver_Direction", 'value': [[1, 1, 1], [-1, 1], [-1], [1, 1, 1]]}
+priors:: {'pname': "controlID", 'value': [[7, 8, 12], [2, 8, 14], [4], [4, 5, 12]]}
+priors:: {'pname': "driver_Direction", 'value': [[1, 1, 1], [-1, -1, 1], [-1], [1, 1, 1]]}
 priors:: {'pname': "x0",'np': 4, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
 
 #betas
 priors:: {'pname': "betas",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
-priors:: {'pname': "betas",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "betas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "betas",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 #powers
 priors:: {'pname': "powers",'np': 3, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
-priors:: {'pname': "powers",'np': 2, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 3, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 priors:: {'pname': "powers",'np': 3, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 
@@ -66,7 +66,7 @@ subset_function_args:: {'months_of_year': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
 subset_function_args:: {'year_range': [2010, 2026]}
 #region_months:: {'Pantanal': [5, 6, 7, 8], 'Amazon': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]}
 region_months:: {'Pantanal': [4,5, 6, 7, 8], 'Amazon': [5, 6, 7, 8, 9]}
-grab_old_trace::  False # set to True till you get the code running. 
+grab_old_trace::  True # set to True till you get the code running. 
                       # Then set to False when you start adding in new response curves
 ### output info
 dir_outputs:: 'outputs/outputs_scratch/'
