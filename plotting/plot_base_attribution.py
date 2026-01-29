@@ -10,16 +10,14 @@ import imageio
 
 if __name__=="__main__":
     dir1 = "outputs/outputs_scratch/ConFLAME_nrt-attribution-base-2/"
-    dir2 = "/time_series/_20-frac_points_0.2/"
+    dir2 = "/time_series/_19-frac_points_0.2/" 
 
-    regions = ["Amazon", "Pantanal"] #
-    regions = ["Pantanal"]
-    region_names = ['Amazonia', 'Pantanal'] #
-    region_names = ['Pantanal']
+    region = "Amazon"
+
     obs_dir = 'data/data/driving_data_base//'
     obs_file = 'burnt_area_data.csv'
     
-    plot_attribution_scatter(regions, "attribution_metrics_era5_base",
+    plot_attribution_scatter([region], "attribution_metrics_era5_base",
                              dir1 = dir1, dir2 = dir2,
                              obs_dir = obs_dir, obs_file = obs_file, 
                              plot_FUN = effect_ratio_and_rr_over_range)
@@ -30,7 +28,7 @@ if __name__=="__main__":
                              obs_dir = obs_dir, obs_file = obs_file, 
                              plot_FUN = effect_ratio_and_rr_over_range) 
     '''
-    outs_era5 = plot_attribution_scatter(regions, "attribution_scatter_era5_base",
+    outs_era5 = plot_attribution_scatter([region], "attribution_scatter_era5_base",
                              dir1 = dir1, dir2 = dir2,
                              obs_dir = obs_dir, obs_file = obs_file) 
     

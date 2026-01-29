@@ -12,6 +12,8 @@ import datetime
 import sys
 sys.path.append('libs/')
 from climtatology_difference import *
+from plot_maps import *
+from plot_multimaps import *
 
 try:
     from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -205,7 +207,12 @@ def make_time_series(cube, name, output_path, percentile = None, cube_assess = N
     makeDir(out_dir)
     def output_cube_to_csv(data, realizations, extra_dim,  filename): 
         times = cube.coord('time').units.num2date(cube.coord('time').points)[0:data.shape[1]]
-        df = pd.DataFrame(data, index=realizations, columns=[t.isoformat() for t in times])
+        try:
+            df = pd.DataFrame(data, index=realizations, columns=[t.isoformat() for t in times])
+        except:
+            df = pd.DataFrame(data[:,0:len(times)], 
+                              index=realizations, columns=[t.isoformat() for t in times])
+            
         df.index.name = extra_dim
         df.to_csv(filename)
         #np.savetxt(out_file_points, area_weighted_mean.data, delimiter=',')
@@ -237,7 +244,8 @@ def make_both_time_series(percentiles, *args, **kw):
         make_time_series(*args, **kw, percentile = percentile) 
 
 
-def run_experiment(training_namelist, namelist, control_direction, control_names, 
+def run_experiment(training_namelist, namelist, control_direction,
+                   control_names, control_colours, plot_control_maps,
                    output_dir, output_file, 
                    name = '', time_series_percentiles = None, 
                    limitation_types = None, controls_to_plot = None,*args, **kws):
@@ -295,6 +303,13 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
                           Y = Y, X = X, lmask = lmask, scalers = scalers, 
                               cube_assess = Control[0], **kws) \
                         for i in controls_to_plot]
+            
+            if plot_control_maps:
+                plot_ensemble_maps(limitation, titles = control_names,
+                                   control_colours = control_colours,
+                                   output_path = output_dir + '/figs/' + \
+                                            ltype + 'controls_maps.png')
+
             limitation_TS = np.array([make_both_time_series(time_series_percentiles, \
                                                         cube[0], \
                                                         ltype + '-' + name, out_dir_ts, \
@@ -303,7 +318,10 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
         
     open(temp_file, 'a').close() 
 
+    
+
 def run_experiment_wrapper(kwargs):
+    run_experiment(**kwargs)
     try:
         run_experiment(**kwargs)
         return (kwargs, "success")
@@ -331,6 +349,8 @@ def run_ConFire(namelist):
                              if param['pname'] == 'control_Direction'][-1]
     
     control_names = select_from_info('control_names')
+    control_colours = select_from_info('control_colours')
+    plot_control_maps = select_from_info('plot_control_maps', False)
     subset_function_args = select_from_info('subset_function_args')
     subset_function_eval = select_from_info('subset_function_eval')
     subset_function_args_eval = select_from_info('subset_function_args_eval')
@@ -414,6 +434,8 @@ def run_ConFire(namelist):
                           namelist=namelist,
                           control_direction=control_direction,
                           control_names=control_names,
+                          control_colours=control_colours,
+                          plot_control_maps = plot_control_maps,
                           output_dir=output_dir,
                           output_file=output_file,
                           name=name,
@@ -429,7 +451,7 @@ def run_ConFire(namelist):
                          )
                     for name, dir, expt, yfile in zip(names_all, dirs_all, exp_type, y_filen)
                 ]
-        args_list.reverse()
+        #args_list.reverse()
         if len(args_list) > 1 and select_from_info('parallelize', True): 
             try:
                 with get_context("spawn").Pool(processes=4) as pool:
@@ -447,7 +469,6 @@ def run_ConFire(namelist):
         for region in regions: run_for_regions(region)
 
 if __name__=="__main__":
-    import sys
 
     if len(sys.argv) < 2:
         print("Usage: python run_ConFire.py <namelist_path>")

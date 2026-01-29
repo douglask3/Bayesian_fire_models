@@ -362,7 +362,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
         'grab_old_trace': grab_old_trace}
     
     Sim = runSim_MaxEntFire(**common_args, run_name = control_run_name, test_eg_cube = True)
-    #run_only = True
+    
     if run_only: 
         if return_inputs: 
             return Sim, Y, X, lmask, scalers 
@@ -372,6 +372,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
     common_args['Sim'] = Sim[0]
     
     filename_out += filename_out_ext 
+    
     compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, *args, **kw)
     Bayes_benchmark(filename_out, fig_dir, Sim, Obs, lmask)
 
