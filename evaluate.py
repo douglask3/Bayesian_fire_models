@@ -333,14 +333,16 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
     }
         
     if CA_filen is not None:
-        Y, X, CA, lmask, scalers = read_all_data_from_netcdf(CA_filename = CA_filen, **common_args)   
+        Y, X, CA, lmask, scalers = read_all_data_from_netcdf(CA_filename = CA_filen, 
+                                                             **common_args)
     else:
         if Y is  None or X is  None or lmask is  None or scalers is  None:
-            Y, X, lmask, scalers = read_all_data_from_netcdf(**common_args)
+            Y, X, lmask, scalers = read_all_data_from_netcdf(**common_args, test_trace = True)
     
     Obs = read_variable_from_netcdf(y_filen, dir,
                                     subset_function = subset_function, 
                                     subset_function_args = subset_function_args)
+    
     Obs.data = Obs.data / 100.0
     Obs.data[~np.reshape(lmask, Obs.shape)] = np.nan
     if Y_scale is not None: Y_scale = Y_scale / 100.0
@@ -362,7 +364,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
         'grab_old_trace': grab_old_trace}
     
     Sim = runSim_MaxEntFire(**common_args, run_name = control_run_name, test_eg_cube = True)
-    
+     
     if run_only: 
         if return_inputs: 
             return Sim, Y, X, lmask, scalers 
