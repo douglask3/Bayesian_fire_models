@@ -1,6 +1,6 @@
 ## model info
 regions:: ['Pantanal']
-model_title::  'attribution-base-localBA-data-SuperSlimmed-18/<<region>>'
+model_title::  'attribution-base-localBA-data-SuperSlimmed-19/<<region>>'
 
 ## input data paths and filenames
 
@@ -49,7 +49,7 @@ link_func_class:: MaxEnt
 niterations:: 1000
 cores:: 10
 
-fraction_data_for_sample:: 0.1
+fraction_data_for_sample:: 0.5
 min_data_points_for_sample:: 1000
 
 #for testing purposes
