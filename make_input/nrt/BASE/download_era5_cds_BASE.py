@@ -9,7 +9,7 @@ if __name__=="__main__":
     out_dir = "data/data/driving_data_base/nrt_attribution//"
 
     shapefile_path = "data/BASE_shapes/"
-    region_names = ["Amazon", "Pantanal"]
+    region_names = ["Pantanal", "Amazon"]
     
     for region in region_names:
         shapefile = shapefile_path + '/' + region + '/' + region + '.shp'
