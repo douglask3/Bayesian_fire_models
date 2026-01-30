@@ -2,6 +2,7 @@ import sys
 sys.path.append('.')
 sys.path.append('plotting/')
 sys.path.append('src/')
+sys.path.append('src/attribution/')
 sys.path.append('make_input/burnt_area/')
 from plot_effect_rr import *
 from attribution_where import *
@@ -9,10 +10,10 @@ from plot_BA_climateology import *
 import imageio
 
 if __name__=="__main__":
-    dir1 = "outputs/outputs_scratch/ConFLAME_nrt-attribution-base-2/"
-    dir2 = "/time_series/_19-frac_points_0.2/" 
+    dir1 = "outputs/outputs_scratch/play/Pantanal/"
+    dir2 = "/time_series/_19-frac_points_0.02/" 
 
-    region = "Amazon"
+    region = "Pantanal"
 
     obs_dir = 'data/data/driving_data_base//'
     obs_file = 'burnt_area_data.csv'
