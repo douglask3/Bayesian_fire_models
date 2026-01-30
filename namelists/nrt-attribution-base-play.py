@@ -1,6 +1,6 @@
 ## model info
 regions:: ['Pantanal']
-model_title::  'attribution-base-localBA-data-SuperSlimmed-22/<<region>>'
+model_title::  'attribution-base-localBA-data-SuperSlimmed-23/<<region>>'
 
 ## input data paths and filenames
 
@@ -27,19 +27,19 @@ priors:: {'pname': "link-qSpread_sigma",'np': 1, 'dist': 'HalfNormal', 'sigma': 
 
 control_names:: ['Fuel','Moisture', 'Suppression', 'Ignitions']
 priors:: {'pname': "control_Direction", 'value': [1, 1, 1, 1]}
-priors:: {'pname': "controlID", 'value': [[6, 7, 8, 12], [0, 1, 2,  3, 6, 8, 14], [4], [4, 5, 10, 13]]}
+priors:: {'pname': "controlID", 'value': [[6, 7, 8, 12], [0, 1, 2,  3, 6, 8, 14], [4, 12], [4, 5, 10, 13]]}
 priors:: {'pname': "driver_Direction", 'value': [[1, 1, 1, 1], [-1, -1, -1, -1, -1, -1, 1], [-1], [1, 1, 1, 1]]}
 priors:: {'pname': "x0",'np': 4, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
 
 #betas
 priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "betas",'np': 7, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
-priors:: {'pname': "betas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 #powers
 priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 priors:: {'pname': "powers",'np': 7, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
-priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 2, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 
 
