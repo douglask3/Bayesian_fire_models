@@ -35,19 +35,3 @@ if __name__=="__main__":
     plot_attribution_scatter_generic("counterfactual-metmean", "rr_line",
                                      effect_ratio_and_rr_over_range)
     
-    '''plot_attribution_scatter(regions, "attribution_metrics_era5_cf_mean_base",
-                             dir1 = dir1, dir2 = dir2, 
-                             counterfactual_name = 'counterfactual-metmean',
-                             obs_dir = obs_dir, obs_file = obs_file, 
-                             plot_FUN = effect_ratio_and_rr_over_range) 
-    
-    outs_era5 = plot_attribution_scatter([region], "attribution_scatter_era5_base",
-                             dir1 = dir1, dir2 = dir2,
-                             obs_dir = obs_dir, obs_file = obs_file) 
-    
-    outs_era52 = plot_attribution_scatter(regions, "attribution_scatter_era5_cf_mean_base",
-                             dir1 = dir1, dir2 = dir2, 
-                             counterfactual_name = 'counterfactual-metmean',
-                             obs_dir = obs_dir, obs_file = obs_file) 
-    '''
-    
