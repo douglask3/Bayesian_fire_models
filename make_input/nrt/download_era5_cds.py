@@ -28,8 +28,24 @@ def common_time_coord(cubes, time_coord = 'valid_time'):
     
     # Standardize time coordinates across all cubes
     for cube in cubes:
-        time_coord = cube.coord('valid_time')
+        try: 
+            time_coord = cube.coord('valid_time')
+        except:
+            cube.coord('time').rename('valid_time')
+            time_coord = cube.coord('valid_time')
+        cube.coord('valid_time').attributes = {}
+        
+        coord = cube.coord('valid_time')
+        coord.points = coord.points.astype(np.float64)
 
+        
+        coord.standard_name = None
+        coord.long_name = None
+        coord.var_name = None
+        coord.long_name = 'valid_time'
+        
+        if coord.has_bounds():
+            coord.bounds = coord.bounds.astype(np.float64)
         # Convert numeric time to datetime
         datetimes = [time_coord.units.num2date(t) for t in time_coord.points]
         
@@ -66,7 +82,7 @@ def download_era5(variables, years = [1940], months = range(13),
             region_geom = unary_union(region_shape.geometry)
         else:
             region_geom = shapes.geometry.unary_union
-    
+     
     def download_var(variable, statistics, year, mnths): 
         mnths = ['0' + str(i) if i < 10 else str(i) for i in mnths]
         temp_file =  temp_dir + '/download_era5_' + variable + statistics + \
@@ -121,9 +137,10 @@ def download_era5(variables, years = [1940], months = range(13),
         lons, lats = np.meshgrid(cube.coord('longitude').points, cube.coord('latitude').points)
     
         # Create a mask where True means outside and False means inside the shape
-        mask = ~shapely.vectorized.contains(region_geom, lons, lats)
+        mask = ~shapely.intersects_xy(region_geom, lons, lats)
+        
         cube.data = np.where(mask, np.nan, cube.data)
-
+        
         # Get bounding box (minx, miny, maxx, maxy)
         min_lon, min_lat, max_lon, max_lat = region_geom.bounds
 
@@ -182,7 +199,10 @@ def download_era5(variables, years = [1940], months = range(13),
         
         cubes = common_time_coord(cubes)
         iris.util.equalise_attributes(cubes)
-        cubes = iris.cube.CubeList(cubes).concatenate_cube()
+        try:
+            cubes = iris.cube.CubeList(cubes).concatenate_cube()
+        except:
+            set_trace()
         iris.save(cubes, out_file)
         
         return out_file
@@ -198,18 +218,18 @@ area = [90, -180, -60, 180]
 dataset = "derived-era5-single-levels-daily-statistics"
 
 variables = [#["volumetric_soil_water_layer_1", "daily_minimum", "mrsos"],
-             ["10m_u_component_of_wind", "daily_mean", "u-wind"],
-             ["10m_v_component_of_wind", "daily_mean", "v-wind"],
+             #["10m_u_component_of_wind", "daily_mean", "u-wind"],
+             #["10m_v_component_of_wind", "daily_mean", "v-wind"],
              ["total_precipitation", "daily_mean", "pr"], 
              ["2m_temperature", "daily_maximum", "tasmax"],
              ["2m_temperature", "daily_mean", "tas"],
              ["2m_dewpoint_temperature", "daily_minimum", "tasdew"],
              ["2m_temperature", "daily_minimum", "tasmin"],
-             ["10m_wind_gust_since_previous_post_processing", "daily_maximum", "WindGust1"],
-             ["instantaneous_10m_wind_gust", "daily_maximum", "WindGust2"],
-             ["evaporation", "daily_mean", "evap"],
-             ["potential_evaporation", "daily_mean", "pevap"],
-             ["runoff", "daily_mean", "mrros"]
+             #["10m_wind_gust_since_previous_post_processing", "daily_maximum", "WindGust1"],
+             #["instantaneous_10m_wind_gust", "daily_maximum", "WindGust2"],
+             #["evaporation", "daily_mean", "evap"],
+             #["potential_evaporation", "daily_mean", "pevap"],
+             #["runoff", "daily_mean", "mrros"]
             ]
 
 if __name__=="__main__":    
