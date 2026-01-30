@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.collections import PolyCollection
 import seaborn as sns
-import fnmatch
+
 import pickle
 from scipy.stats import genpareto
 
@@ -35,9 +35,6 @@ def flatten(xss):
         A single flattened list containing all elements from the sublists, in order.
     """
     return [x for xs in xss for x in xs]
-
-
-
 
 def plot_kde(x, y, xlab, ylab, cmap_name = "gradient_hues_extended", ax = None, *args, **kw): 
     """
