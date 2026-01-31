@@ -1,6 +1,6 @@
 ## model info
 regions:: ['Amazon']
-model_title::  'attribution-base-localBA-data-AMAZON-test-2/<<region>>'
+model_title::  'attribution-base-localBA-data-AMAZON-test-3/<<region>>'
 
 ## input data paths and filenames
 
@@ -27,7 +27,7 @@ priors:: {'pname': "link-qSpread_sigma",'np': 1, 'dist': 'HalfNormal', 'sigma': 
 control_names:: ['Fuel','Moisture', 'Suppression', 'Ignitions']
 priors:: {'pname': "control_Direction", 'value': [1, 1, 1, 1]}
 priors:: {'pname': "controlID", 'value': [[4, 5, 6, 7, 8, 9], [0, 1, 2,  3, 6, 8, 13], [4, 5], [4, 5, 10, 12, 13, 14]]}
-priors:: {'pname': "driver_Direction", 'value': [[1, 1, 1,  1, 1, 1], [-1, -1, 1, -1, -1, 1, 1], [-1, -1], [1, 1, 1, 1, 1, 1]]}
+priors:: {'pname': "driver_Direction", 'value': [[1, 1, 1,  1, 1, 1], [-1, -1, 1, -1, 1, 1, 1], [-1, -1], [1, 1, 1, 1, 1, 1]]}
 priors:: {'pname': "x0",'np': 4, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
 
 #betas
