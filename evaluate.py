@@ -264,6 +264,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
                           control_run_name = "control",
                           experiment_type = 'single',
                           subset_function = None, subset_function_args = None,
+                          max_no_ensembles = False,
                           sample_for_plot = 1, grab_old_trace = False, 
                           run_response_curves = False, 
                           response_grouping = None, run_only = False, return_inputs = False,
@@ -292,6 +293,8 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
                 data to spatial locations and time periods/months. Default is not to 
                 constrain (i.e "None" for no functions")
         subset_function_args -- list of arguements that feed into subset_function
+        max_no_ensembles -- if there is an esemble of input data, what's the maxmimum we will 
+                                use.
         sample_for_plot -- fraction of gridcells used for optimization
         grab_old_trace -- Boolean. If True, and a filename starting with 'filename' and 
                 containing some of the same setting (saved in filename) exists,  it will open 
@@ -334,7 +337,8 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
         'x_find_mode': experiment_type,
         'dir_driving_data': dir_driving_data,
         'subset_function': subset_function,
-        'subset_function_args': subset_function_args
+        'subset_function_args': subset_function_args,
+        'max_no_ensembles': max_no_ensembles
     }
         
     if CA_filen is not None:

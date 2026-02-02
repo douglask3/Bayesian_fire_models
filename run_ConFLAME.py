@@ -411,7 +411,7 @@ def run_ConFire(namelist):
         dirs_all = [params['dir']]
         common_noises = [False]
         limitation_types = select_from_info('limitation_types')
-        
+        max_no_ensembles =  select_from_info('max_no_ensembles')
         try:
             y_filen1 = [select_from_info('y_filen_eval', run_info['x_filen_list'][0])]
             experiment_dirs  = select_from_info('experiment_dir')
@@ -452,6 +452,7 @@ def run_ConFire(namelist):
                           model_title=model_title,
                           subset_function = subset_function_eval,
                           subset_function_args = subset_function_args_eval,
+                          max_no_ensembles = max_no_ensembles,
                           common_noise = common_noise
                          )
                     for name, dir, expt, yfile, common_noise \

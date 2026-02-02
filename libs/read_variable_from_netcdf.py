@@ -220,7 +220,8 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None,
                               check_mask = True, frac_random_sample = 1.0, 
                               min_data_points_for_sample = None,
                               x_find_mode = 'single', 
-                              dir_driving_data = None, *args, **kw):
+                              dir_driving_data = None, 
+                              max_no_ensembles = None, *args, **kw):
 
                               
     """Read data from netCDF files 
@@ -243,6 +244,8 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None,
             This could be different in some circumstances
         frac_random_sample -- fraction of data to be returned
         see read_variable_from_netcdf comments for *arg and **kw.
+        max_no_ensembles -- if there is an esemble of input data, what's the maxmimum we will 
+                                use.
     Returns:
         Y - a numpy array of the target variable
         X - an n-D numpy array of the feature variables 
@@ -342,6 +345,7 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None,
     if x_find_mode == 'ensemble-single':
         nfs = [read_variable_from_netcdf(filename, find_no_files = True, *args, **kw)    
                for  filename in x_filename_list]
+        
         nfs = np.array(nfs)
         nfs = np.unique(nfs[nfs >1])
         if len(nfs) == 0:
@@ -351,12 +355,17 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None,
                 nfs = int(nfs[0])
             else:
                 nfs = int(nfs.min() )
+            if max_no_ensembles is None or nfs < max_no_ensembles:
+                nfs_index = range(nfs)
+            else:
+                rng = np.random.default_rng(seed=42)
+                nfs_index = rng.choice(range(nfs), size=5, replace=False)         
             xOut = []
             cells_we_want = None
-            for i in range(nfs): 
+            for i in nfs_index: 
                 print(i)
                 out_file = dir_driving_data + 'ens_no-' + str(i) + '.npy'
-                if not os.path.isfile(out_file) or i == 0:
+                if not os.path.isfile(out_file) or i == nfs_index[0]:
                     output = open_ensemble_member(i, Y, scalers, frac_random_sample,
                                                   cells_we_want = cells_we_want)
                     if i == 0: cells_we_want = output[2]
@@ -364,7 +373,10 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None,
                 
                 xOut = xOut + [out_file]
             
-            y = list(output)
+            try:
+                y = list(output)
+            except:
+                set_trace()
             y[1] = xOut
             output = tuple(y)         
         
