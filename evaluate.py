@@ -267,8 +267,10 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
                           sample_for_plot = 1, grab_old_trace = False, 
                           run_response_curves = False, 
                           response_grouping = None, run_only = False, return_inputs = False,
-                          Y = None, X = None, lmask = None, scalers = None, *args, **kw):
-
+                          Y = None, X = None, lmask = None, scalers = None, 
+                          data_store = None, common_noise = False, 
+                          *args, **kw):
+    #set_trace()
     """ Runs prediction and evalutation of the sampled model based on previously run trace.
     Arguments:
         trace - pymc traces nc or nc fileiles, probably from a 'train_MaxEnt_model' run
@@ -306,7 +308,10 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
     dir_samples = combine_path_and_make_dir(dir_outputs, '/samples/')     
     dir_samples = combine_path_and_make_dir(dir_samples, filename_out)
 
-    dir_driving_data = combine_path_and_make_dir(dir_outputs, '/driving_data_store/')     
+    dir_data_store = combine_path_and_make_dir(dir_outputs, '/data_store/')
+    dir_driving_data = combine_path_and_make_dir(dir_data_store, '/driving_data/')
+    dir_optimisation_data = combine_path_and_make_dir(dir_data_store, '/optimisation_data/')
+     
     dir_driving_data = combine_path_and_make_dir(dir_driving_data, 
                                                  filename_out + '/' + control_run_name)
     
@@ -361,8 +366,9 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
         'eg_cube': Obs,
         'lmask': lmask,
         'dir_samples': dir_samples,
-        'grab_old_trace': grab_old_trace}
-    
+        'grab_old_trace': grab_old_trace,
+        'data_store': dir_optimisation_data,  
+        'common_noise': common_noise}
     Sim = runSim_MaxEntFire(**common_args, run_name = control_run_name, test_eg_cube = True)
      
     if run_only: 

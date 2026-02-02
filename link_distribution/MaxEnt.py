@@ -7,6 +7,7 @@ from typing import Optional, Tuple
 import numpy as np
 from pdb import set_trace
 import matplotlib.pyplot as plt
+import os
 
 def any_in(list_str, string):
     return any(np.array([string in item for item in list_str]))
@@ -26,7 +27,10 @@ def overlap_inverse(Y, qSpread):
 
 
 class MaxEnt(object):
-    def __init__(self):
+    def __init__(self, data_store = None, ensemble_member = None, common_noise = False):
+        self.data_store = data_store
+        self.ensemble_member = ensemble_member
+        self.common_noise = common_noise
         pass
 
     #def fire_spread(self,value: TensorVariable, mu: TensorVariable, sigma: TensorVariable,
@@ -118,7 +122,17 @@ class MaxEnt(object):
                 if inference:
                     qSpread = pm.LogNormal("qSpread", mu = mu, sigma = sigma)
                 else:
-                    qSpread = np.random.lognormal(mu, sigma, size)
+                    if self.common_noise:
+                        qfile = self.data_store + 'qSpread-ensemble-' + \
+                                str(self.ensemble_member)  + '.csv'
+                        print(qfile)
+                        if os.path.exists(qfile):
+                            qSpread = np.loadtxt(qfile)
+                        else:
+                            qSpread = np.random.lognormal(mu, sigma, size)
+                            np.savetxt(qfile, qSpread, delimiter=",")
+                    else:
+                        qSpread = np.random.lognormal(mu, sigma, size)
         elif any_in(param_names, 'qSpread'):
             qSpread =  element_ref(params, param_names, 'qSpread')[0]
         else:

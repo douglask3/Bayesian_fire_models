@@ -409,15 +409,18 @@ def run_ConFire(namelist):
         names_all = ['baseline']
         exp_type = ['single']        
         dirs_all = [params['dir']]
+        common_noises = [False]
+        limitation_types = select_from_info('limitation_types')
         
         try:
             y_filen1 = [select_from_info('y_filen_eval', run_info['x_filen_list'][0])]
             experiment_dirs  = select_from_info('experiment_dir')
             experiment_names = select_from_info('experiment_names')
+            common_noises = common_noises + \
+                select_from_info('experiment_common_noise',[False] * len(experiment_names))
             experiments = select_from_info('experiment_experiment')
             periods = select_from_info('experiment_period')
             models = select_from_info('experiment_model')
-            limitation_types = select_from_info('limitation_types')
             controls_to_plot = select_from_info('controls_to_plot', 
                                                  range(len(control_direction)))
             experiment_dirs = find_replace_period_model(experiment_dirs)
@@ -427,6 +430,7 @@ def run_ConFire(namelist):
             names_all = names_all + experiment_names
             dirs_all = dirs_all + experiment_dirs
             y_filen = y_filen + y_filen1 * len(experiment_dirs)
+            
         except:
             pass   
          
@@ -447,9 +451,11 @@ def run_ConFire(namelist):
                           y_filen=yfile,
                           model_title=model_title,
                           subset_function = subset_function_eval,
-                          subset_function_args = subset_function_args_eval
+                          subset_function_args = subset_function_args_eval,
+                          common_noise = common_noise
                          )
-                    for name, dir, expt, yfile in zip(names_all, dirs_all, exp_type, y_filen)
+                    for name, dir, expt, yfile, common_noise \
+                        in zip(names_all, dirs_all, exp_type, y_filen, common_noises)
                 ]
         #args_list.reverse()
         if len(args_list) > 1 and select_from_info('parallelize', True): 

@@ -63,7 +63,9 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
                       dir_samples, grab_old_trace, extra_params = None,
                       class_object = FLAME, method = 'burnt_area',
                       link_func_class = MaxEnt, hyper = True, sample_error = True,
-                      test_eg_cube = False, out_index = None, *args, **kw):  
+                      test_eg_cube = False, out_index = None, 
+                      data_store = None, common_noise = False,
+                      *args, **kw):  
     
     if lmask is None:
         asRaster = False
@@ -125,8 +127,11 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
     
         if out_index is not None: out = out[:, out_index]
 
+        func_class = link_func_class(data_store = data_store, 
+                                     ensemble_member = i, 
+                                     common_noise = common_noise)
         if test_eg_cube:
-            prob = link_func_class().sample_given_(eg_cube.data.flatten()[lmask], out, 
+            prob = func_class.sample_given_(eg_cube.data.flatten()[lmask], out, 
                                                    [*link_param_in])
             
             prob = make_into_cube(prob, file_prob) 
@@ -134,9 +139,9 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
         
         if hyper:
             if sample_error:
-                out = link_func_class().random_sample_given_(out, link_param_in) 
+                out = func_class.random_sample_given_(out, link_param_in) 
             else:
-                out = link_func_class().random_sample_given_central_limit_(out, link_param_in) 
+                out = func_class.random_sample_given_central_limit_(out, link_param_in) 
                      
         out = make_into_cube(out, file_sample)
         
