@@ -28,21 +28,21 @@ x_filen_list:: "change_Forest_fraction_Amazonia.nc" #14
 
 ## Model info
 control_names:: ['Weather','Ignition', 'Suppression', 'Fuel']
-priors:: {'pname': "controlID", 'value': [[0, 1, 2, 3], [4, 5, 10, 11, 12, 13, 14], [4, 6, 11, 12], [4, 5, 6, 7, 8, 9]]}
-priors:: {'pname': "driver_Direction", 'value': [[-1, 1, 1, -1], [1, 1, 1, 1, 1, 1, 1], [-1, -1, -1,-1], [1, 1, 1, 1, 1, 1]]}
+priors:: {'pname': "controlID", 'value': [[0, 1, 2, 3, 6], [4, 5, 10, 11, 12, 13, 14], [4, 11, 12], [4, 5, 6, 7, 8, 9]]}
+priors:: {'pname': "driver_Direction", 'value': [[-1, 1, 1, -1, -1], [1, 1, 1, 1, 1, 1, 1], [-1, -1, -1], [1, 1, 1, 1, 1, 1]]}
 priors:: {'pname': "control_Direction", 'value': [1, 1, 1, 1]}
 priors:: {'pname': "x0",'np': 4, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
 
 #betas
-priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas",'np': 5, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "betas",'np': 7, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
-priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "betas",'np': 6, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 
 #powers
-priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 5, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 priors:: {'pname': "powers",'np': 7, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
-priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 3, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 priors:: {'pname': "powers",'np': 6, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 
 
