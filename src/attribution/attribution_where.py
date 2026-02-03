@@ -28,11 +28,10 @@ def month_range(month_strings):
     # Same start & end → single month (e.g. ['07'] → 'Jul')
     return start if start == end else f"{start}-{end}"
 
-
 def map_attribution_for_region(dir1, dir2, region, 
                               ax = None, variable = 'Evaluate', nfiles = 1000,
                               temp_filename = '',
-                              add_cbar = None, month_idx = None):   
+                              add_cbar = None, month_idx = None, addRegion2Title = True):   
     region_info = get_region_info(region)[region]
     if month_idx is None: month_idx = region_info['mnths'] 
     
@@ -79,8 +78,14 @@ def map_attribution_for_region(dir1, dir2, region,
         iris.save(  count_map,   temp_file)
     if ax is None: plt.figure(figsize=(10*0.7, 6*0.7))
     
-    title = get_region_info(region)[region]['shortname'] + ' (' \
-                + month_range(month_idx) + ')'
+    if addRegion2Title:
+        title = get_region_info(region)[region]['shortname'] + '('
+    else:
+        title = ''
+    
+    title += month_range(month_idx)
+    if addRegion2Title: title += ')'
+
     if add_cbar is None:
         add_cbar = ax is None
     

@@ -23,12 +23,12 @@ def plot_all_attribution_scatter(dir1, dir2, regions, obs_dir, obs_file):
                                  plot_FUN = plot_FUN)
 
     plot_attribution_scatter_generic("counterfactual")
-    plot_attribution_scatter_generic("counterfactual-metmean")
+    plot_attribution_scatter_generic("counterfactual-extraNoise-")
     plot_attribution_scatter_generic("counterfactual", "rr_line",
                                      effect_ratio_and_rr_over_range)
-    plot_attribution_scatter_generic("counterfactual-metmean", "rr_line",
+    plot_attribution_scatter_generic("counterfactual-extraNoise-", "rr_line",
                                      effect_ratio_and_rr_over_range)
-
+    
 def plot_confidence_in_attribution(dir1, dir2, region):
     eg_file  = list(Path(dir1 + get_region_info(region)[region]['dir'] + dir2 + '/').rglob('*.nc'))[0]
     eg_cube = iris.load_cube(eg_file)
@@ -219,14 +219,14 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_di
     plt.savefig("figs/attrbution_increase_map" + region + ".png", dpi = 300) 
 
 if __name__=="__main__":
-    dir1 = "outputs/outputs_scratch/play/"
-    dir2 = "/_16-frac_points_0.02/" 
+    dir1 = "outputs/outputs_scratch/attribution-base-localBA-data-NEW4/"
+    dir2 = "/_16-frac_points_0.5/" 
 
     region = "Pantanal"
 
     obs_dir = 'data/data/driving_data_base//'
     obs_file = 'burnt_area_data.csv'  
      
-    #plot_all_attribution_scatter(dir1, '/time_series/' +dir2, region, obs_dir, obs_file)
-    #plot_confidence_in_attribution(dir1, '/samples/' +  dir2, region)
+    plot_all_attribution_scatter(dir1, '/time_series/' +dir2, region, obs_dir, obs_file)
+    plot_confidence_in_attribution(dir1, '/samples/' +  dir2, region)
     plot_change_in_burned_area(dir1, '/samples/' +  dir2, region, obs_dir = obs_dir)
