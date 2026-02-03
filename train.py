@@ -75,7 +75,7 @@ def set_priors(priors, X):
 def fit_MaxEnt_probs_to_data(Y, X, CA = None, 
                              model_class = FLAME, link_func_class = MaxEnt,
                              niterations = 100, priors = None, inference_step_type = None, 
-                             x_filen_list = None, dir_outputs = '',
+                             x_filen_list = None, dir_outputs = '', plot_drivers = False,
                              *arg, **kw):
     """ Bayesian inerence routine that fits independant variables, X, to dependant, Y.
         Based on the MaxEnt solution of probabilities. 
@@ -106,9 +106,10 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None,
     except:
         pass
 
-    scatter_each_x_vs_y(x_filen_list, X, Y*100.0)
-    os.makedirs(dir_outputs + 'figs/', exist_ok=True)
-    plt.savefig(dir_outputs + 'figs/X_vs_Ys.png')
+    if plot_drivers:
+        scatter_each_x_vs_y(x_filen_list, X, Y*100.0)
+        os.makedirs(dir_outputs + 'figs/', exist_ok=True)
+        plt.savefig(dir_outputs + 'figs/X_vs_Ys.png')
     
     with pm.Model() as max_ent_model:
         priors, link_priors = set_priors(priors, X)
@@ -204,8 +205,7 @@ def train_MaxEnt_model_from_namelist(namelist = None, **kwargs):
     
     if 'dir' not in variables and 'dir_training' in variables:
         variables['dir'] = variables['dir_training']
-
-    
+        
     return train_MaxEnt_model(**variables)
 
 
@@ -337,7 +337,8 @@ def train_MaxEnt_model(y_filen, x_filen_list, CA_filen = None, model_class = FLA
                                          niterations = niterations, 
                                          cores = cores, priors = priors, 
                                          inference_step_type = inference_step_type,
-                                         x_filen_list = x_filen_list, dir_outputs = dir_outputs)
+                                         x_filen_list = x_filen_list, dir_outputs = dir_outputs,
+                                         plot_drivers = plot_drivers)
         
         ## save trace file
         write_variables_to_namelist(none_trace_params, other_params_file)
