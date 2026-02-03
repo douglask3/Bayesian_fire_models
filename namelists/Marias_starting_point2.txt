@@ -1,6 +1,6 @@
 ## model info
 regions:: ['Amazon']
-model_title::  'Amazon-Maria-10/<<region>>'
+model_title::  'Amazon-Maria-11/<<region>>'
 
 ## input data paths and filenames
 dir_training:: "data/data/driving_data_base/<<region>>/nrt/era5_monthly/"
@@ -10,39 +10,39 @@ y_filen:: "Fire_fraction_Amazonia.nc"
 Y_scale:: 0.01
 CA_filen:: None
 
-x_filen_list:: ["precip"] #0
-x_filen_list:: ["max_consec_dry"] #1
-x_filen_list:: ["tas_max"] #2
-x_filen_list:: ["hurs_min"] #3
-x_filen_list:: ["Agriculture_fraction_Amazonia"] #4
-x_filen_list:: ["Pasture_fraction_Amazonia"] #5
-x_filen_list:: ["Forest_fraction_Amazonia"] #6
-x_filen_list:: ["Grassland_fraction_Amazonia"] #7
-x_filen_list:: ["Savanna_fraction_Amazonia"] #8
-x_filen_list:: ["TV_CFUEL_CORRECTED_MAP"] #9
-x_filen_list:: ["LI_2003_2025"] #10
-x_filen_list:: ["rural_population_regridded_to_era5"] #11
-x_filen_list:: ["urban_area_regridded_to_era5"] #12
-x_filen_list:: ["road_density"] #13
-x_filen_list:: ["change_Forest_fraction_Amazonia.nc"] #14
+x_filen_list:: "precip" #0
+x_filen_list:: "max_consec_dry" #1
+x_filen_list:: "tas_max" #2
+x_filen_list:: "hurs_min" #3
+x_filen_list:: "Agriculture_fraction_Amazonia" #4
+x_filen_list:: "Pasture_fraction_Amazonia" #5
+x_filen_list:: "Forest_fraction_Amazonia" #6
+x_filen_list:: "Grassland_fraction_Amazonia" #7
+x_filen_list:: "Savanna_fraction_Amazonia" #8
+x_filen_list:: "TV_CFUEL_CORRECTED_MAP" #9
+x_filen_list:: "LI_2003_2025" #10
+x_filen_list:: "rural_population_regridded_to_era5" #11
+x_filen_list:: "urban_area_regridded_to_era5" #12
+x_filen_list:: "road_density" #13
+x_filen_list:: "change_Forest_fraction_Amazonia.nc" #14
 
 ## Model info
 control_names:: ['Weather','Ignition', 'Suppression', 'Fuel']
-priors:: {'pname': "controlID", 'value': [[0, 1, 2, 3], [4, 5, 10, 11, 12, 13, 14], [4, 11, 12], [4, 5, 6, 7, 8, 9]]}
-priors:: {'pname': "driver_Direction", 'value': [[-1, 1, 1, -1], [1, 1, 1, 1, 1, 1, 1], [-1, -1,-1], [1, 1, 1, 1, 1, 1]]}
+priors:: {'pname': "controlID", 'value': [[0, 1, 2, 3], [4, 5, 10, 11, 12, 13, 14], [4, 6, 11, 12], [4, 5, 6, 7, 8, 9]]}
+priors:: {'pname': "driver_Direction", 'value': [[-1, 1, 1, -1], [1, 1, 1, 1, 1, 1, 1], [-1, -1, -1,-1], [1, 1, 1, 1, 1, 1]]}
 priors:: {'pname': "control_Direction", 'value': [1, 1, 1, 1]}
 priors:: {'pname': "x0",'np': 4, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
 
 #betas
 priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "betas",'np': 7, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
-priors:: {'pname': "betas",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "betas",'np': 6, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 
 #powers
 priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 priors:: {'pname': "powers",'np': 7, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
-priors:: {'pname': "powers",'np': 3, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 priors:: {'pname': "powers",'np': 6, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 
 
