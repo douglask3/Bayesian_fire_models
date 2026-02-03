@@ -1,6 +1,6 @@
 ## model info
 regions:: ['Amazon']
-model_title::  'Amazon-Maria-11/<<region>>'
+model_title::  'Amazon-Maria-full-2/<<region>>'
 
 ## input data paths and filenames
 dir_training:: "data/data/driving_data_base/<<region>>/nrt/era5_monthly/"
@@ -28,19 +28,19 @@ x_filen_list:: "change_Forest_fraction_Amazonia.nc" #14
 
 ## Model info
 control_names:: ['Weather','Ignition', 'Suppression', 'Fuel']
-priors:: {'pname': "controlID", 'value': [[0, 1, 2, 3], [4, 5, 10, 11, 12, 13, 14], [4, 6, 11, 12], [4, 5, 6, 7, 8, 9]]}
-priors:: {'pname': "driver_Direction", 'value': [[-1, 1, 1, -1], [1, 1, 1, 1, 1, 1, 1], [-1, -1, -1,-1], [1, 1, 1, 1, 1, 1]]}
+priors:: {'pname': "controlID", 'value': [[0, 1, 2], [4, 5, 10, 11, 12, 13, 14], [4, 6, 11, 12], [4, 5, 6, 7, 8, 9]]}
+priors:: {'pname': "driver_Direction", 'value': [[-1, 1, 1], [1, 1, 1, 1, 1, 1, 1], [-1, -1, -1,-1], [1, 1, 1, 1, 1, 1]]}
 priors:: {'pname': "control_Direction", 'value': [1, 1, 1, 1]}
 priors:: {'pname': "x0",'np': 4, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
 
 #betas
-priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "betas",'np': 7, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "betas",'np': 6, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 
 #powers
-priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 3, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 priors:: {'pname': "powers",'np': 7, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 priors:: {'pname': "powers",'np': 6, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
@@ -56,12 +56,9 @@ link_func_class:: MaxEnt
 niterations:: 1000
 cores:: 10
 
-fraction_data_for_sample:: 0.05
-min_data_points_for_sample:: 100
+fraction_data_for_sample:: 0.2
+min_data_points_for_sample:: 2000
 
-#for testing purposes
-#fraction_data_for_sample:: 0.000002
-#min_data_points_for_sample:: 100
 
 subset_function:: sub_year_months
 #Amazonia - June to October 
@@ -85,7 +82,7 @@ y_filen_eval:: 'Fire_fraction_Pantanal.nc'
 subset_function_eval:: [sub_year_range, sub_year_months]
 subset_function_args_eval:: [{'year_range': [2024, 2026]}, {'months_of_year': [4,5, 6, 7, 8]}]
 
-sample_for_plot:: 50
+sample_for_plot:: 200
 #if it doenst work delte the sample folder and generate again
 
 plot_control_maps:: True
@@ -94,20 +91,24 @@ levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0]
 dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
 cmap:: 'gradient_red' 
 dcmap:: 'diverging_TealOrange'
-#dir_projecting:: "data/data/driving_data_base/<<region>>/nrt/era5_monthly/"
-dir_projecting:: "C:/BASE/Data/<<region>>/monthly_era5/"
+dir_projecting:: "data/data/driving_data_base/<<region>>/nrt/era5_monthly/"
+#dir_projecting:: "C:/BASE/Data/<<region>>/monthly_era5/"
 parallelize:: False
 
 ## experiment info
 limitation_types:: ['standard']
 controls_to_plot:: [0, 1, 2, 3]
-#experiment_dir:: ["data/data/driving_data_base/<<region>>/nrt/era5_monthly/", "data/data/driving_data_base/<<region>>/nrt/era5_monthly/CF_mean/||data/data/driving_data_base/<<region>>/nrt/era5_monthly/","data/data/driving_data_base/<<region>>/nrt/era5_monthly/CF/||data/data/driving_data_base/<<region>>/nrt/era5_monthly/"]
-#experiment_type:: ['single', 'single', 'ensemble-single']
-#experiment_names:: ["factual", "counterfactual-metmean", "counterfactual"]
 
-experiment_dir:: ["C:/BASE/Data/<<region>>/monthly_era5/", "C:/BASE/Data/<<region>>/CF/" "data/data/driving_data_base/<<region>>/nrt/era5_monthly/CF/||C:/BASE/Data/<<region>>/monthly_era5/"]
-experiment_type:: ['single', 'ensemble-single']
-experiment_names:: ["factual", "counterfactual"]
+experiment_dir:: "data/data/driving_data_base/<<region>>/nrt/era5_monthly/"
+
+experiment_dir:: "data/data/driving_data_base/<<region>>/nrt/era5_monthly/CF_mean/||data/data/driving_data_base/<<region>>/nrt/era5_monthly/"
+
+experiment_dir:: data/data/driving_data_base/<<region>>/nrt/era5_monthly/CF/||data/data/driving_data_base/<<region>>/nrt/era5_monthly/"
+
+experiment_type:: ['single', 'single', 'ensemble-single', 'ensemble-single']
+experiment_names:: ["factual", "counterfactual-metmean", "counterfactual", "counterfactual-extranoise"
+]
+experiment_common_noise:: [True, True, True, False]
 
 time_series_percentiles:: [0.0, 95.0]
 
