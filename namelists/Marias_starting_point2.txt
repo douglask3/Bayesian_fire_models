@@ -70,7 +70,7 @@ subset_function_args:: {'months_of_year': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
 subset_function_args:: {'year_range': [2010, 2026]}
 #region_months:: {'Pantanal': [5, 6, 7, 8], 'Amazon': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]}
 region_months:: {'Pantanal': [4,5, 6, 7, 8], 'Amazon': [5, 6, 7, 8, 9]}
-grab_old_trace::  False # set to True till you get the code running. 
+grab_old_trace::  True # set to True till you get the code running. 
                       # Then set to False when you start adding in new response curves
 ### output info
 dir_outputs:: 'outputs/outputs_scratch'
@@ -99,11 +99,7 @@ parallelize:: False
 limitation_types:: ['standard']
 controls_to_plot:: [0, 1, 2, 3]
 
-experiment_dir:: "data/data/driving_data_base/<<region>>/nrt/era5_monthly/"
-
-experiment_dir:: "data/data/driving_data_base/<<region>>/nrt/era5_monthly/CF_mean/||data/data/driving_data_base/<<region>>/nrt/era5_monthly/"
-
-experiment_dir:: data/data/driving_data_base/<<region>>/nrt/era5_monthly/CF/||data/data/driving_data_base/<<region>>/nrt/era5_monthly/"
+experiment_dir:: ["data/data/driving_data_base/<<region>>/nrt/era5_monthly/","data/data/driving_data_base/<<region>>/nrt/era5_monthly/CF_mean/||data/data/driving_data_base/<<region>>/nrt/era5_monthly/","data/data/driving_data_base/<<region>>/nrt/era5_monthly/CF/||data/data/driving_data_base/<<region>>/nrt/era5_monthly/"]
 
 experiment_type:: ['single', 'single', 'ensemble-single', 'ensemble-single']
 experiment_names:: ["factual", "counterfactual-metmean", "counterfactual", "counterfactual-extranoise"
