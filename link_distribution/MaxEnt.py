@@ -157,17 +157,6 @@ class MaxEnt(object):
                     if self.common_noise:
                         qSpread = self.deterministic_lognormal_array(self.ensemble_member, 
                                                                     mu, sigma)
-                        #qfile = self.data_store + 'qSpread-ensemble-' + \
-                        #        str(self.ensemble_member)  + '.csv'
-                        #print(qfile)
-                        #if os.path.exists(qfile):
-                        #    qSpread = np.loadtxt(qfile)
-                        #else:
-                        #
-                        #    
-                        #    
-                        #    qSpread = np.random.lognormal(mu, sigma, size)
-                        #    np.savetxt(qfile, qSpread, delimiter=",")
                     else:
                         qSpread = np.random.lognormal(mu, sigma, size)
         elif any_in(param_names, 'qSpread'):
