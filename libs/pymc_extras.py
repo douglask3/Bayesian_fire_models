@@ -126,10 +126,11 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
         
     
         if out_index is not None: out = out[:, out_index]
-
+        
         func_class = link_func_class(data_store = data_store, 
                                      ensemble_member = i, 
-                                     common_noise = common_noise)
+                                     common_noise = common_noise,
+                                     eg_cube = eg_cube, lmask = lmask)
         if test_eg_cube:
             prob = func_class.sample_given_(eg_cube.data.flatten()[lmask], out, 
                                                    [*link_param_in])
