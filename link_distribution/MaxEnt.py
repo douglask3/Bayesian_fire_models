@@ -143,7 +143,7 @@ class MaxEnt(object):
     
     def define_qSpread_param(self, params, param_names, inference = True, sigma = None,
                              size = 1):
-        #set_trace()
+        
         if any_in(param_names, 'qSpread_mu'):
             mu = element_ref(params, param_names, 'qSpread_mu')[0]
             if sigma is None:
