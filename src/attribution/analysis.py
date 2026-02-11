@@ -220,9 +220,12 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_di
 
 if __name__=="__main__":
     dir1 = "outputs/outputs_scratch/attribution-base-localBA-data-NEW4/"
+    dir1 = "outputs/outputs_scratch/Amazon-Maria-full-3/"
     dir2 = "/_16-frac_points_0.5/" 
+    dir2 = "/_15-frac_points_0.2/" 
 
     region = "Pantanal"
+    region = "Amazon"
 
     obs_dir = 'data/data/driving_data_base//'
     obs_file = 'burnt_area_data.csv'  
