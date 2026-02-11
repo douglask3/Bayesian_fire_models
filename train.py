@@ -1,5 +1,6 @@
 import multiprocessing as mp
 #mp.set_start_method('forkserver')
+mp.set_start_method("spawn", force=True)
 
 import sys
 sys.path.append('fire_model/')
