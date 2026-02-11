@@ -46,7 +46,7 @@ def work_out_change(dir, file_in, file_out):
 if __name__=="__main__":
     
     regions = ['NEIndia', 'Alberta', 'LA', 'Congo','Pantanal', 'Amazon']
-
+    regions = ['Pantanal', 'Amazon']
     clims = ["obsclim", "counterclim"]
     periods3a = ["period_2000_2019", "period_1901_1920"]
     
@@ -68,7 +68,7 @@ if __name__=="__main__":
     for region in regions:
         for clim in clims:
             for period in periods3a:
-                dir = "data/data/driving_data2425/" + region + "/isimp3a/" + clim + \
+                dir = "data/data/driving_data_base/" + region + "/isimp3a/" + clim + \
                       "/GSWP3-W5E5/" +  period + "/"
                 
                 run_for_all_files(dir)
