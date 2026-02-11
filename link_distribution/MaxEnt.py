@@ -37,19 +37,20 @@ class MaxEnt(object):
         self.ensemble_member = ensemble_member
         self.common_noise = common_noise
 
-        flat_idx = np.where(lmask)[0]
-        ntime, nlat, nlon = eg_cube.shape
-        t_idx, lat_idx, lon_idx = np.unravel_index(flat_idx, (ntime, nlat, nlon))
-
-        time_coord = eg_cube.coord('time').points
-        lat_coord = eg_cube.coord('latitude').points
-        lon_coord = eg_cube.coord('longitude').points
-
-        self.times = time_coord[t_idx]
-        lats = lat_coord[lat_idx]
-        lons = lon_coord[lon_idx]
-        self.lats = np.round(lats, 5)
-        self.lons = np.round(lons, 5)
+        if eg_cube is not None and lmask is not None:
+            flat_idx = np.where(lmask)[0]
+            ntime, nlat, nlon = eg_cube.shape
+            t_idx, lat_idx, lon_idx = np.unravel_index(flat_idx, (ntime, nlat, nlon))
+            
+            time_coord = eg_cube.coord('time').points
+            lat_coord = eg_cube.coord('latitude').points
+            lon_coord = eg_cube.coord('longitude').points
+            
+            self.times = time_coord[t_idx]
+            lats = lat_coord[lat_idx]
+            lons = lon_coord[lon_idx]
+            self.lats = np.round(lats, 5)
+            self.lons = np.round(lons, 5)
         pass
 
     #def fire_spread(self,value: TensorVariable, mu: TensorVariable, sigma: TensorVariable,
