@@ -5,53 +5,16 @@ sys.path.append('src/')
 sys.path.append('src/attribution/')
 sys.path.append('SoW_info/')
 from  pathlib import Path
+
 from plot_BA_climateology import *
 from plot_maps import *
-from attribution_where import *
-
-def plot_confidence_in_attribution(dir1, dir2, region):
-    eg_file  = list(Path(dir1 + region + dir2 + '/').rglob('*.nc'))[0]
-    eg_cube = iris.load_cube(eg_file)
-    
-    nplots = eg_cube.shape[0] + 2
-    nrows = int(np.ceil(np.sqrt(nplots)))
-    ncols = int(np.ceil(nplots/nrows))
-    
-    fig, axes = set_up_sow_plot_windows(nrows, ncols, eg_cube[0],  size_scale = 3)
-
-    for mnth, ax in zip(eg_cube.coord('month_number').points, axes[:-1]):
-        month_idx = '0' + str(mnth + 1) if mnth <9 else str(mnth + 1)#
-        map_attribution_for_region(dir1, dir2, region, 
-                                       temp_filename = '-base-' + month_idx + '-', 
-                                       addRegion2Title = False,
-                                       ax = ax, add_cbar = False, month_idx = [month_idx])
-
-    img = map_attribution_for_region(dir1, dir2, region, 
-                                    temp_filename = '-base-', addRegion2Title = False,
-                                    ax = axes[nplots-2], add_cbar = False) 
-    if (nplots-1) < (ncols * nrows):    
-        for ax in axes[(nplots-1):]: ax.set_visible(False)
-
-
-    pos1 = axes[-nrows].get_position()
-    pos2 = axes[-1].get_position()
-    x0 = pos1.x0
-    x1 = pos2.x1
-    y1 = pos1.y1  # top of the top row
-    height = 0.8  # thickness of the colorbar
-
-    cbar_ax = fig.add_axes([x0, y1 - height*0.1, x1 - x0, height]) 
-    cbar_ax.set_visible(False)
-    add_attribubtion_map_cbar(img, cbar_ax)
-    
-    plt.savefig("figs/attrbution_where-base" + region + ".png", dpi = 300) 
 
 def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_dir = None):
     if obs_dir is not None:
         filename = "data/data/driving_data_base/" + region +"/burnt_area.nc"
         anomaly, climatology = open_netcdf_and_find_clim(filename)
 
-    dir = dir1 + get_region_info(region)[region]['dir'] + dir2 + '/'
+    dir = dir1 + region + dir2 + '/'
     
     # Returns a list of Path objects for directories only
     experiments = [d for d in Path(dir).iterdir() if d.is_dir()]
