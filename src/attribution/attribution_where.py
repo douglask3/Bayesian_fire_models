@@ -33,19 +33,19 @@ def month_range(month_strings):
 def map_attribution_for_region(dir1, dir2, region, 
                               ax = None, variable = 'Evaluate', nfiles = 1000,
                               temp_filename = '',
-                              add_cbar = None, month_idx = None, addRegion2Title = True):   
-    region_info = get_region_info(region)[region]
-    if month_idx is None: month_idx = region_info['mnths'] 
+                              add_cbar = None, month_idx = None, year = None,
+                              title = ''):   
     
-    temp_file = 'temp/attribution_where2-' + region_info['dir'] + '-' + temp_filename + \
-                variable + '-' + str(nfiles) + '.nc' 
+    
+    
+    temp_file = dir1 + 'data_store/attribute_where/' + dir2.replace('samples', '') + \
+                '-' + temp_filename + variable + '-' + str(nfiles) + '.nc'  
     if os.path.exists(temp_file):
         count_map = iris.load_cube(temp_file)
     else:
-        # Which month index?   
-        year = region_info['years'][0]  
-         
-        fact_dir = dir1 + region_info['dir'] + dir2  + '/'
+        Path(temp_file).parent.mkdir(parents=True, exist_ok=True)
+        # Which month index?            
+        fact_dir = dir1 + region + dir2  + '/'
         cfact_dir = fact_dir + 'counterfactual-/' + variable + '/'
         fact_dir = fact_dir + 'factual-/' + variable + '/'
         
@@ -59,13 +59,16 @@ def map_attribution_for_region(dir1, dir2, region,
         def load_file_month(file):
             cube = iris.load_cube(file)
             cube0 = cube.copy()
-            cube = sub_year_range(cube, [year, year])
-            cube = sub_year_months(cube, month_idx)
+            if year is not None: cube = sub_year_range(cube, [year, year])
+            if month_idx is not None: cube = sub_year_months(cube, month_idx)
             try:
                 cube = cube.collapsed('time', iris.analysis.MEAN)    
             except:
                 pass
-            return cube.data
+            try:
+                return cube.data
+            except:
+                set_trace()
         
         
         for f_file, c_file in zip(fact_files, cfact_files):
@@ -80,13 +83,11 @@ def map_attribution_for_region(dir1, dir2, region,
         iris.save(  count_map,   temp_file)
     if ax is None: plt.figure(figsize=(10*0.7, 6*0.7))
     
-    if addRegion2Title:
-        title = get_region_info(region)[region]['shortname'] + '('
-    else:
-        title = ''
-    
-    title += month_range(month_idx)
-    if addRegion2Title: title += ')'
+    if month_idx is not None:
+        if title is not None:
+            title += '(' + month_range(month_idx) + ')'
+        else: 
+            title = month_range(month_idx)
 
     if add_cbar is None:
         add_cbar = ax is None
@@ -140,14 +141,14 @@ def plot_confidence_in_attribution(dir1, dir2, region):
     fig, axes = set_up_sow_plot_windows(nrows, ncols, eg_cube[0],  size_scale = 3)
 
     for mnth, ax in zip(eg_cube.coord('month_number').points, axes[:-1]):
-        month_idx = '0' + str(mnth + 1) if mnth <9 else str(mnth + 1)#
+        
+        month_idx = '0' + str(mnth) if mnth <9 else str(mnth)#
         map_attribution_for_region(dir1, dir2, region, 
                                        temp_filename = '-base-' + month_idx + '-', 
-                                       addRegion2Title = False,
                                        ax = ax, add_cbar = False, month_idx = [month_idx])
-
+    
     img = map_attribution_for_region(dir1, dir2, region, 
-                                    temp_filename = '-base-', addRegion2Title = False,
+                                    temp_filename = '-base-',
                                     ax = axes[nplots-2], add_cbar = False) 
     if (nplots-1) < (ncols * nrows):    
         for ax in axes[(nplots-1):]: ax.set_visible(False)

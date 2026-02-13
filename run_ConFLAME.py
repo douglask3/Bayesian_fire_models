@@ -11,9 +11,11 @@ import datetime
 
 import sys
 sys.path.append('libs/')
+sys.path.append('src/attribution/')
 from climtatology_difference import *
 from plot_maps import *
 from plot_multimaps import *
+from attribution import *
 
 try:
     from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -416,8 +418,6 @@ def run_ConFire(namelist):
             y_filen1 = [select_from_info('y_filen_eval', run_info['x_filen_list'][0])]
             experiment_dirs  = select_from_info('experiment_dir')
             experiment_names = select_from_info('experiment_names')
-            common_noises = common_noises + \
-                select_from_info('experiment_common_noise',[False] * len(experiment_names))
             experiments = select_from_info('experiment_experiment')
             periods = select_from_info('experiment_period')
             models = select_from_info('experiment_model')
@@ -430,6 +430,8 @@ def run_ConFire(namelist):
             names_all = names_all + experiment_names
             dirs_all = dirs_all + experiment_dirs
             y_filen = y_filen + y_filen1 * len(experiment_dirs)
+            common_noises = common_noises + \
+                select_from_info('experiment_common_noise',[False] * len(experiment_names))
             
         except:
             pass   
@@ -458,7 +460,8 @@ def run_ConFire(namelist):
                     for name, dir, expt, yfile, common_noise \
                         in zip(names_all, dirs_all, exp_type, y_filen, common_noises)
                 ]
-        #args_list.reverse()
+        args_list.reverse()
+        
         if len(args_list) > 1 and select_from_info('parallelize', True): 
             try:
                 with get_context("spawn").Pool(processes=4) as pool:
@@ -470,6 +473,14 @@ def run_ConFire(namelist):
             for args in args_list:
                 run_experiment_wrapper(args)
 
+        if len(args_list)>1:
+            
+            attribution_analysis(output_dir, '/' + output_file + '/', 
+                                 [x["dir"] for x in args_list if x["name"] == "factual"][0],
+                                 obs_file_nc = args_list[0]['y_filen'])
+            set_trace()
+
+        #set_trace()
     if regions is None:
         run_for_regions(None)
     else:

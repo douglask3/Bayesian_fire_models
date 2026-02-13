@@ -9,10 +9,11 @@ from  pathlib import Path
 from plot_BA_climateology import *
 from plot_maps import *
 
-def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_dir = None):
-    if obs_dir is not None:
-        filename = "data/data/driving_data_base/" + region +"/burnt_area.nc"
-        anomaly, climatology = open_netcdf_and_find_clim(filename)
+def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_file = None):
+    if obs_file is not None:
+        #set_trace()
+        #filename = "data/data/driving_data_base/" + region +"/burnt_area.nc"
+        anomaly, climatology = open_netcdf_and_find_clim(obs_file)
 
     dir = dir1 + region + dir2 + '/'
     

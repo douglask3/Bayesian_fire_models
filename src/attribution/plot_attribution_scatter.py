@@ -196,7 +196,7 @@ def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name,
     
     mask = factual_flat > obs
     if (np.sum(mask) < 10):
-        mask = factual_flat > np.sort(factual_flat)[-10]
+        mask = factual_flat > np.sort(factual_flat)[-np.min([10, int(len(factual_flat)/2)])]
     percentile = [5, 25, 50, 75, 95]
     if np.sum(mask) == 0: 
         return
@@ -262,14 +262,20 @@ def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name,
 def plot_for_region(region, metric, plot_FUN, 
                     dir1, dir2, obs_dir, obs_file, 
                     factual_name = "factual", counterfactual_name = "counterfactual",
-                    all_mod_years = False, add_legend = False,
+                    all_mod_years = False, add_legend = False, 
+                    years = None, mnths = range(12),
                     *args, **kw):
-    region_info = get_region_info(region)[region]
     
-    years = region_info['years']
-    mnths = region_info['mnths']
-    # Load the data
+    if region != "":
+        region_info = get_region_info(region)[region]
+    
+        if years is None:
+            years = region_info['years']
+        if mnths is None:
+            mnths = region_info['mnths']
+        # Load the data
     dir = dir1 + region + dir2 + '/'
+    #set_trace()
     try:    
         factual = pd.read_csv(dir + factual_name + "-/" + metric + \
                                      "/members/absolute/Evaluate.csv")
@@ -298,7 +304,7 @@ def plot_for_region(region, metric, plot_FUN,
     factual_flat0 = factual_flat.copy()
     if metric == 'mean':
         obs = obs[0]#*20#*33.0
-        plot_name = region_info['shortname']
+        plot_name = region#region_info['shortname']
     else:
         plot_name = ""
         obs = obs[1]
