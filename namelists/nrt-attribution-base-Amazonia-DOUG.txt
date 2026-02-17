@@ -1,12 +1,12 @@
 ## model info
 regions:: ['Amazon']
-model_title::  'Amazon-Maria-full-2/<<region>>'
+model_title::  'Amazon-Maria-full-newmask/<<region>>'
 
 ## input data paths and filenames
 dir_training:: "data/data/driving_data_base/<<region>>/nrt/era5_monthly/"
 #dir_training:: "C:/BASE/Data/<<region>>/monthly_era5/"
 
-y_filen:: "Fire_fraction_Amazonia.nc"
+y_filen:: "Fire_fraction_Amazonia-masked.nc"
 Y_scale:: 0.01
 CA_filen:: None
 
@@ -77,8 +77,8 @@ dir_outputs:: 'outputs/outputs_scratch'
 
 ## evaluation info
 #y_filen_eval:: 'burnt_area.nc'
-#y_filen_eval:: 'Fire_fraction_Amazonia.nc'
-y_filen_eval:: 'Fire_fraction_Pantanal.nc'
+y_filen_eval:: 'Fire_fraction_Amazonia-masked.nc'
+#y_filen_eval:: 'Fire_fraction_Pantanal.nc'
 subset_function_eval:: [sub_year_range, sub_year_months]
 subset_function_args_eval:: [{'year_range': [2024, 2026]}, {'months_of_year': [4,5, 6, 7, 8]}]
 
@@ -99,12 +99,10 @@ parallelize:: False
 limitation_types:: ['standard']
 controls_to_plot:: [0, 1, 2, 3]
 
-experiment_dir:: ["data/data/driving_data_base/<<region>>/nrt/era5_monthly/","data/data/driving_data_base/<<region>>/nrt/era5_monthly/CF_mean/||data/data/driving_data_base/<<region>>/nrt/era5_monthly/","data/data/driving_data_base/<<region>>/nrt/era5_monthly/CF/||data/data/driving_data_base/<<region>>/nrt/era5_monthly/"]
-
-experiment_type:: ['single', 'single', 'ensemble-single', 'ensemble-single']
-experiment_names:: ["factual", "counterfactual-metmean", "counterfactual", "counterfactual-extranoise"
-]
-experiment_common_noise:: [True, True, True, False]
+experiment_dir:: ["data/data/driving_data_base/<<region>>/nrt/era5_monthly/", "data/data/driving_data_base/<<region>>/nrt/era5_monthly/CF/||data/data/driving_data_base/<<region>>/nrt/era5_monthly/", "data/data/driving_data_base/<<region>>/nrt/era5_monthly/CF/||data/data/driving_data_base/<<region>>/nrt/era5_monthly/"]
+experiment_type:: ['single', 'ensemble-single', 'ensemble-single']
+experiment_names:: ["factual", "counterfactual", "counterfactual-extraNoise"]
+experiment_common_noise:: [True, True, False]
 
 time_series_percentiles:: [0.0, 95.0]
 

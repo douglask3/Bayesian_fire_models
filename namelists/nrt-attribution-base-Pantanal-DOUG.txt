@@ -1,6 +1,6 @@
 ## model info
 regions:: ['Pantanal']
-model_title::  'attribution-base-localBA-data-NEW4/<<region>>'
+model_title::  'Pantanal-Maria-full-5/<<region>>'
 
 ## input data paths and filenames
 

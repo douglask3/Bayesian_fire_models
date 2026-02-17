@@ -1,6 +1,6 @@
 ## model info
 regions:: ['Pantanal']
-model_title::  'Pantanal-Maria-full-3-all-year/<<region>>'
+model_title::  'Pantanal-Maria-full-5-all-year/<<region>>'
 
 ## input data paths and filenames
 
@@ -28,7 +28,7 @@ priors:: {'pname': "link-qSpread_sigma",'np': 1, 'dist': 'HalfNormal', 'sigma': 
 control_names:: ['Fuel','Moisture', 'Suppression', 'Ignitions']
 priors:: {'pname': "control_Direction", 'value': [1, 1, 1, 1]}
 priors:: {'pname': "controlID", 'value': [[6, 7, 8, 12, 14], [0, 1, 2, 6, 8, 14], [4, 5, 12], [4, 5, 10, 13]]}
-priors:: {'pname': "driver_Direction", 'value': [[1, 1, 1, 1, 1], [-1, -1, 1, -1, -1, 1], [-1, -1, -1], [1, 1, 1, 1]]}
+priors:: {'pname': "driver_Direction", 'value': [[1, 1, 1, 1, 1], [-1, 1, 1, -1, -1, -1], [-1, -1, -1], [1, 1, 1, 1]]}
 priors:: {'pname': "x0",'np': 4, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
 
 #betas
