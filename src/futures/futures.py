@@ -77,12 +77,12 @@ if __name__=="__main__":
             except:
                 set_trace()
         out = [pd.concat([out[0], ot], axis=1) for ot in out[1:]]
-        #[yay(out[0], ot) for ot in out[1:]]
+        
         return out
     BAs = [BA_for_model(model) for model in models]
 
     occurance = np.mean(np.array(BAs) > obs, axis = 2)
-    #set_trace()
+    
     *other_dims, last_dim = occurance.shape
     block_size = 10
     num_blocks = last_dim // block_size
