@@ -68,7 +68,7 @@ def plot_projections(ax, sample_type = "mean", run = "Evaluate.csv", obs = None,
     BAs = open_BA_projections(sample_type = sample_type, run = run, *args, **kw) 
     
     if obs.shape == ():
-        mask = np.array(BAs) > obs
+        mask = np.array(BAs) > (obs/ 100.0)
         occurance = np.mean(mask, axis = 2)
     else:
         occurance = np.where(obs, np.array(BAs), np.nan)
@@ -127,23 +127,10 @@ def plot_projections(ax, sample_type = "mean", run = "Evaluate.csv", obs = None,
     
     return mask
 
-if __name__=="__main__":
-    
-    obs_path = "data/data/driving_data_base/Amazon/burnt_area_data.csv"
-    mod_path = "outputs/outputs_scratch/Base-ISIMIP_large-4/ConFLAME_Amazon-2425/time_series/_15-frac_points_0.5/"
-    Region_name = "Amazonia"
-    periods = ["historical", "ssp126", "ssp370", "ssp585"]
-    models  = ["GFDL-ESM4-", "IPSL-CM6A-LR-", "MPI-ESM1-2-HR-", "UKESM1-0-LL-"]
-    sample_types = ["mean", "pc-90.0", "pc-95.0"]
-    sample_names = ["All region", "Top 10% Burned Area", "Top 5% Burned Area"]
-    runs = ["Evaluate.csv", "standard-Fuel.csv", 
-           "standard-Moisture.csv"]
-    plot_names = ["Burned Area\n(Times more likely)", "Fuel control\nstrength change (%)", "Dryness controll\nstrength change (%)"]
-    cmaps = ['gradient_hues', "gradient_teal", "gradient_red"]
-    target_mnths = range(5, 7)
-    target_years = [2024]
-    yrs_range = [2010, 2100]
-    
+
+def plot_future_projections(obs_path, mod_path, Region_name, periods, models, 
+                            sample_types, sample_names, runs, plot_names, cmaps, 
+                            target_mnths, target_years, yrs_range):
     obs = pd.read_csv(obs_path)
     which_mnths = obtain_mnths(obs, target_mnths, target_years)
     obs0 = np.mean(obs['mean_burnt_area'][which_mnths])
@@ -166,5 +153,32 @@ if __name__=="__main__":
 
     fig.suptitle(Region_name, fontsize=16)
     fig.savefig("figs/futures" + Region_name + ".png", dpi = 300)
-    set_trace() 
+
+if __name__=="__main__":
     
+    obs_path = "data/data/driving_data_base/Amazon/burnt_area_data.csv"
+    mod_path = "outputs/outputs_scratch/Base-ISIMIP_large-4/ConFLAME_Amazon-2425/time_series/_15-frac_points_0.5/"
+    Region_name = "Amazonia"
+    periods = ["historical", "ssp126", "ssp370", "ssp585"]
+    models  = ["GFDL-ESM4-", "IPSL-CM6A-LR-", "MPI-ESM1-2-HR-", "UKESM1-0-LL-"]
+    sample_types = ["mean", "pc-90.0", "pc-95.0"]
+    sample_names = ["All region", "Top 10% Burned Area", "Top 5% Burned Area"]
+    runs = ["Evaluate.csv", "standard-Fuel.csv", 
+           "standard-Moisture.csv"]
+    plot_names = ["Burned Area\n(Times more likely)", "Fuel control\nstrength change (%)", "Dryness controll\nstrength change (%)"]
+    cmaps = ['gradient_hues', "gradient_teal", "gradient_red"]
+    target_mnths = range(5, 7)
+    target_years = [2024]
+    yrs_range = [2010, 2100]
+    
+plot_future_projections(obs_path, mod_path, Region_name, periods, models, 
+                        sample_types, sample_names, runs, plot_names, cmaps, 
+                        target_mnths, target_years, yrs_range)
+
+obs_path = "data/data/driving_data_base/Pantanal/burnt_area_data.csv"
+mod_path = "outputs/outputs_scratch/Base-ISIMIP_large-4/ConFLAME_Pantanal-2425/time_series/_15-frac_points_0.5/"
+Region_name = "Pantanal"
+
+plot_future_projections(obs_path, mod_path, Region_name, periods, models, 
+                        sample_types, sample_names, runs, plot_names, cmaps, 
+                        target_mnths, target_years, yrs_range)   
