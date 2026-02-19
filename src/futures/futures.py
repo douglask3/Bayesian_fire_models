@@ -41,20 +41,11 @@ def get_mod_dat_for_years_mnths(path, target_mnths = range(0, 12),
     np.array(dat)
 
 if __name__=="__main__":
-    mod = get_mod_dat_for_years_mnths(hist_path, target_mnths)
     obs = pd.read_csv(obs_path)
-   
     which_mnths = obtain_mnths(obs, target_mnths, target_years)
-    #mnths = [int(ob.split('-')[1]) for ob in obs['time']]
-    #years = [int(ob.split('-')[0]) for ob in obs['time']]
-    #set_trace()
-    
-    #which_mnths = [mnth in target_mnths and yr in target_years\
-    #               for mnth, yr in zip(mnths, years)]
-    
     obs = np.mean(obs['mean_burnt_area'][which_mnths])
 
-    
+    mod = get_mod_dat_for_years_mnths(hist_path, target_mnths)
     set_trace()
     
     
