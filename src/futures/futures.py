@@ -71,14 +71,8 @@ if __name__=="__main__":
 
     def BA_for_model(model):
         out = [BA_for_period_mod(period, model) for period in periods]
-        def yay(a, b):
-            try:
-                return pd.concat([a,b], axis = 1)
-            except:
-                set_trace()
-        out = [pd.concat([out[0], ot], axis=1) for ot in out[1:]]
-        
-        return out
+        return [pd.concat([out[0], ot], axis=1) for ot in out[1:]]
+    
     BAs = [BA_for_model(model) for model in models]
 
     occurance = np.mean(np.array(BAs) > obs, axis = 2)
