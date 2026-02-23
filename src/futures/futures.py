@@ -67,6 +67,9 @@ def plot_projections(ax, sample_type = "mean", run = "Evaluate.csv", obs = None,
     print(run)
     BAs = open_BA_projections(sample_type = sample_type, run = run, *args, **kw) 
     
+    if obs is None:
+        obs = np.percentile(np.array(BAs)[:,:,:,1:10], [99.9])[0]
+
     if obs.shape == ():
         mask = np.array(BAs) > (obs/ 100.0)
         occurance = np.mean(mask, axis = 2)
@@ -167,7 +170,7 @@ if __name__=="__main__":
            "standard-Moisture.csv"]
     plot_names = ["Burned Area\n(Times more likely)", "Fuel control\nstrength change (%)", "Dryness controll\nstrength change (%)"]
     cmaps = ['gradient_hues', "gradient_teal", "gradient_red"]
-    target_mnths = range(5, 7)
+    target_mnths = range(0, 12)
     target_years = [2024]
     yrs_range = [2010, 2100]
     
@@ -178,6 +181,7 @@ plot_future_projections(obs_path, mod_path, Region_name, periods, models,
 obs_path = "data/data/driving_data_base/Pantanal/burnt_area_data.csv"
 mod_path = "outputs/outputs_scratch/Base-ISIMIP_large-4/ConFLAME_Pantanal-2425/time_series/_15-frac_points_0.5/"
 Region_name = "Pantanal"
+target_mnths = range(4, 10)
 
 plot_future_projections(obs_path, mod_path, Region_name, periods, models, 
                         sample_types, sample_names, runs, plot_names, cmaps, 
