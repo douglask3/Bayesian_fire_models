@@ -11,45 +11,60 @@ from plot_change_in_burned_area import *
 import imageio
 from  pathlib import Path
 
-def plot_all_attribution_scatter(dir1, dir2, regions, obs_dir, obs_file):
+def plot_all_attribution_scatter(dir1, dir2, regions, obs_dir, obs_file, *args, **kw):
     
     if not isinstance(regions, list):
         regions = [regions]
-
     def plot_attribution_scatter_generic(counterfactual_name, 
                                          plot_name = "attribution_scatter",
                                          plot_FUN = plot_fact_vs_ratio):
         plot_attribution_scatter(regions, plot_name + counterfactual_name,
                                  dir1 = dir1, dir2 = dir2,
                                  obs_dir = obs_dir, obs_file = obs_file, 
-                                 plot_FUN = plot_FUN)
-    set_trace()
-    plot_attribution_scatter_generic("counterfactual")
-    plot_attribution_scatter_generic("counterfactual-extraNoise-")
-    plot_attribution_scatter_generic("counterfactual", "rr_line",
-                                     effect_ratio_and_rr_over_range)
-    plot_attribution_scatter_generic("counterfactual-extraNoise-", "rr_line",
-                                     effect_ratio_and_rr_over_range)
+                                 plot_FUN = plot_FUN, counterfactual_name = counterfactual_name,
+                                 *args, **kw)
+    path = Path(dir1 + regions[0] + dir2)
+    directories = [d for d in path.iterdir() if d.is_dir()] 
+    directories = [d.name for d in directories if "counterfactual" in d.name]
+    for dir in directories:
+        #set_trace()
+        plot_attribution_scatter_generic(dir)
+        #plot_attribution_scatter_generic("counterfactual-extraNoise-")
+        plot_attribution_scatter_generic(dir, "rr_line",
+                                         effect_ratio_and_rr_over_range)
+    #plot_attribution_scatter_generic("counterfactual-extraNoise-", "rr_line",
+    #                                 effect_ratio_and_rr_over_range)
     
 def attribution_analysis(dir1, dir2, obs_dir, obs_file_nc = "burnt_area.nc",
-                         obs_file_csv = 'burnt_area_data.csv', region = ""):
-    plot_all_attribution_scatter(dir1, '/time_series/' +dir2, region, obs_dir, obs_file_csv)
-    plot_confidence_in_attribution(dir1, '/samples/' +  dir2, region)
-    plot_change_in_burned_area(dir1, '/samples/' +  dir2, region, 
-                               obs_file = obs_dir + '/' + obs_file_nc)
-
+                         obs_file_csv = 'burnt_area_data.csv', region = "", *args, **kw):
+    plot_all_attribution_scatter(dir1, '/time_series/' +dir2, region, obs_dir, obs_file_csv,
+                                 *args, **kw)
+    plot_confidence_in_attribution(dir1, '/samples/' +  dir2, region, *args, **kw)
+    
+    try:
+        plot_change_in_burned_area(dir1, '/samples/' +  dir2, region, 
+                               obs_file = obs_dir + '/' + region + '/' + obs_file_nc, 
+                               *args, **kw)
+    except:
+        plot_change_in_burned_area(dir1, '/samples/' +  dir2, region, 
+                               obs_file = obs_dir + '/' + obs_file_nc, 
+                               *args, **kw)
+    
 
 if __name__=="__main__":
     dir1 = "outputs/outputs_scratch/attribution-base-localBA-data-NEW4/"
-    #dir1 = "outputs/outputs_scratch/Amazon-Maria-full-3/"
     dir1 = "outputs/outputs_scratch/Pantanal-Maria-full-3-all-year/"
+    dir1 = "outputs/outputs_scratch/Amazon-Maria-full-3-all-year-masked/"
     dir2 = "/_16-frac_points_0.5/" 
-    #dir2 = "/_15-frac_points_0.2/" 
+    dir2 = "/_15-frac_points_0.2/" 
 
     region = "Pantanal"
-    #region = "Amazon"
+    region = "Amazon"
 
     obs_dir = 'data/data/driving_data_base//'
     obs_file = 'burnt_area_data.csv'  
+
+    attribution_analysis(dir1, dir2, obs_dir, region = region, obs_file_nc = "burnt_area.nc",
+                         obs_file_csv = 'burnt_area_data.csv')
      
     
