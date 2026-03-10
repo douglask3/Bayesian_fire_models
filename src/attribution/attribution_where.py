@@ -55,7 +55,7 @@ def map_attribution_for_region(dir1, dir2, region,
         # Load first cube to get grid info
         count_map = iris.load_cube(fact_files[0])[0]
         count_map.data[:] = 0.0
-        
+        mask_map = count_map.copy()
         def load_file_month(file):
             cube = iris.load_cube(file)
             cube0 = cube.copy()
@@ -72,14 +72,17 @@ def map_attribution_for_region(dir1, dir2, region,
         
         
         for f_file, c_file in zip(fact_files, cfact_files):
+            print(f_file)
             fact_data = load_file_month(f_file)
             cfact_data = load_file_month(c_file)
             
+            
             # Compare and count
-            count_map.data += (fact_data > cfact_data)
-        
+            count_map.data += (fact_data >= cfact_data)
+            count_map.data[np.isnan(fact_data)] = np.nan
+            count_map.data[np.isnan(cfact_data)] = np.nan
         count_map.data = count_map.data * 100.0/(len(fact_files)-1)
-        #count_map.data[count_map.data<50.0] = 0.0
+        
         iris.save(  count_map,   temp_file)
     if ax is None: plt.figure(figsize=(10*0.7, 6*0.7))
     
@@ -130,7 +133,7 @@ def add_attribubtion_map_cbar(img, ax, levels = [0, 33, 50, 66, 80, 85, 90, 99, 
         cax_top.tick_params(axis='x', length=10, width = 1.5, direction='out', top=True)
 
 
-def plot_confidence_in_attribution(dir1, dir2, region):
+def plot_confidence_in_attribution(dir1, dir2, region, out_dir = "figs/"):
     eg_file  = list(Path(dir1 + region + dir2 + '/').rglob('*.nc'))[0]
     eg_cube = iris.load_cube(eg_file)
     
@@ -153,19 +156,19 @@ def plot_confidence_in_attribution(dir1, dir2, region):
     if (nplots-1) < (ncols * nrows):    
         for ax in axes[(nplots-1):]: ax.set_visible(False)
 
-
-    pos1 = axes[-nrows].get_position()
+    #set_trace()
+    pos1 = axes[ncols*(nrows-1)+1].get_position()
     pos2 = axes[-1].get_position()
     x0 = pos1.x0
     x1 = pos2.x1
     y1 = pos1.y1  # top of the top row
     height = 0.8  # thickness of the colorbar
 
-    cbar_ax = fig.add_axes([x0, y1 - height*0.1, x1 - x0, height]) 
+    cbar_ax = fig.add_axes([x0, y1- height*0.2 , x1 - x0, height]) #
     cbar_ax.set_visible(False)
     add_attribubtion_map_cbar(img, cbar_ax)
     
-    plt.savefig("figs/attrbution_where-base" + region + ".png", dpi = 300) 
+    plt.savefig(out_dir + "attrbution_where-base" + region + ".png", dpi = 300) 
 
 
 if __name__=="__main__":
