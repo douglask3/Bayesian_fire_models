@@ -129,6 +129,121 @@ def estimate_tail_prob_gpd(obs, threshold, params):
     excess = obs - threshold
     return genpareto.sf(excess, *params)
 
+
+import numpy as np
+from scipy.stats import beta
+
+def compute_weights(y_obs, mu, phi, eps=1e-6):
+    """
+    Compute Beta likelihood weights for ensemble members.
+    
+    y_obs : float (0,1)
+    mu    : array of ensemble means (0,1)
+    phi   : precision parameter
+    """
+    
+    # Avoid exact 0 or 1 (Beta undefined there)
+    y_obs = np.clip(y_obs, eps, 1 - eps)
+    mu = np.clip(mu, eps, 1 - eps)
+    
+    # Convert mean/precision to alpha/beta parameters
+    alpha = mu * phi
+    beta_param = (1 - mu) * phi
+    
+    # Likelihood for each ensemble member
+    likelihood = beta.pdf(y_obs, alpha, beta_param)
+    
+    # Avoid all-zero weights
+    likelihood = np.maximum(likelihood, 1e-300)
+    
+    # Normalise
+    weights = likelihood / np.sum(likelihood)
+    
+    return weights
+
+def resample_ensemble(mu, weights, n_samples=None):
+    """
+    Resample ensemble members according to weights.
+    
+    mu         : original ensemble array
+    weights    : normalised weights
+    n_samples  : number of resampled members (default = original size)
+    """
+    
+    if n_samples is None:
+        n_samples = len(mu)
+    
+    indices = np.random.choice(
+        np.arange(len(mu)),
+        size=n_samples,
+        replace=True,
+        p=weights
+    )
+    
+    return mu[indices], indices
+
+def plot_attribution_time_series(factual, counterfactual, obs, plot_name, 
+                       set_Ylab = True, ax = None):
+    mu = np.mean(factual.values, axis = 1)
+    weights = compute_weights(obs, mu, 50)
+    mu_rs, idx = resample_ensemble(mu, weights, 1000)
+    set_trace()
+
+    def process_df(df):
+        df.columns = pd.to_datetime(df.columns)
+        df.sort_index(axis = 1)
+        return df.iloc[idx]
+    #factual.columns = pd.to_datetime(factual.columns)
+    #counterfactual.columns = pd.to_datetime(counterfactual.columns)
+    # 
+    # # Sort columns just in case
+    #factual = factual.sort_index(axis=1)
+    #counterfactual = counterfactual.sort_index(axis=1)
+    
+    factual = process_df(factual)
+    counterfactual = process_df(counterfactual)
+    
+    # ---------- Helper function ----------
+    def ensemble_stats(df):
+        return {
+            "p05": df.quantile(0.05, axis=0),
+            "p25": df.quantile(0.25, axis=0),
+            "median": df.quantile(0.5, axis=0),
+            "p75": df.quantile(0.75, axis=0),
+            "p95": df.quantile(0.95, axis=0),
+        }
+        
+    fact_stats = ensemble_stats(factual)
+    cf_stats   = ensemble_stats(counterfactual)
+    
+    # Paired difference (important: ensemble members are paired)
+    diff = factual - counterfactual
+    diff_stats = ensemble_stats(diff)
+    
+    # ---------- Plot ----------
+    fig, axes = plt.subplots(3, 1, figsize=(10, 12), sharex=True)
+    
+    def plot_panel(ax, stats, title):
+        ax.fill_between(stats["p05"].index, stats["p05"], stats["p95"], alpha=0.2)
+        ax.fill_between(stats["p25"].index, stats["p25"], stats["p75"], alpha=0.4)
+        ax.plot(stats["median"].index, stats["median"], linewidth=2.5)
+        ax.set_title(title)
+        #ax.set_yscale('symlog', linthresh=0.01) 
+        ax.grid(True)
+    
+    plot_panel(axes[0], fact_stats, "Factual")
+    plot_panel(axes[1], cf_stats, "Counterfactual")
+    plot_panel(axes[2], diff_stats, "Factual - Counterfactual (UnPaired Difference)")
+    
+    axes[2].set_xlabel("Time")
+    
+    plt.tight_layout()
+    set_trace()
+    plt.show()
+
+
+    
+
 def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, 
                        set_Ylab = True, ax = None):
     """
@@ -263,7 +378,7 @@ def plot_for_region(region, metric, plot_FUN,
                     dir1, dir2, obs_dir, obs_file, 
                     factual_name = "factual", counterfactual_name = "counterfactual",
                     all_mod_years = False, add_legend = False, 
-                    years = None, mnths = range(12),
+                    years = None, mnths = range(12), flatten = True,
                     *args, **kw):
     
     if region != "":
@@ -280,13 +395,11 @@ def plot_for_region(region, metric, plot_FUN,
         factual = pd.read_csv(dir + factual_name + "-/" + metric + \
                                      "/members/absolute/Evaluate.csv")
         counterfactual = pd.read_csv(dir + counterfactual_name + \
-                              "-/" + metric + "/members/absolute/Evaluate.csv")
+                              "/" + metric + "/members/absolute/Evaluate.csv")
     except:
-        set_trace()
         factual = pd.read_csv(dir + factual_name + "-/" + metric + \
                                      "/points-Evaluate.csv")
-        counterfactual = pd.read_csv(dir + counterfactual_name + \
-                              "-/" + metric + "/points-Evaluate.csv")
+        counterfactual = pd.read_csv(dir + counterfactual_name +  "/" + metric + "/points-Evaluate.csv")
     obs = pd.read_csv(obs_dir + '/' + region + '/' + obs_file)
     obs = obs[['time', 'mean_burnt_area', 'p95_burnt_area']]
     
@@ -295,8 +408,8 @@ def plot_for_region(region, metric, plot_FUN,
         mod_years = None
     else:
         mod_years = years
-    factual_flat = extract_years(factual, mod_years, mnths)/len(mnths) + 0.000000001
-    counterfactual_flat = extract_years(counterfactual, mod_years, mnths)/len(mnths)\
+    factual_flat = extract_years(factual, mod_years, mnths, flatten = flatten)/len(mnths) + 0.000000001
+    counterfactual_flat = extract_years(counterfactual, mod_years, mnths, flatten = flatten)/len(mnths)\
                                  + 0.000000001
     
     obs = extract_years(obs.set_index('time').T, years, mnths, '-15')
@@ -308,14 +421,6 @@ def plot_for_region(region, metric, plot_FUN,
     else:
         plot_name = ""
         obs = obs[1]
-    '''    if factual_flat.max() < 1:
-            factual_flat = factual_flat * 150.0
-            counterfactual_flat = counterfactual_flat * 150.0
-        plot_name = ""
-    if obs > factual_flat.max() and factual_flat.max() < 1:
-        factual_flat = factual_flat * 150
-        counterfactual_flat = counterfactual_flat * 150
-    '''
     
     factual_flat = factual_flat * 100
     counterfactual_flat = counterfactual_flat * 100
@@ -327,7 +432,7 @@ def plot_for_region(region, metric, plot_FUN,
 
     return out
 
-def plot_attribution_scatter(regions, figname, plot_FUN = plot_fact_vs_ratio,
+def plot_attribution_scatter(regions, figname, plot_FUN = plot_fact_vs_ratio, out_dir = "figs/",
                              *args, **kw):
     """
     Loads and prepares burned area data for a specified region and metric, then
@@ -405,7 +510,7 @@ def plot_attribution_scatter(regions, figname, plot_FUN = plot_fact_vs_ratio,
     fig.text(0.33, 0.9, "Entire region", ha='center', va='bottom', fontsize=14)
     fig.text(0.73, 0.9, "High burnt areas", ha='center', va='bottom', fontsize=14)
     
-    plt.savefig('figs/' + figname + ".png")
+    plt.savefig(out_dir + figname + ".png")
     return out
 
 def add_violin_plot(df, df_type, ax, title):

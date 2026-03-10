@@ -180,7 +180,7 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
     
 
 def compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, levels, cmap,
-                        *args, **kw):    
+                        fig_dir = None, *args, **kw):    
  
     
     """ Plots the summery evaluation plot.
@@ -207,7 +207,7 @@ def compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, levels, cmap
     plt.clf()
     plt.close()
     
-    fig_dir = combine_path_and_make_dir(dir_outputs, '/figs/')
+    if fig_dir is None: fig_dir = combine_path_and_make_dir(dir_outputs, '/figs/')
     figure_filename = fig_dir + filename_out + '-evaluation'
     figure_dir =  combine_path_and_make_dir(figure_filename)
     
@@ -259,7 +259,9 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
                           model_class = FLAME,
                           link_func_class = MaxEnt, hyper = True, sample_error = True,
                           dir = '', 
-                          dir_outputs = '', model_title = '', filename_out = '',
+                          dir_outputs = '', 
+                          fig_dir = None, 
+                          model_title = '', filename_out = '',
                           filename_out_ext = '',
                           control_run_name = "control",
                           experiment_type = 'single',
@@ -318,7 +320,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
     dir_driving_data = combine_path_and_make_dir(dir_driving_data, 
                                                  filename_out + '/' + control_run_name)
     
-    fig_dir = combine_path_and_make_dir(dir_outputs, '/figs/')
+    if fig_dir is None: fig_dir = combine_path_and_make_dir(dir_outputs, '/figs/')
     trace = az.from_netcdf(trace_file)
     
     scalers = pd.read_csv(scale_file).values  
@@ -385,7 +387,9 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
     
     filename_out += filename_out_ext 
     
-    compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, *args, **kw)
+    compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, fig_dir = fig_dir,
+                        *args, **kw)
+    
     Bayes_benchmark(filename_out, fig_dir, Sim, Obs, lmask)
 
     if run_response_curves: 

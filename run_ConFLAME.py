@@ -248,7 +248,7 @@ def make_both_time_series(percentiles, *args, **kw):
 
 def run_experiment(training_namelist, namelist, control_direction,
                    control_names, control_colours, plot_control_maps,
-                   output_dir, output_file, 
+                   output_dir, output_file, fig_dir, 
                    name = '', time_series_percentiles = None, 
                    limitation_types = None, controls_to_plot = None,*args, **kws):
     
@@ -263,17 +263,18 @@ def run_experiment(training_namelist, namelist, control_direction,
             output_file + name).replace('/', '_') + '.txt'
     #if os.path.isfile(temp_file): return None
 
-    figName = output_dir + 'figs/' + output_file + '-' + name + 'control_TS'
+    figName = fig_dir + '/' + name + 'control_TS'
     makeDir(figName + '/')
     Evaluate, Y, X, lmask, scalers  = call_eval(training_namelist, namelist,
                         name + '/Evaluate', run_only = run_only, return_inputs = True,
-                        filename_out_ext = 'stochastic',
+                        filename_out_ext = 'stochastic', fig_dir = fig_dir, 
                         *args, **kws)
 
     Control, Y, X, lmask, scalers  = call_eval(training_namelist, namelist,
                         name + '/control', run_only = run_only, return_inputs = True, 
                         Y = Y, X = X, lmask = lmask, scalers = scalers,
                         sample_error = False, filename_out_ext = 'none_stochastic',
+                        fig_dir = fig_dir,
                         *args, **kws)
     
     grab_old = read_variables_from_namelist(namelist)['grab_old_trace']
@@ -309,7 +310,7 @@ def run_experiment(training_namelist, namelist, control_direction,
             if plot_control_maps:
                 plot_ensemble_maps(limitation, titles = control_names,
                                    control_colours = control_colours,
-                                   output_path = output_dir + '/figs/' + \
+                                   output_path = fig_dir + \
                                             ltype + 'controls_maps.png')
 
             limitation_TS = np.array([make_both_time_series(time_series_percentiles, \
@@ -389,7 +390,8 @@ def run_ConFire(namelist):
         params = read_variables_from_namelist(training_namelist)
         output_dir = params['dir_outputs']
         output_file = params['filename_out']
-
+        fig_dir = output_dir + '/figs/' + output_file + '/'
+        os.makedirs(fig_dir, exist_ok=True)
         def find_replace_period_model(exp_list):
             exp_list_all = [item.replace('<<region>>', region) for item in exp_list \
                             if "<<experiment>>" not in item and "<<model>>" not in item]
@@ -444,6 +446,7 @@ def run_ConFire(namelist):
                           plot_control_maps = plot_control_maps,
                           output_dir=output_dir,
                           output_file=output_file,
+                          fig_dir = fig_dir,
                           name=name,
                           time_series_percentiles=time_series_percentiles,
                           limitation_types = limitation_types, 
@@ -474,13 +477,10 @@ def run_ConFire(namelist):
                 run_experiment_wrapper(args)
 
         if len(args_list)>1:
-            
             attribution_analysis(output_dir, '/' + output_file + '/', 
                                  [x["dir"] for x in args_list if x["name"] == "factual"][0],
-                                 obs_file_nc = args_list[0]['y_filen'])
-            set_trace()
-
-        #set_trace()
+                                 obs_file_nc = args_list[0]['y_filen'], out_dir = fig_dir)
+            
     if regions is None:
         run_for_regions(None)
     else:
