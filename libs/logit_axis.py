@@ -7,7 +7,6 @@ from matplotlib.collections import PolyCollection
 
 
 def scale2upper1(y):
-    #set_trace()
     return y/(1.0 + y)
     #return 1-np.exp(-y * (-np.log(0.5)))
 
