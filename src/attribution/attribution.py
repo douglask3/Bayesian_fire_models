@@ -17,18 +17,21 @@ def plot_all_attribution_scatter(dir1, dir2, regions, obs_dir, obs_file, *args, 
         regions = [regions]
     def plot_attribution_scatter_generic(counterfactual_name, 
                                          plot_name = "attribution_scatter",
-                                         plot_FUN = plot_fact_vs_ratio):
+                                         plot_FUN = plot_fact_vs_ratio, flatten = True):
+        
         plot_attribution_scatter(regions, plot_name + counterfactual_name,
                                  dir1 = dir1, dir2 = dir2,
                                  obs_dir = obs_dir, obs_file = obs_file, 
                                  plot_FUN = plot_FUN, counterfactual_name = counterfactual_name,
-                                 *args, **kw)
+                                 flatten = flatten, *args, **kw)
     path = Path(dir1 + regions[0] + dir2)
     directories = [d for d in path.iterdir() if d.is_dir()] 
     directories = [d.name for d in directories if "counterfactual" in d.name]
     for dir in directories:
         #set_trace()
         plot_attribution_scatter_generic(dir)
+        #plot_attribution_scatter_generic(dir, "time_series", plot_attribution_time_series,
+        #                                False)
         #plot_attribution_scatter_generic("counterfactual-extraNoise-")
         plot_attribution_scatter_generic(dir, "rr_line",
                                          effect_ratio_and_rr_over_range)
@@ -37,18 +40,21 @@ def plot_all_attribution_scatter(dir1, dir2, regions, obs_dir, obs_file, *args, 
     
 def attribution_analysis(dir1, dir2, obs_dir, obs_file_nc = "burnt_area.nc",
                          obs_file_csv = 'burnt_area_data.csv', region = "", *args, **kw):
-    plot_all_attribution_scatter(dir1, '/time_series/' +dir2, region, obs_dir, obs_file_csv,
-                                 *args, **kw)
-    plot_confidence_in_attribution(dir1, '/samples/' +  dir2, region, *args, **kw)
+    #plot_all_attribution_scatter(dir1, '/time_series/' +dir2, region, obs_dir, obs_file_csv,
+    #                             *args, **kw)
+    #plot_confidence_in_attribution(dir1, '/samples/' +  dir2, region, *args, **kw)
     
-    try:
-        plot_change_in_burned_area(dir1, '/samples/' +  dir2, region, 
-                               obs_file = obs_dir + '/' + region + '/' + obs_file_nc, 
-                               *args, **kw)
-    except:
-        plot_change_in_burned_area(dir1, '/samples/' +  dir2, region, 
-                               obs_file = obs_dir + '/' + obs_file_nc, 
-                               *args, **kw)
+    for percentiles in [[50], [5, 95]]:
+        try:
+            plot_change_in_burned_area(dir1, '/samples/' +  dir2, region, 
+                                       obs_file = obs_dir + '/' + region + '/' + obs_file_nc, 
+                                       percentiles = percentiles, *args, **kw)
+        except:
+            plot_change_in_burned_area(dir1, '/samples/' +  dir2, region, 
+                                       obs_file = obs_dir + '/' + obs_file_nc, 
+                                       percentiles = percentiles, *args, **kw)
+
+    #plot_attribution_time_series(dir1, '/samples/' +  dir2, region, *args, **kw)
     
 
 if __name__=="__main__":
