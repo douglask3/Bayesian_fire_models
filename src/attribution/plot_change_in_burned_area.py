@@ -9,11 +9,11 @@ from  pathlib import Path
 from plot_BA_climateology import *
 from plot_maps import *
 
-def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_file = None):
-    if obs_file is not None:
-        #set_trace()
-        #filename = "data/data/driving_data_base/" + region +"/burnt_area.nc"
-        anomaly, climatology = open_netcdf_and_find_clim(obs_file)
+def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_file = None,
+                               out_dir = "figs/", percentiles = [5, 95]):
+    #if obs_file is not None:
+    #    #filename = "data/data/driving_data_base/" + region +"/burnt_area.nc"
+    #    anomaly, climatology = open_netcdf_and_find_clim(obs_file)
 
     dir = dir1 + region + dir2 + '/'
     
@@ -55,8 +55,8 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_fi
             
                 cf_cube = iris.load_cube(dir / run_name / file.name)
             
-                out1 = f_cube - cf_cube
-                out2 = f_a_cube - cf_cube.collapsed('time', iris.analysis.MEAN)
+                out1 = f_cube / cf_cube
+                out2 = f_a_cube / cf_cube.collapsed('time', iris.analysis.MEAN)
                 iris.save(out1, out_file1)
                 iris.save(out2, out_file2)
             return(out1, out2)
@@ -72,27 +72,33 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_fi
     out = np.array(out)
     
     def merge_realization(i,j):
-        return iris.cube.CubeList(out[:,i, j]).merge_cube()*100
+        return iris.cube.CubeList(out[:,i, j]).merge_cube()
     
     out_merge = [[merge_realization(i, j) for j in range(out.shape[2])]\
                      for i in range(out.shape[1])]
     out_merge = np.array(out_merge)
-    summery = [[cube.collapsed('realization', iris.analysis.PERCENTILE, percent = [5, 95]) \
-                for cube in cubes] for cubes in out_merge]
-    summery = np.array(summery)
     
+    summery = [[cube.collapsed('realization', iris.analysis.PERCENTILE, percent = percentiles) \
+                for cube in cubes] for cubes in out_merge]
+    #set_trace()
+    summery = np.array(summery)
+    #set_trace()
     nrows = out_merge[0][0].shape[1] + 1
-    ncols = (out_merge.shape[0])*2
+    ncols = (out_merge.shape[0])*len(percentiles)
     eg_cube = out_merge[0][0]
 
     def find_levels(ii, n_levels = 7, *args, **kw):
         
-        all_fact = np.array([np.append(summery[i][0].data.flatten(), \
+        try:    
+            all_fact = np.array([np.append(summery[i][0].data.flatten(), \
                              summery[i][1].data.flatten()) for i in ii])
-        all_fact[np.abs(all_fact)<0.0001] = 0.0
-        return auto_pretty_levels(all_fact,   n_levels=7, ignore_v = 0.0)
+        except:
+            all_fact[np.abs(all_fact)<0.0001] = 0.0
+        return auto_pretty_levels(all_fact,   n_levels=n_levels, ignore_v = 0.0, *args, **kw)
     
-    dlevels = find_levels(range(1, 3))
+    #dlevels = find_levels(range(1, len(summery)), n_levels =4, ratio = 1, force0 = True)
+    #set_trace()
+    dlevels = np.array([0.25, 0.3, 0.33, 0.4, 0.5, 0.67, 1, 1.5, 2, 2.5, 3, 3.5, 4])
     levels = find_levels([0])
     levels = np.append(0, levels)
     
@@ -106,11 +112,18 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_fi
                             cmap=SoW_cmap[cmap], extend = extend, ax = axes[axi], 
                             *args, **kw)
     
+    def select_month(cube, mnthi):
+        if len(cube.shape) == 3:
+            out = [cube[mnthi]]
+        else:
+            out = cube[:, mnthi]
+        return out
 
+    npc = len(percentiles)
     for mnthi, mnth in zip(range(len(mnths)), mnths):
         month_idx = calendar.month_name[mnth]
-        fact = summery[0][0][:, mnthi]
-        for fi in range(2):
+        fact = select_month(summery[0][0], mnthi)
+        for fi in range(npc):
             plot_map_fun(fact[fi], levels, 'gradient_red', 'max', axi)
                 
             if fi == 0:
@@ -118,13 +131,18 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_fi
                         va='center', ha='right', rotation=90)
             axi += 1
         for cfn in range(1, summery.shape[0]):
-            cf = summery[cfn][0][:, mnthi]
-            for fi in range(2):                
+            cf = fact = select_month(summery[cfn][0], mnthi)
+            for fi in range(npc):                
                 plot_map_fun(cf[fi], dlevels, 'diverging_BlueRed', 'both', axi)
                 axi += 1
-
-    for fi in range(2):
-        img = plot_map_fun(summery[0][1][fi], levels, 'gradient_red', 'max', axi)
+    
+    for fi in range(npc):
+        if len(summery[0][1].shape) == 2:
+            cube = summery[0][1]
+        else:
+            cube = summery[0][1][fi]
+        
+        img = plot_map_fun(cube, levels, 'gradient_red', 'max', axi)
         if fi == 0:
             axes[axi].text(-0.15, 0.5, 'Average',  transform=axes[axi].transAxes, 
                     va='center', ha='right', rotation=90)
@@ -135,23 +153,83 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_fi
         pos1 = axes[axi2].get_position()
         cbar_width = pos1.x1 - pos0.x0
         cax = fig.add_axes([pos0.x0, pos0.y0 - 0.05, cbar_width, 0.02])
-        fig.colorbar(img, cax=cax, orientation='horizontal')
+        cbar = fig.colorbar(img, cax=cax, orientation='horizontal')
 
-    add_cbar(axi-2, axi-1, img)
+        if hasattr(img, "levels"):  # contourf case
+            cbar.set_ticks(img.levels)
+        
+        # Get tick labels
+        labels = cbar.ax.get_xticklabels()
+        
+        for i, label in enumerate(labels):
+            label.set_rotation(45)
+            
+            if i % 2 == 0:
+                # Bottom labels
+                label.set_verticalalignment('top')
+                label.set_y(-0.02)   # small downward shift
+            else:
+                # Top labels
+                label.set_verticalalignment('bottom')
+                label.set_y(1.1)    # move above the bar
+                #label.set_horizontalalignment('right')
+
+        
+        '''
+        # 1. Create a twin axis for the colorbar
+        cbar_ax = cbar.ax
+        
+        # 2. Sync ticks and limits
+        # 2. Create a twin x-axis for the top of the colorbar
+        twin_ax = cbar_ax.twiny()
+        
+        # 3. Synchronize the twin axis with the colorbar's scale
+        ticks = cbar.get_ticks()
+        set_trace()
+        twin_ax.set_xlim(cbar_ax.get_xlim())
+        twin_ax.set_xticks(ticks)
+        twin_ax.set_xticklabels([f'{t:.1f}' for t in ticks])
+        #set_trace() 
+        # 4. Toggle visibility to alternate labels
+        for i, (l_bot, l_top) in enumerate(zip(cbar_ax.get_xticklabels(), twin_ax.get_xticklabels())):
+            if i % 2 == 0:
+                l_top.set_visible(False) # Even index: label stays at bottom
+            else:
+                l_bot.set_visible(False) # Odd index: label moves to top
+        
+        #plt.show()        
+        #set_trace()
+        cbar.ax.xaxis.set_ticks_position('both')
+
+        # 2. Loop through ticks to alternate label visibility
+        for i, tick in enumerate(cbar.ax.xaxis.get_major_ticks()):
+            if i % 2 == 0:
+                tick.label1.set_visible(True)   # Bottom label ON
+                tick.label2.set_visible(False)  # Top label OFF
+            else:
+                tick.label1.set_visible(False)  # Bottom label OFF
+                tick.label2.set_visible(True)   # Top label ON
+        '''
+    add_cbar(axi-npc, axi-1, img)
     for cfn in range(1, summery.shape[0]):
-        for fi in range(2):
-            img = plot_map_fun(summery[cfn][1][fi], dlevels, 'diverging_BlueRed', 'both', axi)
+        for fi in range(npc):    
+            if len(summery[cfn][1].shape) == 2:
+                cube = summery[cfn][1]
+            else:
+                cube = summery[cfn][1][fi]
+            img = plot_map_fun(cube, dlevels, 'diverging_BlueRed', 'both', axi)
             axi += 1
-    add_cbar(axi-4, axi-1, img)
+    add_cbar(axi-npc*2, axi-1, img)
 
     titles = [factual.name[:-1]] + [cf.name[:-1] for cf in counterfactual]
 
     for i in range(summery.shape[0]):
-        axes[i*2].set_title('5%', fontsize=10)
-        axes[i*2 + 1].set_title('95%', fontsize=10)
+        for j, title in enumerate(percentiles):
+            axes[i*2].set_title(str(title) + '%', fontsize=10)
+        #axes[i*2 + 1].set_title('95%', fontsize=10)
 
         pos0 = axes[i*2].get_position()
-        pos1 = axes[i*2 + 1].get_position()
+        pos1 = axes[i*2 + len(percentiles) -1].get_position()
 
         # Calculate the center between the two columns
         center_x = (pos0.x0 + pos1.x1) / 2
@@ -160,5 +238,6 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_fi
 
         fig.text(center_x, top_y, titles[i], 
                  ha='center', va='bottom', fontsize=12, fontweight='bold')
-    plt.savefig("figs/attrbution_increase_map" + region + ".png", dpi = 300) 
+    #set_trace()
+    plt.savefig(out_dir + "attrbution_increase_map" + region + "-".join([str(pc) for pc in percentiles]) + ".png", dpi = 200) 
 
