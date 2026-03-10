@@ -1,6 +1,6 @@
 ## model info
 regions:: ['Pantanal']
-model_title::  'Pantanal-Maria-full-5-all-year/<<region>>'
+model_title::  'Pantanal-Maria-full-5-all-year_masked/<<region>>'
 
 ## input data paths and filenames
 
@@ -10,7 +10,7 @@ dir_training:: "data/data/driving_data_base/<<region>>/nrt/era5_monthly/"
 
 #y_filen:: "burnt_area.nc"
 #y_filen:: "Fire_fraction_Amazonia.nc"
-y_filen:: "Fire_fraction_Pantanal.nc"
+y_filen:: "Fire_fraction_Pantanal-masked.nc"
 
 
 CA_filen:: None
@@ -72,7 +72,7 @@ grab_old_trace::  True # set to True till you get the code running.
 dir_outputs:: 'outputs/outputs_scratch/'
 
 ## evaluation info
-y_filen_eval:: 'Fire_fraction_Pantanal.nc'
+y_filen_eval:: 'Fire_fraction_Pantanal-masked.nc'
 subset_function_eval:: [sub_year_range, sub_year_months]
 subset_function_args_eval:: [{'year_range': [2024, 2026]}, {'months_of_year': [4,5, 6, 7, 8]}]
 plot_drivers :: True
