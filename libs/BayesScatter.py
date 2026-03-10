@@ -77,9 +77,7 @@ def Bayes_benchmark(filename_out, fig_dir, Y, X, lmask, logXmin = None, logYmin 
             else:
                 plt.text(0.05, 0.95 - 0.1 * i, 
                         f'{nme10:.2f}-{nme90:.2f}', transform=plt.gca().transAxes)
-
-        
-    
+ 
     plt.figure(figsize=(8, 12))  # Set the figure size
     plt.subplot(3, 1, 1)  # Create the density plot in the top subplot
     run_NME_over_subset(X, Y, None)
