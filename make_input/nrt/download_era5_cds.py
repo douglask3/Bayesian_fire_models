@@ -212,38 +212,30 @@ def download_era5(variables, years = [1940], months = range(13),
 
 yr_now = DT.now().year
 yearss = [range(yr_now-2, yr_now + 1), range(2020, 2026), range(2010, 2026), range(2002, 2026)]
-mnth_now = DT.now().month - 2
+mnth_now = DT.now().month - 1
 
 area = [90, -180, -60, 180]
 dataset = "derived-era5-single-levels-daily-statistics"
 
-variables = [#["volumetric_soil_water_layer_1", "daily_minimum", "mrsos"],
-             #["10m_u_component_of_wind", "daily_mean", "u-wind"],
-             #["10m_v_component_of_wind", "daily_mean", "v-wind"],
-             ["total_precipitation", "daily_mean", "pr"], 
+variables = [["total_precipitation", "daily_mean", "pr"], 
              ["2m_temperature", "daily_maximum", "tasmax"],
              ["2m_temperature", "daily_mean", "tas"],
              ["2m_dewpoint_temperature", "daily_minimum", "tasdew"],
              ["2m_temperature", "daily_minimum", "tasmin"],
+             #["volumetric_soil_water_layer_1", "daily_minimum", "mrsos"],
+             #["10m_u_component_of_wind", "daily_mean", "u-wind"],
+             #["10m_v_component_of_wind", "daily_mean", "v-wind"],
              #["10m_wind_gust_since_previous_post_processing", "daily_maximum", "WindGust1"],
              #["instantaneous_10m_wind_gust", "daily_maximum", "WindGust2"],
              #["evaporation", "daily_mean", "evap"],
              #["potential_evaporation", "daily_mean", "pevap"],
              #["runoff", "daily_mean", "mrros"]
             ]
+temp_dir_default = "/data/users/douglas.kelley/Bayesian_fire_models/data-cds/era5_nrt/"
 
-if __name__=="__main__":    
-    temp_dir = "/data/users/douglas.kelley/Bayesian_fire_models/data-cds/era5_nrt/"
-    out_dir = "data/data/driving_data2425/nrt_attribution//"
 
-    shapefile_path = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
-    region_names = ["northeast India",
-                    "Alberta",
-                    "Los Angeles",
-                    "Congo basin",
-                    "Amazon and Rio Negro rivers",
-                    "Pantanal basin"]
-    
+
+def run_for_report(shapefile_path, region_names,  out_dir, temp_dir = temp_dir_default):
     for years in yearss:
         download_era5(variables, years, months = range(12), 
                           yr_now = yr_now, mnth_now = mnth_now,
@@ -262,6 +254,22 @@ if __name__=="__main__":
                           temp_dir = temp_dir,
                           shapefile_path = shapefile_path)
     
+
+
+
+if __name__=="__main__":    
+    data_dir = "data/data/driving_data2425"
+    out_dir = data_dir + "nrt_raw/"
+    shapefile_path = data_dir +"/SoW2425_shapes/SoW2526_Focal_MASTER_20260218.shp"
+    region_names = ["northeast India",
+                    "Alberta",
+                    "Los Angeles",
+                    "Congo basin",
+                    "Amazon and Rio Negro rivers",
+                    "Pantanal basin"]
+    run_for_report(shapefile_path, region_names,  out_dir)
+
+
     area = [90, -180, -90, 180]
     dataset = "derived-era5-land-daily-statistics"
     temp_dir = "/data/users/douglas.kelley/Bayesian_fire_models/data-cds/era5_land_/"
@@ -276,7 +284,6 @@ if __name__=="__main__":
                     ["2m_dewpoint_temperature", "daily_minimum", "tasdew_min"],
                     ["2m_temperature", "daily_minimum", "tasmin"]
                 ]
-
     for years in yearss:
         download_era5(variables, years, months = range(12), 
                           yr_now = yr_now, mnth_now = mnth_now,
