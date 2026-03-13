@@ -9,6 +9,44 @@ from  pathlib import Path
 from plot_BA_climateology import *
 from plot_maps import *
 
+import numpy as np
+
+def ratio_levels(ratios, n_levels = 7, *args, **kw):
+    assert n_levels % 2 == 1, "N must be odd"
+
+    ratios = ratios[np.isfinite(ratios) & (ratios > 0)]
+
+    half = (n_levels - 1) // 2
+
+    log_r = np.log10(ratios)
+    max_log = np.max(np.abs(log_r))
+
+    # target max ratio
+    max_ratio = 10**max_log
+
+    # "nice" numbers sequence
+    base = np.array([1, 2, 5])
+    powers = np.arange(-10, 10)
+
+    try:
+        nice = (base[:, None] * 10.0**powers).ravel()
+    except:
+        set_trace()
+    nice = nice[nice > 1]
+    nice.sort()
+
+    nice = nice[nice <= max_ratio]
+
+    if len(nice) < half:
+        # extend if needed
+        nice = nice[:half]
+    else:
+        idx = np.linspace(0, len(nice)-1, half).astype(int)
+        nice = nice[idx]
+
+    levels = np.concatenate([1/nice[::-1], [1], nice])
+    return levels
+
 def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_file = None,
                                out_dir = "figs/", percentiles = [5, 95]):
     #if obs_file is not None:
@@ -87,16 +125,16 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_fi
     ncols = (out_merge.shape[0])*len(percentiles)
     eg_cube = out_merge[0][0]
 
-    def find_levels(ii, n_levels = 7, *args, **kw):
+    def find_levels(ii, n_levels = 7, FUN = auto_pretty_levels, *args, **kw):
         
         try:    
             all_fact = np.array([np.append(summery[i][0].data.flatten(), \
                              summery[i][1].data.flatten()) for i in ii])
         except:
             all_fact[np.abs(all_fact)<0.0001] = 0.0
-        return auto_pretty_levels(all_fact,   n_levels=n_levels, ignore_v = 0.0, *args, **kw)
+        return FUN(all_fact,   n_levels=n_levels, ignore_v = 0.0, *args, **kw)
     
-    #dlevels = find_levels(range(1, len(summery)), n_levels =4, ratio = 1, force0 = True)
+    dlevels = find_levels(range(1, len(summery)), n_levels =7, FUN = ratio_levels)#ratio = 1, force0 = True)
     #set_trace()
     dlevels = np.array([0.25, 0.3, 0.33, 0.4, 0.5, 0.67, 1, 1.5, 2, 2.5, 3, 3.5, 4])
     levels = find_levels([0])
