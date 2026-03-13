@@ -211,43 +211,7 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_fi
                 label.set_verticalalignment('bottom')
                 label.set_y(1.1)    # move above the bar
                 #label.set_horizontalalignment('right')
-
-        
-        '''
-        # 1. Create a twin axis for the colorbar
-        cbar_ax = cbar.ax
-        
-        # 2. Sync ticks and limits
-        # 2. Create a twin x-axis for the top of the colorbar
-        twin_ax = cbar_ax.twiny()
-        
-        # 3. Synchronize the twin axis with the colorbar's scale
-        ticks = cbar.get_ticks()
-        set_trace()
-        twin_ax.set_xlim(cbar_ax.get_xlim())
-        twin_ax.set_xticks(ticks)
-        twin_ax.set_xticklabels([f'{t:.1f}' for t in ticks])
-        #set_trace() 
-        # 4. Toggle visibility to alternate labels
-        for i, (l_bot, l_top) in enumerate(zip(cbar_ax.get_xticklabels(), twin_ax.get_xticklabels())):
-            if i % 2 == 0:
-                l_top.set_visible(False) # Even index: label stays at bottom
-            else:
-                l_bot.set_visible(False) # Odd index: label moves to top
-        
-        #plt.show()        
-        #set_trace()
-        cbar.ax.xaxis.set_ticks_position('both')
-
-        # 2. Loop through ticks to alternate label visibility
-        for i, tick in enumerate(cbar.ax.xaxis.get_major_ticks()):
-            if i % 2 == 0:
-                tick.label1.set_visible(True)   # Bottom label ON
-                tick.label2.set_visible(False)  # Top label OFF
-            else:
-                tick.label1.set_visible(False)  # Bottom label OFF
-                tick.label2.set_visible(True)   # Top label ON
-        '''
+    
     add_cbar(axi-npc, axi-1, img)
     for cfn in range(1, summery.shape[0]):
         for fi in range(npc):    
