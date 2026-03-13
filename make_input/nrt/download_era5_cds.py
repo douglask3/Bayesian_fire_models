@@ -236,14 +236,7 @@ temp_dir_default = "/data/users/douglas.kelley/Bayesian_fire_models/data-cds/era
 
 
 def run_for_report(shapefile_path, region_names,  out_dir, temp_dir = temp_dir_default):
-    for years in yearss:
-        download_era5(variables, years, months = range(12), 
-                          yr_now = yr_now, mnth_now = mnth_now,
-                          area = area, region_name = " ",
-                          dataset = dataset, 
-                          out_dir = out_dir, 
-                          temp_dir = temp_dir)    
-
+    
     for region_name in region_names:
         for years in yearss:
             download_era5(variables, years, months = range(12), 
@@ -253,9 +246,13 @@ def run_for_report(shapefile_path, region_names,  out_dir, temp_dir = temp_dir_d
                           out_dir = out_dir, 
                           temp_dir = temp_dir,
                           shapefile_path = shapefile_path)
-    
-
-
+    for years in yearss:
+        download_era5(variables, years, months = range(12), 
+                          yr_now = yr_now, mnth_now = mnth_now,
+                          area = area, region_name = " ",
+                          dataset = dataset, 
+                          out_dir = out_dir, 
+                          temp_dir = temp_dir)    
 
 if __name__=="__main__":    
     data_dir = "data/data/driving_data2425"
