@@ -13,14 +13,15 @@ import calendar
 from matplotlib.gridspec import GridSpec
 from  pathlib import Path
 
-def month_range(month_strings):
+def month_range(months):
     """
     Convert a list like ['01', '02', '03'] → 'Jan-Mar'.
     Assumes the months are consecutive and cover one calendar span.
     """
     # Convert strings → ints and sort (just in case)
     try:
-        months = sorted(int(m) for m in month_strings)
+        if not isinstance(months, int):
+            months = sorted(int(m) for m in months)
     except:
         set_trace()
     # Get three‑letter abbreviations (calendar.month_abbr[0] is '')
@@ -35,8 +36,6 @@ def map_attribution_for_region(dir1, dir2, region,
                               temp_filename = '',
                               add_cbar = None, month_idx = None, year = None,
                               title = ''):   
-    
-    
     
     temp_file = dir1 + 'data_store/attribute_where/' + dir2.replace('samples', '') + \
                 '-' + temp_filename + variable + '-' + str(nfiles) + '.nc'  
