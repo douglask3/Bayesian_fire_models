@@ -40,10 +40,18 @@ def plot_all_attribution_scatter(dir1, dir2, regions, obs_dir, obs_file, *args, 
     
 def attribution_analysis(dir1, dir2, obs_dir, obs_file_nc = "burnt_area.nc",
                          obs_file_csv = 'burnt_area_data.csv', region = "", *args, **kw):
-    #plot_all_attribution_scatter(dir1, '/time_series/' +dir2, region, obs_dir, obs_file_csv,
-    #                             *args, **kw)
-    #plot_confidence_in_attribution(dir1, '/samples/' +  dir2, region, *args, **kw)
+
+     
+    plot_all_attribution_scatter(dir1, '/time_series/' +dir2, region, obs_dir, obs_file_csv,
+                                 *args, **kw)
+    plot_confidence_in_attribution(dir1, '/samples/' +  dir2, region, *args, **kw)
     
+    plot_change_in_burned_area(dir1, '/samples/' +  dir2, region, 
+                               obs_file = obs_dir + '/' + region + '/' + obs_file_nc, 
+                               counterfactual_name = 'counterfactual-extraNoise-',
+                               percentiles = [50], plot_att_only = True, 
+                               out_figname_extra = 'season-', *args, **kw)
+    #set_trace()
     for percentiles in [[50], [5, 95]]:
         try:
             plot_change_in_burned_area(dir1, '/samples/' +  dir2, region, 
@@ -60,12 +68,12 @@ def attribution_analysis(dir1, dir2, obs_dir, obs_file_nc = "burnt_area.nc",
 if __name__=="__main__":
     dir1 = "outputs/outputs_scratch/attribution-base-localBA-data-NEW4/"
     dir1 = "outputs/outputs_scratch/Pantanal-Maria-full-3-all-year/"
-    dir1 = "outputs/outputs_scratch/Amazon-Maria-full-3-all-year-masked/"
+    #dir1 = "outputs/outputs_scratch/Amazon-Maria-full-3-all-year-masked/"
     dir2 = "/_16-frac_points_0.5/" 
-    dir2 = "/_15-frac_points_0.2/" 
+    #dir2 = "/_15-frac_points_0.2/" 
 
     region = "Pantanal"
-    region = "Amazon"
+    #region = "Amazon"
 
     obs_dir = 'data/data/driving_data_base//'
     obs_file = 'burnt_area_data.csv'  
