@@ -710,7 +710,17 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
     
     img = iplt.contourf(cube, levels=levels, cmap=cmap, axes=ax, extend = extend, 
                         norm = norm)
-    
+
+    ## Create mask: 1 where NaN, 0 where valid
+    #nan_mask = cube.data.copy()
+    #nan_mask.mask[:] = False
+    #nan_mask.data[cube.data.mask] = 0
+    #nan_mask.data[~cube.data.mask] = 1
+    ##
+    ## Plot boundary where mask changes
+    #ax.contour(cube.coord('longitude').points, cube.coord('latitude').points, nan_mask,
+    #    levels=[0.5], colors='black', linewidths=1)
+    #set_trace()
     if overlay_cube is not None:
         add_overlay_cube(overlay_cube, overlay_value, overlay_col, overlay_size, ax)
     elif overlay_value is not None:
