@@ -17,69 +17,69 @@ import iris.quickplot as qplt
 import matplotlib.pyplot as plt
 
 
-def make_variable_inputs(variable, transformation, inverse, regions, model_dir, obs_dir, 
-                         experiments, obs_dataset, npairs = 1000):
+def make_variable_inputs(variable, transformation, inverse, datadir, regions, model_dir, 
+                         experiments, obs_dataset, npairs = 10):
 
     def make_region_input(region):
+        
         def exp_files(experiment):
-            dir = model_dir + '/' + region + '/' + experiment + '/' + variable + '/'
+            dir = datadir + region.replace(' ', '_')  + '/'  + '/HadGEM_' + \
+                experiments[0] + '/' + variable + '/'
+            
             return [dir + file for file in  os.listdir(dir)]
             
-        
         file_lists = [exp_files(experiment) for experiment in experiments]
         
         all_pairs = list(itertools.product(file_lists[0], file_lists[1]))
         # Sample N unique pairs with replacement
         exp_files = set()
-        while len(exp_files) < 1000:
-            exp_files.add(random.choice(all_pairs))
         
+        while len(exp_files) < npairs:
+            exp_files.add(random.choice(all_pairs))
+        #set_trace() 
         exp_files = list(exp_files)
         
-        dir = obs_dir + '/' + region + '/' + obs_dataset + '/' + variable + '/'
+        dir = datadir + region.replace(' ', '_')  + '/'  + obs_dataset + '/' + variable + '/'
         files = os.listdir(dir)
-        if len(files) == 1:
-            obs_file = dir + files[0]
-        else:
-            set_trace()
-
+        if len(files) > 1:
+            years = np.array([int(file.split('_years')[1][0:4]) for file in files])
+            files = files[np.argmin(years)]#set_trace()
+        else:   
+            files = files[0]
+        obs_file = dir + files
         def open_data(file):
-            cube = iris.load_cube(obs_file)
+            cube = iris.load_cube(file)
             if transformation is not None: 
                 cube.data = transformation(cube.data)
             return cube
     
         obs_cube = open_data(obs_file)
         for exp_file in exp_files:
-            
+            set_trace()
             ALL = open_data(exp_file[0])
             corect = open_data(exp_file[1])
             corect.data = corect.data - ALL
-            set_trace()
+            
             
         set_trace()
         
     [make_region_input(region) for region in regions]
     set_trace()
 
-    
+model_dir = "/hadgem_nrt/"
+obs_dataset = "/Era5_derived-era5-single-levels-daily-statistics/"
 
-
+variables = ['tasmax', 'tas', 'pr']
+transformations = [None, None, np.log]
+inverses = [None, None, np.exp]
 
 if __name__=="__main__":
-    model_dir = "data/data/driving_data2425/hadgem_nrt/"
-    obs_dir = "data/data/driving_data2425/era5_nrt/"
+    dir = "data/data/driving_data2526/nrt_raw/"
 
-    experiments = ["ALL", "ALL"]
-    obs_dataset = "derived-era5-single-levels-daily-statistics/"
-    regions = ["Los_Angeles"]
+    experiments = ["ALL", "NAT"]
+    regions = ["Northwest Iberia"]
 
-    variables = ['tasmax', 'tas', 'pr']
-
-    transformations = [None, None, np.log]
-    inverses = [None, None, np.exp]
-
-    make_variable_inputs(variables[0], transformations[0], inverses[0], 
-                         regions, model_dir, obs_dir, 
+    make_variable_inputs(variables[0], transformations[0], inverses[0], dir,
+                         regions, model_dir, 
                          experiments, obs_dataset)
 
