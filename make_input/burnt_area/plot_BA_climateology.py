@@ -14,6 +14,10 @@ from shapely.geometry import MultiPolygon
 from pdb import set_trace
 import os
 
+import sys
+sys.path.append('libs/')
+from plot_maps import *
+
 def open_netcdf_and_find_clim(filename):
     # Load NetCDF file
     cube = iris.load_cube(filename)
@@ -102,9 +106,9 @@ def plot_all_climatology(climatology, #title="Annual Mean Burnt Area per Month",
         #set_trace()
         climatology = climatology[sub_months]
     
-    fig, axes = plt.subplots(nrow, ncol, figsize=(3 + ncol * 2, 3 + nrow * 1.3),
-                             subplot_kw={'projection': ccrs.PlateCarree()})
-
+    #fig, axes = plt.subplots(nrow, ncol, figsize=(3 + ncol * 2, 3 + nrow * 1.3),
+    #                         subplot_kw={'projection': ccrs.PlateCarree()})
+    fig, axes = set_up_sow_plot_windows(nrow, ncol, climatology[0],  size_scale = 3)
     # Compute global min/max for consistent colour scale
     clim_min, clim_max = np.min(climatology.data), np.max(climatology.data)
     
@@ -132,14 +136,17 @@ def plot_all_climatology(climatology, #title="Annual Mean Burnt Area per Month",
                            transform=ccrs.PlateCarree(), cmap=cmap, norm=norm)
 
         # Geographic features
-        ax.coastlines()
-        ax.add_feature(cfeature.BORDERS, edgecolor='black', linewidth=0.5)
-        ax.add_feature(cfeature.LAKES, alpha=0.5)
-        ax.add_feature(cfeature.RIVERS, edgecolor='blue', alpha=0.33)
-
+        #ax.coastlines()
+        #ax.add_feature(cfeature.BORDERS, edgecolor='black', linewidth=0.5)
+        #ax.add_feature(cfeature.LAKES, alpha=0.5)
+        #ax.add_feature(cfeature.RIVERS, edgecolor='blue', alpha=0.33)
+        ax.add_feature(cfeature.COASTLINE, linewidth=0.5)
+        ax.add_feature(cfeature.RIVERS, linewidth=0.5)
+        ax.add_feature(cfeature.BORDERS, linewidth=0.5)
+        ax.add_feature(cfeature.LAND, facecolor='lightgray')
         # Shapefile outline
-        ax.add_geometries(shapefile_geometries, ccrs.PlateCarree(), edgecolor='black', 
-                          facecolor='none', linewidth=1)
+        #ax.add_geometries(shapefile_geometries, ccrs.PlateCarree(), edgecolor='black', 
+        #                  facecolor='none', linewidth=1)
 
         ax.set_title(month_name)  # Use real month name
 
@@ -194,11 +201,14 @@ if __name__=="__main__":
     cmap = SoW_gradient_red
     dcmap = SoW_diverging_TealOrange
 
-    Region_titles = ["Pantanal & Chiquitano", "Northeast Amazonia", "Congo Basin", "Southern California", "Himalayan", "Alberta"]
-    Region_dirs = ["Pantanal",  "Amazon", "Congo", "LA", "NWIndia", "Alberta"]
+    #Region_titles = ["Pantanal & Chiquitano", "Northeast Amazonia", "Congo Basin", "Southern California", "Himalayan", "Alberta"]
+    #Region_dirs = ["Pantanal",  "Amazon", "Congo", "LA", "NWIndia", "Alberta"]
+    Region_titles = ['Amazonia', 'Pantanal']
+    Region_dirs = ['Amazon', 'Pantanal']
     sub_months = [[5, 6, 7, 8], [6], [2, 3, 10, 11], [4, 5, 6, 7], [0], [3]]
     for i in range(len(Region_dirs)):
         filename = "data/data/driving_data2425/" + Region_dirs[i] +"/burnt_area.nc"
+        filename = "data/data/driving_data_base/" + Region_dirs[i] +"/burnt_area.nc"
 
     
         levels = [0, 0.1, 0.5, 1, 2, 5, 10]
