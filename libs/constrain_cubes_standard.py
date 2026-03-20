@@ -154,14 +154,15 @@ def sub_year_range(cube, year_range):
     Returns:
         cube of just years between to years provided.
     """
-    
+    if len(year_range) == 1: year_range = [year_range[0], year_range[0]]
+     
     try:
         icc.add_year(cube, 'time')
     except:
         pass
     
-    constraint = iris.Constraint(year=lambda cell: (year_range[0]-0.95) <= cell <= (year_range[1]+0.95))
-    
+    constraint = iris.Constraint(year=lambda cell: 
+                            (year_range[0]-0.99) <= cell <= (year_range[1]+0.99))
     return cube.extract(constraint)
     
     
@@ -178,11 +179,19 @@ def sub_year_months(cube, months_of_year):
         icc.add_month_number(cube, 'time')
     except:
         pass  
-           
-    months_of_year = np.array(months_of_year)+1
+    if not isinstance(months_of_year, list): months_of_year = [months_of_year]
+    if isinstance(months_of_year[0], str):
+        months_of_year = np.array([int(month) for month in months_of_year])
+    else:
+        months_of_year = np.array(months_of_year)+1
     season = iris.Constraint(month_number = lambda cell, mnths = months_of_year: \
                              np.any(np.abs(mnths - cell[0])<0.5))
     return cube.extract(season)
+
+def constrain_to_time(cube, years, months_of_year):
+    cube = sub_year_range(cube, years)
+    cube = sub_year_months(cube, months_of_year)
+    return(cube)
 
 def constrain_cube_by_cube_and_numericIDs(cube, regions, region):
     """constrains a cube to region identifies in 'mask'
@@ -302,6 +311,21 @@ def contrain_to_shape(cube, geom, constrain = True):
     
     return masked_cube
 
+def contrain_to_shapefile(cube, shp_filename, name = None, *args, **kw):
+    shp = gp.read_file(shp_filename)
+    shp["geometry"] = shp["geometry"].buffer(0)
+    
+    if name is None:
+        geom = shp.geometry.unary_union
+    else:
+        try:
+            geom = shp[shp['name'].str.contains(name, case=False, na=False)].geometry.unary_union
+        except:
+            if name in shp_filename:
+                print("WARNING: name ''" + name + "'' not a shape in ''" + shp_filename + \
+                      "''. Using all shapes instead")
+                geom = shp.geometry.unary_union
+    return contrain_to_shape(cube, geom, *args, **kw)
 
 def contrain_to_sow_shapefile(cube, shp_filename, name, *args, **kw):
     shp = gp.read_file(shp_filename)

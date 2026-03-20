@@ -77,9 +77,7 @@ def Bayes_benchmark(filename_out, fig_dir, Y, X, lmask, logXmin = None, logYmin 
             else:
                 plt.text(0.05, 0.95 - 0.1 * i, 
                         f'{nme10:.2f}-{nme90:.2f}', transform=plt.gca().transAxes)
-
-        
-    
+ 
     plt.figure(figsize=(8, 12))  # Set the figure size
     plt.subplot(3, 1, 1)  # Create the density plot in the top subplot
     run_NME_over_subset(X, Y, None)
@@ -99,8 +97,8 @@ def Bayes_benchmark(filename_out, fig_dir, Y, X, lmask, logXmin = None, logYmin 
     plt.clf()
     plt.close()
 
-    pos = pos[X > 0]
-    X = X[X>0]
+    #pos = pos[X > 0]
+    #X = X[X>0]
     scatter_metric_overall_and_percentiles(X, pos)
     plt.savefig(fig_dir + filename_out + '-posterior-position.png')
     plt.clf()
@@ -152,7 +150,8 @@ def scatter_metric_overall_and_percentiles(X, pos, xlabel = 'Burnt Area',
     plt.gcf().text(0.04, 0.25, 'Frequency', ha='center', fontsize=12, rotation=90)
     
 
-def BayesScatter(X, Y, lmask = None, logXmin = None, logYmin = None, ax = None):
+def BayesScatter(X, Y, lmask = None, logXmin = None, logYmin = None, ax = None,
+                 figure_filename = None):
     pc_size = 10
     percentiles = np.arange(pc_size, 100, pc_size) 
     percentiles = np.array([1, 2, 5, 10, 25, 75, 90, 95, 99])
@@ -170,6 +169,12 @@ def BayesScatter(X, Y, lmask = None, logXmin = None, logYmin = None, ax = None):
         select = np.random.choice(len(X), 1000)
         X = X[select]
         Y = Y[select, :]
+
+    csv_out = np.column_stack((X, Y))
+    
+    header=','.join(['X'] + ['Y' + str(i) for i in percentiles])
+    np.savetxt(figure_filename + '.csv', csv_out, 
+               delimiter = ',', header = header, comments = '')
     
     X = sqidge_01s(X, logXmin)
     Y = sqidge_01s(Y, logYmin)
@@ -178,7 +183,7 @@ def BayesScatter(X, Y, lmask = None, logXmin = None, logYmin = None, ax = None):
     ncols = int(Y.shape[1]/2)
     line_widths = np.linspace(0.2, 2, ncols)
     
-    alpha = 1.0/(Y.shape[1])
+    alpha = 0.5/(Y.shape[1])
 
     for i in range(ncols):        
         ax.vlines(X, ymin = Y[:,i], ymax = Y[:, -i-1],
@@ -195,5 +200,5 @@ def BayesScatter(X, Y, lmask = None, logXmin = None, logYmin = None, ax = None):
     plt.yticks(labels)
     plt.xticks(labels)
 
-    plt.xlabel("Observation")
-    plt.ylabel("Simulation")
+    plt.xlabel("Observed BA (frac)")
+    plt.ylabel("Simulation BA (frac)")

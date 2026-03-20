@@ -293,7 +293,7 @@ def process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, yea
                            *args, **kw):
     def process(process, dir):
         [make_variables_for_year_range(year, process, dir, *args, **kw) for year in  years]
-    #process(process_jules, dir_jules)
+    process(process_jules, dir_jules)
     process(process_clim, dir_clim)
     
     

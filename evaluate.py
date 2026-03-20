@@ -8,6 +8,9 @@ from ConFire import ConFire
 from BayesScatter import *
 from response_curves import *
 from jackknife import *
+from state_of_wildfires_colours  import SoW_cmap
+#from train import *
+from extend_np_range import *
 
 from read_variable_from_netcdf import *
 from combine_path_and_make_dir import * 
@@ -15,6 +18,8 @@ from namelist_functions import *
 from pymc_extras import *
 from plot_maps import *
 from parameter_mapping import *
+from flatten_list import *
+from apply_consistent_mask_from_best_slice import *
 
 import os
 from   io     import StringIO
@@ -35,7 +40,7 @@ from pdb import set_trace
 
 def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Ncols = 2,
                                      figure_filename = None):
-    
+   
     def flatten_to_dim0(cube):           
         x = cube.data.flatten()[lmask]        
         x = x.reshape([cube.shape[0], int(len(x)/cube.shape[0])])
@@ -57,6 +62,7 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
     #set_trace()
     #pvf0 = 10**pvf0
     plot_id = ax.hist2d(Xf0, pvf0, bins=100, cmap='afmhot_r', norm=mpl.colors.LogNorm())
+    
     y_min, y_max = plt.ylim()
 
     # Define the padding (e.g., 10% of the data range)
@@ -64,17 +70,8 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
 
     #  Set new y-axis limits with the padding
     plt.ylim(y_min - padding, y_max + padding)
-
-    #plt.gcf().colorbar(plot_id[3], ax=ax)
-    #try:
-    #    plt.gcf().colorbar(plot_id[3], ax=ax)
-    #except ValueError as e:
-    #    print("Error creating colorbar:")
-    #    print("plot_id[3] min:", np.nanmin(plot_id[3].get_array()))
-    #    print("plot_id[3] max:", np.nanmax(plot_id[3].get_array()))
-    #    print(np.min(Xf0))
-    #    print(np.max(Xf0))
-    #    raise e
+    plt.xlabel('Observed BA (frac)')
+    plt.ylabel('P(Obs|model)')
     print("Starting colorbar creation...")
     try:
         data = plot_id[3].get_array()
@@ -103,7 +100,7 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
             print(f"Adjusted range for colorbar: vmin = {vmin}, vmax = {vmax}")
         
         print(f"Final vmin: {vmin}, vmax: {vmax}")
-        norm = colors.Normalize(vmin=vmin, vmax=vmax)
+        norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
         
         print("Updating colormap of the plot...")
         plot_id[3].set_norm(norm)
@@ -135,21 +132,29 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
     #labels = np.array([0, 0.3, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99])
     #plt.yticks(10**labels, labels)
     
-    try:
-        Sim[1].data.mask[Sim[1].data == 0] = True
-    except:
-        pass
+    #try:
+    #    Sim[1].data.mask[Sim[1].data == 0] = True
+    #except:
+    #    pass
     
-    plot_BayesModel_maps(Sim[1], [0.0, 0.5, 0.75, 0.9, 0.95, 0.99, 1.0], 'copper', '', None, 
-                         Nrows = Nrows, Ncols = Ncols, plot0 = plot_n, collapse_dim = 'time',
-                         scale = 1, figure_filename = figure_filename + 'obs_liklihood')
+    Sim_p = Sim[1].copy()
+    #Sim_p.data[Obs.data == 0] = np.nan
+    
+    plot_BayesModel_maps(Sim_p, [0.0, 0.5, 0.75, 0.9, 0.95, 0.99, 1.0], 
+                        'gradient_teal', '', None, 
+                         Nrows = Nrows, Ncols = Ncols, plot0 = plot_n, 
+                         collapse_dim = 'time',scale = 1, 
+                         extend = 'neither',
+                         figure_filename = figure_filename + 'obs_liklihood')
     
     ax = plt.subplot(Nrows, Ncols, plot_n + 3)
     
-    BayesScatter(Obs, Sim[0], lmask,  0.000001, 0.000001, ax)
+    BayesScatter(Obs, Sim[0], lmask,  0.000001, 0.000001, ax, 
+                 figure_filename = figure_filename + 'Scatter')
+
     
     pos = np.mean(X[np.newaxis, :, :] > Y, axis = 0)
-    pos[X == 0] = np.nan
+    #pos[X == 0] = np.nan
     sameness_test = np.nanmean(pos, axis = 0) == np.nanmin(pos, axis = 0)
     pos[:, sameness_test] = np.nan
     
@@ -160,32 +165,62 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
     mask = lmask.reshape([ X.shape[0], int(lmask.shape[0]/X.shape[0])])[0]
     apos_cube = insert_data_into_cube(apos, Obs[0], mask)
     p_value_cube = insert_data_into_cube(p_value, Obs[0], mask)
-
+    
     plot_annual_mean(apos_cube,[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], 
-                     'RdYlBu_r',  plot_name = "mean bias", 
+                     'diverging_TealPurple',  plot_name = "mean bias", 
+                     extend = 'neither',
                      Nrows = Nrows, Ncols = Ncols, plot_n = plot_n + 4,
                      figure_filename = figure_filename + 'obs_post-Position.nc')
 
-    plot_annual_mean(p_value_cube, np.array([0, 0.01, 0.05, 0.1, 0.5, 1.0]), 'copper',   
+    plot_annual_mean(p_value_cube, np.array([0, 0.01, 0.05, 0.1, 0.5, 1.0]), 'gradient_hues',   
                      plot_name = "mean bias p-value", 
+                     extend = 'neither',
                      Nrows = Nrows, Ncols = Ncols, plot_n = plot_n + 5,
                      figure_filename = figure_filename + 'obs_post-Pvalue.nc')
     
 
 def compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, levels, cmap,
-                        dlevels = None, dcmap = None,
-                        *args, **kw):    
+                        fig_dir = None, *args, **kw):    
+ 
+    
+    """ Plots the summery evaluation plot.
+    Arguments:
+        filename_out -- string of filename of resultant figure
+        dir_outputs -- string of path where to output figure. The figure gets output into a 
+                dir 'fig' within this (which is created if it doesnt already exist)
+        Obs -- An iris cube of coords time, latitude and longitude that the model (Sim) will 
+                be evaluated against
+	Sim -- An iris cube of coords realizations time, latitude and longitude that the
+                function evaluates. Realizations coord is teh different model enembles
+        lmask -- numpy array of same shape a Obs that describes which are valid cells of 
+                comparison.
+	levels -- list containing numerics, describing the colourbar levels when plotting
+                straight map of Obs and Sim.
+        cmap -- string of name of colourmap for maps.
+    
+    Returns:
+        evaluation file wiyj map of Obs, 10-90%ile of Sim, scatter of liklihood of Obs
+        giving Sim and maps of Obs given Sim likihood ranges, and ''Bayesian Scatter' of
+        Obs vs Sim with positio of Obs in Sim as maps.
+    """
+    
     plt.clf()
-    plt.close() 
-    fig_dir = combine_path_and_make_dir(dir_outputs, '/figs/')
+    plt.close()
+    
+    if fig_dir is None: fig_dir = combine_path_and_make_dir(dir_outputs, '/figs/')
     figure_filename = fig_dir + filename_out + '-evaluation'
     figure_dir =  combine_path_and_make_dir(figure_filename)
     
     #Sim[0].data = 100 * Sim[0].data
-   # Obs.data = Obs.data * 100
-    plot_BayesModel_maps(Sim[0], None, cmap, '', Obs, Nrows = 3, Ncols = 3, scale = 100,
-                         figure_filename = figure_dir)
+    #Obs.data = Obs.data * 100
     
+    plot_BayesModel_maps(Sim[0].collapsed('time', iris.analysis.MEAN), 
+                         None, cmap, '', 
+                         Obs.collapsed('time', iris.analysis.MEAN), 
+                         Nrows = 3, Ncols = 3, scale = 100,
+                         extend = 'max',
+                         figure_filename = figure_dir)
+     
     plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 4, Nrows = 3, Ncols = 3,
                                      figure_filename = figure_dir)
     
@@ -197,62 +232,25 @@ def compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, levels, cmap
 
 def evaluate_MaxEnt_model_from_namelist(training_namelist = None, evaluate_namelist = None, 
                                         **kwargs):
+    """ Runs evaluation from namelists. Reads namelists and passes to evaluate_MaxEnt_model.
+    Arguments:
+        training_namelist -- a namelist see 'namelists/simple_example.txt' for an example,
+            with all the information that is output from the training step of the workflow 
+            (see train.py)
+        evaluate_namelist -- a namelist see 'namelists/simple_example.txt' for an example,
+            with all the information required for evaluation. Any repeats in evaluate_namelist              overwrite training_namelist   
+        **kwargs -- additional args for us in evaluate_MaxEnt_model. Overwrites any mathcing
+            arguments in namelist  
+    Returns:
+        see evaluate_MaxEnt_model
+    """
 
     variables = read_variable_from_namelist_with_overwite(training_namelist, **kwargs)
     variables.update(read_variable_from_namelist_with_overwite(evaluate_namelist, **kwargs))
      
     return evaluate_MaxEnt_model(**variables)
 
-def plot_limitation_maps(fig_dir, filename_out, **common_args):
-    limitations = [runSim_MaxEntFire(**common_args, run_name = "control_controls-" + str(i),  
-                                     test_eg_cube = False, out_index = i, 
-                                     method = 'burnt_area', return_limitations = True)  \
-                   for i in range(4)] 
-        
-    for i in range(len(limitations)):
-        coord = iris.coords.DimCoord(i, "model_level_number")
-        limitations[i].add_aux_coord(coord)
-    limitations = iris.cube.CubeList(limitations).merge_cube()
-    mn = np.mean(limitations.data, axis = tuple([2, 3, 4]))
-    std = np.std(limitations.data, axis = tuple([2, 3, 4]))
-    limitations = limitations-mn [:, :, None, None, None]
-    limitations = limitations/std[:, :, None, None, None]
 
-    def select_limitations(slice_B, slice_A):
-        dists = [np.sum(np.abs((slice_A[i] - slice_B).data), axis = tuple([1, 2, 3])) \
-                 for i in range(slice_A.shape[0])]
-        
-        dists = np.array(dists)            
-            
-        row_ind, col_ind = linear_sum_assignment(dists)
-            
-        return col_ind   
-
-    # Iterate through each B slice and apply the function
-    sorted_indices = []
-    for b_index in range(limitations.shape[1]):  # Loop through B dimension
-        print(b_index)
-        sorted_index = select_limitations(limitations[:, b_index, :], limitations[:, 0, :])
-        sorted_indices.append(sorted_index)
-    sorted_indices = np.transpose(np.array(sorted_indices))
-
-    sorted_lim = limitations.copy()
-    sorted_lim.data = np.take_along_axis(limitations.data, 
-                                         sorted_indices[:, :, None,None, None], axis=1)
-        
-    figName = fig_dir + filename_out + '-limitation_maps'
-    for i in range(sorted_lim.shape[0]):
-        plot_BayesModel_maps(sorted_lim[i], 
-                             [-2.5, -2.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0, 2.5], 
-                             'PiYG', '', None, 
-                             Nrows = 5, Ncols = 2, plot0 = i*2,
-                             scale = 1, figure_filename = figName)
-            
-    plt.gcf().set_size_inches(8, 12)
-    plt.gcf().tight_layout()
-    plt.savefig(figName + '.png')
-    plt.clf()
-    plt.close() 
 
 def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file, 
                           Y_scale = None,
@@ -261,14 +259,21 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
                           model_class = FLAME,
                           link_func_class = MaxEnt, hyper = True, sample_error = True,
                           dir = '', 
-                          dir_outputs = '', model_title = '', filename_out = '',
+                          dir_outputs = '', 
+                          fig_dir = None, 
+                          model_title = '', filename_out = '',
                           filename_out_ext = '',
                           control_run_name = "control",
+                          experiment_type = 'single',
                           subset_function = None, subset_function_args = None,
+                          max_no_ensembles = False,
                           sample_for_plot = 1, grab_old_trace = False, 
                           run_response_curves = False, 
                           response_grouping = None, run_only = False, return_inputs = False,
-                          Y = None, X = None, lmask = None, scalers = None, *args, **kw):
+                          Y = None, X = None, lmask = None, scalers = None, 
+                          data_store = None, common_noise = False, 
+                          *args, **kw):
+    #set_trace()
     """ Runs prediction and evalutation of the sampled model based on previously run trace.
     Arguments:
         trace - pymc traces nc or nc fileiles, probably from a 'train_MaxEnt_model' run
@@ -290,6 +295,8 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
                 data to spatial locations and time periods/months. Default is not to 
                 constrain (i.e "None" for no functions")
         subset_function_args -- list of arguements that feed into subset_function
+        max_no_ensembles -- if there is an esemble of input data, what's the maxmimum we will 
+                                use.
         sample_for_plot -- fraction of gridcells used for optimization
         grab_old_trace -- Boolean. If True, and a filename starting with 'filename' and 
                 containing some of the same setting (saved in filename) exists,  it will open 
@@ -306,7 +313,14 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
     dir_samples = combine_path_and_make_dir(dir_outputs, '/samples/')     
     dir_samples = combine_path_and_make_dir(dir_samples, filename_out)
 
-    fig_dir = combine_path_and_make_dir(dir_outputs, '/figs/')
+    dir_data_store = combine_path_and_make_dir(dir_outputs, '/data_store/')
+    dir_driving_data = combine_path_and_make_dir(dir_data_store, '/driving_data/')
+    dir_optimisation_data = combine_path_and_make_dir(dir_data_store, '/optimisation_data/')
+     
+    dir_driving_data = combine_path_and_make_dir(dir_driving_data, 
+                                                 filename_out + '/' + control_run_name)
+    
+    if fig_dir is None: fig_dir = combine_path_and_make_dir(dir_outputs, '/figs/')
     trace = az.from_netcdf(trace_file)
     
     scalers = pd.read_csv(scale_file).values  
@@ -322,19 +336,24 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
         'dir': dir,
         'scalers': scalers,
         'x_normalise01': True,
+        'x_find_mode': experiment_type,
+        'dir_driving_data': dir_driving_data,
         'subset_function': subset_function,
-        'subset_function_args': subset_function_args
+        'subset_function_args': subset_function_args,
+        'max_no_ensembles': max_no_ensembles
     }
         
     if CA_filen is not None:
-        Y, X, CA, lmask, scalers = read_all_data_from_netcdf(CA_filename = CA_filen, **common_args)   
+        Y, X, CA, lmask, scalers = read_all_data_from_netcdf(CA_filename = CA_filen, 
+                                                             **common_args)
     else:
         if Y is  None or X is  None or lmask is  None or scalers is  None:
-            Y, X, lmask, scalers = read_all_data_from_netcdf(**common_args)
+            Y, X, lmask, scalers = read_all_data_from_netcdf(**common_args, test_trace = True)
     
     Obs = read_variable_from_netcdf(y_filen, dir,
                                     subset_function = subset_function, 
                                     subset_function_args = subset_function_args)
+    
     Obs.data = Obs.data / 100.0
     Obs.data[~np.reshape(lmask, Obs.shape)] = np.nan
     if Y_scale is not None: Y_scale = Y_scale / 100.0
@@ -353,8 +372,9 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
         'eg_cube': Obs,
         'lmask': lmask,
         'dir_samples': dir_samples,
-        'grab_old_trace': grab_old_trace}
-    
+        'grab_old_trace': grab_old_trace,
+        'data_store': dir_optimisation_data,  
+        'common_noise': common_noise}
     Sim = runSim_MaxEntFire(**common_args, run_name = control_run_name, test_eg_cube = True)
      
     if run_only: 
@@ -362,13 +382,14 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
             return Sim, Y, X, lmask, scalers 
         else:
             return Sim
-    #plot_limitation_maps(fig_dir, filename_out, **common_args)
     
     common_args['Sim'] = Sim[0]
-    #set_trace()
-    #jackknife(x_filen_list, fig_dir = fig_dir, **common_args)       
+    
     filename_out += filename_out_ext 
-    compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, *args, **kw)
+    
+    compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, fig_dir = fig_dir,
+                        *args, **kw)
+    
     Bayes_benchmark(filename_out, fig_dir, Sim, Obs, lmask)
 
     if run_response_curves: 

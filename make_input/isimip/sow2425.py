@@ -8,12 +8,13 @@ from regrid_all import *
 output_dir = "data/data/driving_data2425/"
 if __name__=="__main__":
 
-    shape_names = ['northeast India', "Alberta",
+    shape_names = [
+                   "Congo basin", 
+                   'northeast India', "Alberta",
                    "Los Angeles",
-                   "Congo basin",
                    "Amazon and Rio Negro rivers",
                    "Pantanal"]
-    region_names = [ 'NWIndia', 'Alberta', 'LA', 'Congo', 'Amazon', 'Pantanal']
+    region_names = [ 'Congo', 'NEIndia', 'Alberta', 'LA', 'Amazon', 'Pantanal']
     shp_filename = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
     subset_functions_main = [contrain_to_sow_shapefile]
     vcf_dir = "same"

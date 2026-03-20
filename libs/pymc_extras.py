@@ -2,6 +2,8 @@ import arviz as az
 import numpy as np
 import pymc as pm
 import iris
+import random
+import datetime
 
 import os
 import sys
@@ -61,11 +63,25 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
                       dir_samples, grab_old_trace, extra_params = None,
                       class_object = FLAME, method = 'burnt_area',
                       link_func_class = MaxEnt, hyper = True, sample_error = True,
-                      test_eg_cube = False, out_index = None, *args, **kw):  
+                      test_eg_cube = False, out_index = None, 
+                      data_store = None, common_noise = False,
+                      *args, **kw):  
+    
+    if lmask is None:
+        asRaster = False
+        extension = '.csv'
+        test_eg_cube = False
+        def load_fun(filen):
+            set_trace()
+            np.genfromtxt(filen, delimiter=',')        
+    else:
+        asRaster = True
+        extension = '.nc'
+        load_fun =  iris.load_cube
     
     def sample_model(i, run_name = 'control'):   
         dir_sample =  combine_path_and_make_dir(dir_samples, run_name)
-        file_sample = dir_sample + '/sample-pred' + str(i) + '.nc'
+        file_sample = dir_sample + '/sample-pred' + str(i) + extension
 
         dont_do_prob = True
         if test_eg_cube:
@@ -76,35 +92,47 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
                 dont_do_prob = False
             
         if grab_old_trace and os.path.isfile(file_sample) and dont_do_prob:
-            out = iris.load_cube(file_sample)
+            out = load_fun(file_sample)
             if test_eg_cube:           
                 return out, prob
             else:
                 return out
         
-        coord = iris.coords.DimCoord(i, "realization")
-        def make_into_cube(dat, filename):            
-            dat = insert_data_into_cube(dat, eg_cube, lmask)
-            
-            dat.add_aux_coord(coord)
-            iris.save(dat, filename)
-            return dat
+
+        if asRaster:
+            coord = iris.coords.DimCoord(i, "realization")
+            def make_into_cube(dat, filename):            
+                dat = insert_data_into_cube(dat, eg_cube, lmask)
+                dat.add_aux_coord(coord)
+                iris.save(dat, filename)
+                return dat
 
         
         print("Generating Sample:" + file_sample)
-
+        print(datetime.datetime.now())
         param_in = contruct_param_comb(i, params, params_names, extra_params)
         link_param_in = {key: value for key, value in param_in.items() \
                        if key.startswith('link-')}
         
         obj = class_object(param_in)
-        out = getattr(obj, method)(X, *args, **kw)
+        if isinstance(X, list):
+            Xi = random.choice(X)
+        else:
+            Xi = X
+        if isinstance(Xi, str) and Xi[-4:] == '.npy':
+            Xi = np.load(Xi)
+        
+        out = getattr(obj, method)(Xi, *args, **kw)
         
     
         if out_index is not None: out = out[:, out_index]
+        
+        func_class = link_func_class(data_store = data_store, 
+                                     ensemble_member = i, 
+                                     common_noise = common_noise,
+                                     eg_cube = eg_cube, lmask = lmask)
         if test_eg_cube:
-            
-            prob = link_func_class().sample_given_(eg_cube.data.flatten()[lmask], out, 
+            prob = func_class.sample_given_(eg_cube.data.flatten()[lmask], out, 
                                                    [*link_param_in])
             
             prob = make_into_cube(prob, file_prob) 
@@ -112,12 +140,13 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
         
         if hyper:
             if sample_error:
-                out = link_func_class().random_sample_given_(out, link_param_in) 
+                out = func_class.random_sample_given_(out, link_param_in) 
             else:
-                out = link_func_class().random_sample_given_central_limit_(out, link_param_in) 
+                out = func_class.random_sample_given_central_limit_(out, link_param_in) 
                      
         out = make_into_cube(out, file_sample)
         
+
         if test_eg_cube: 
             return out, prob
         else:
@@ -130,6 +159,7 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
     idx = range(0, nits, int(np.floor(nits/sample_for_plot)))
     out = np.array(list(map(lambda id: sample_model(id, run_name), idx)))
     
+    if not asRaster: return out
     if test_eg_cube: 
         mout = out[:, 1]
         for cube in mout:
