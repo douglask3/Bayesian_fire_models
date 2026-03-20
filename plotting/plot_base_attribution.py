@@ -10,8 +10,8 @@ from plot_BA_climateology import *
 import imageio
 
 if __name__=="__main__":
-    dir1 = "outputs/outputs_scratch/play/Pantanal/"
-    dir2 = "/time_series/_19-frac_points_0.02/" 
+    dir1 = "outputs/outputs_scratch/play/"
+    dir2 = "/time_series/_16-frac_points_0.02/" 
 
     region = "Pantanal"
 
