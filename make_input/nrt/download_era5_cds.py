@@ -211,7 +211,7 @@ def download_era5(variables, years = [1940], months = range(13),
         process_var(var[0], var[1], var[2])
 
 yr_now = DT.now().year
-yearss = [range(yr_now-2, yr_now + 1), range(2020, 2026), range(2010, 2026), range(2002, 2026)]
+yearss = [range(yr_now-2, yr_now + 1),  range(2010, yr_now + 1), range(2002, yr_now + 1)] #range(2020, yr_now + 1),
 mnth_now = DT.now().month - 1
 
 area = [90, -180, -60, 180]
