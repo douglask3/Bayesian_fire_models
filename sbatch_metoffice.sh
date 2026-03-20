@@ -1,9 +1,9 @@
 #!/bin/bash -l
 #SBATCH --mem=200000M
-#SBATCH --ntasks=1                     # Number of nodes
+#SBATCH --ntasks=10                     # Number of nodes
 #SBATCH --output=outputs/ConFLAME_output_%j.txt         # Output file (%j expands to job ID)
 #SBATCH --error=outputs/ConFLAME_error_%j.txt           # Error file (%j expands to job ID)
-#SBATCH --time=6:00:00  
+#SBATCH --time=72:00:00  
 #SBATCH --partition=cpu-long
 
 # Get the namelist argument
