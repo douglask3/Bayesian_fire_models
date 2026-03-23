@@ -162,9 +162,9 @@ sub_dir = '/day/'
 start_years = [2013, 2023]
 
 variables = ['pr', 'tasmax','hursmin', 'tas','sfcWind', 'uas', 'vas',  'mrros']
-variables = ['tas','sfcWind', 'uas', 'vas',  'mrros']
-variables = ['sfcWind', 'uas', 'vas',  'mrros']
-experiments = [['historicalExt', 'ALL'], ['historicalNatExt', 'NAT']]
+#variables = ['tas','sfcWind', 'uas', 'vas',  'mrros']
+#variables = ['sfcWind', 'uas', 'vas',  'mrros']
+experiments = [['historicalNatExt', 'NAT'], ['historicalExt', 'ALL']]
     
 
 if __name__=="__main__":
