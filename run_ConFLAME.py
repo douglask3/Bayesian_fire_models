@@ -381,8 +381,10 @@ def run_ConFire(namelist):
                 set_region_months(subset_function_args_eval)
         model_title = run_info['model_title'].replace('<<region>>', region)
         dir_training = run_info['dir_training'].replace('<<region>>', region)
-        dir_projecting = run_info['dir_projecting'].replace('<<region>>', region)
-        
+        if 'dir_projecting' in run_info.keys():
+            dir_projecting = run_info['dir_projecting'].replace('<<region>>', region)
+        else:
+            dir_projecting = dir_training
         trace, scalers, training_namelist = \
                         train_MaxEnt_model_from_namelist(namelist, model_title = model_title,
                                                          dir_training = dir_training,
