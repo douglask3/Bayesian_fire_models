@@ -257,7 +257,8 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None,
     if CA_filename is not None:
         CA = read_variable_from_netcdf(CA_filename, make_flat = True, 
                                        time_points = time_points, extent = extent, *args, **kw)
-   
+    else:
+        CA = None
     # Create a new categorical variable based on the threshold
     if y_threshold is not None:
         Y = np.where(Y >= y_threshold, 0, 1)
@@ -266,10 +267,10 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None,
         #print(f"Number of 0's: {counts[0]}, Number of 1's: {counts[1]}")   
     
     def open_ensemble_member(ens_no, Y, scalers, frac_random_sample,
-                             cells_we_want = None):
+                             cells_we_want = None, CA = None):
         n=len(Y)
         m=len(x_filename_list)
-    
+        
         X = np.zeros([n,m])
         for i, filename in enumerate(x_filename_list):
             X[:, i] = read_variable_from_netcdf(filename, make_flat = True, 
@@ -279,9 +280,9 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None,
    
         if add_1s_columne: 
             X = np.column_stack((X, np.ones(len(X)))) # add a column of ones to X 
-    
+        
         if check_mask:
-            if CA_filename is not None:
+            if CA is not None:
                 if cells_we_want is None:
                     cells_we_want = np.array([np.all(rw > -9e9) and np.all(rw < 9e9) 
                                              for rw in np.column_stack((X, Y, CA))])
@@ -345,11 +346,11 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None,
     if x_find_mode == 'ensemble-single':
         nfs = [read_variable_from_netcdf(filename, find_no_files = True, *args, **kw)    
                for  filename in x_filename_list]
-        
+          
         nfs = np.array(nfs)
         nfs = np.unique(nfs[nfs >1])
         if len(nfs) == 0:
-            output = open_ensemble_member(None, Y, scalers, frac_random_sample)
+            output = open_ensemble_member(None, Y, scalers, frac_random_sample, CA = CA)
         else:
             if len(nfs) == 1:
                 nfs = int(nfs[0])
@@ -367,7 +368,7 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None,
                 out_file = dir_driving_data + 'ens_no-' + str(i) + '.npy'
                 if not os.path.isfile(out_file) or i == nfs_index[0]:
                     output = open_ensemble_member(i, Y, scalers, frac_random_sample,
-                                                  cells_we_want = cells_we_want)
+                                                  cells_we_want = cells_we_want, CA = CA)
                     if i == 0: cells_we_want = output[2]
                     np.save(out_file, output[1])
                 
@@ -381,5 +382,5 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None,
             output = tuple(y)         
         
     else:
-        output = open_ensemble_member(None, Y, scalers, frac_random_sample)
+        output = open_ensemble_member(None, Y, scalers, frac_random_sample, CA = CA)
     return output
