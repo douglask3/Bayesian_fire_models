@@ -19,3 +19,9 @@ cd make_inputs/isimip/
 sh get_files_from_isimip_repo.sh
 ```
 
+
+#### Near Real Time
+
+```
+lftp -e "mirror --only-newer SOW_FORCINGS data/data/driving_data2526/nrt_raw/Joeys/; quit" -u ecmwf_fire,password ftp.ecmwf.int
+```
