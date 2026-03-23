@@ -211,9 +211,6 @@ def compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, levels, cmap
     figure_filename = fig_dir + filename_out + '-evaluation'
     figure_dir =  combine_path_and_make_dir(figure_filename)
     
-    #Sim[0].data = 100 * Sim[0].data
-    #Obs.data = Obs.data * 100
-    
     plot_BayesModel_maps(Sim[0].collapsed('time', iris.analysis.MEAN), 
                          None, cmap, '', 
                          Obs.collapsed('time', iris.analysis.MEAN), 
@@ -354,9 +351,9 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
                                     subset_function = subset_function, 
                                     subset_function_args = subset_function_args)
     
-    Obs.data = Obs.data / 100.0
+    Obs.data = Obs.data 
     Obs.data[~np.reshape(lmask, Obs.shape)] = np.nan
-    if Y_scale is not None: Y_scale = Y_scale / 100.0
+    if Y_scale is not None: Y_scale = Y_scale 
     #plot_basic_parameter_info(trace, fig_dir)
     #paramter_map(trace, x_filen_list, fig_dir) 
     
