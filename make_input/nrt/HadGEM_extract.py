@@ -173,8 +173,6 @@ experiments = [['historicalNatExt', 'NAT'], ['historicalExt', 'ALL']]
     
 
 if __name__=="__main__":
-    
-
     temp_dir = "/data/scratch/douglas.kelley/Bayesian_fire_models/temp/hadgem_nrt2/"
     out_dir = "data/data/driving_data2425/nrt_attribution/"
     
