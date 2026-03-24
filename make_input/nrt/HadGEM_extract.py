@@ -64,7 +64,7 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
         print(member)
         completed_file = temp_dir + experiment[1] + variable + member + str(start_year) + shapefile_path.replace('/', '-') + '.txt'
         
-        if os.path.isfile(completed_file):# and False:
+        if os.path.isfile(completed_file) and False:
             return
         mfiles = [file for file in files if member in file]
         mfiles = [file for file in mfiles if int(file[-9:-5]) >= start_year]
@@ -124,15 +124,20 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
                        '/' + variable + '/' + member + '-' + str(start_year) + '-2.nc'
             #if os.path.isfile(out_file):
             #    return
+            print(region_name) 
             print(out_file) 
+            
             os.makedirs(os.path.dirname(out_file), exist_ok=True)
             
             cube.coord("longitude").circular = True
             cube = cube.intersection(longitude=(-180, 180))
+            
             if region_in_shapefile:
-                cube = contrain_to_sow_shapefile(cube, shapefile_path, region_name)
+                cube = contrain_to_sow_shapefile(cube, shapefile_path, 
+                                                 region_name, mask = False)
             else:
-                cube = contrain_to_shapefile(cube, shapefile_path)
+                cube = contrain_to_shapefile(cube, shapefile_path, mask = False)
+            
             iris.save(cube, out_file, local_keys=['calendar'])
         
         [process_region(cube, region_name) for region_name in region_names]
@@ -159,11 +164,11 @@ def process_variables(experiments, variables, *args, **kw):
 
 dir = "/data/users/opatt/HadGEM3-A-N216/"
 sub_dir = '/day/'  
-start_years = [2013, 2023]
+start_years = [2019, 2023]
 
-variables = ['pr', 'tasmax','hursmin', 'tas','sfcWind', 'uas', 'vas',  'mrros']
-#variables = ['tas','sfcWind', 'uas', 'vas',  'mrros']
-#variables = ['sfcWind', 'uas', 'vas',  'mrros']
+variables = ['pr', 'tasmax','hursmin', 'tas','sfcWind', 'uas', 'vas',  'mrros'][1:]
+variables = ['tas','sfcWind', 'uas', 'vas',  'mrros']
+variables = ['sfcWind', 'uas', 'vas',  'mrros']
 experiments = [['historicalNatExt', 'NAT'], ['historicalExt', 'ALL']]
     
 

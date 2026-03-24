@@ -291,24 +291,27 @@ def constrain_olson(cube, ecoregions):
     biomes = iris.load_cube('data/wwf_terr_ecos_0p5.nc')
     return constrain_cube_by_cube_and_numericIDs(cube, biomes, ecoregions)
 
-def contrain_to_shape(cube, geom, constrain = True):
+def contrain_to_shape(cube, geom, constrain = True, mask = True):
     if constrain: 
         minx, miny, maxx, maxy = geom.bounds
         cube = contrain_coords(cube, (minx, maxx, miny, maxy))
     
-    # Get cube latitude and longitude coordinates
-    lons, lats = np.meshgrid(cube.coord('longitude').points, cube.coord('latitude').points)
+    if mask:
+        # Get cube latitude and longitude coordinates
+        lons, lats = np.meshgrid(cube.coord('longitude').points, cube.coord('latitude').points)
+        
+        # Create a mask: True for points outside the continent
+        mask = ~contains(geom, lons, lats)
+        
+        # Handle multi-dimensional cubes
+        expanded_mask = np.broadcast_to(mask, cube.shape)
     
-    # Create a mask: True for points outside the continent
-    mask = ~contains(geom, lons, lats)
-    
-    # Handle multi-dimensional cubes
-    expanded_mask = np.broadcast_to(mask, cube.shape)
-
-    # Apply the mask to the cube data
-    masked_data = np.ma.masked_array(cube.data, mask=expanded_mask)
-    masked_cube = cube.copy(data=masked_data)
-    
+        # Apply the mask to the cube data
+        
+        masked_data = np.ma.masked_array(cube.data, mask=expanded_mask)
+        masked_cube = cube.copy(data=masked_data)
+    else:
+        masked_cube = cube
     return masked_cube
 
 def contrain_to_shapefile(cube, shp_filename, name = None, *args, **kw):
