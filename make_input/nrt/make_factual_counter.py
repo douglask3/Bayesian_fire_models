@@ -134,7 +134,7 @@ def make_variable_inputs(variable, transformation, inverse, datadir, regions, mo
             return cube
     
         era5 = open_data(obs_file)
-        for exp_file in exp_files:
+        for i, exp_file in enumerate(exp_files):
             #set_trace()
             ALL = open_data(exp_file[0])
             correct = open_data(exp_file[1])
@@ -143,22 +143,47 @@ def make_variable_inputs(variable, transformation, inverse, datadir, regions, mo
             correct = interplate_hadgem_to_era5_time(era5, correct)
             era5, correct = crop_hadgem_era5_spatial_grids(era5, correct)
             cf = era5.copy()
-            cf.data = cf.data + era5.data
+            cf.data += correct.data 
+            if inverse is not None:
+                cf.data = inverse(cf.data)
             factual_file = exp_file[0].replace(experiments[0], 'Factual')
             factual_file = factual_file.replace('HadGEM', 'ERA5')
+            factual_file = '/'.join(factual_file.split('/')[:-1]) + '.nc'
+            counter_file = exp_file[0].replace(experiments[0], 'Counter')
+            counter_file = '/'.join(counter_file.split('/')[:-1]) + '/ens-' + str(i)  + '.nc'
+            if os.path.isfile(factual_file):
+                os.makedirs(os.path.dirname(factual_file), exist_ok=True)
+                iris.save(era5, factual_file)
+
+            os.makedirs(os.path.dirname(counter_file), exist_ok=True)
+            iris.save(cf, counter_file)
             
-            set_trace()
         
     [make_region_input(region) for region in regions]
-    set_trace()
+    
 
 model_dir = "/hadgem_nrt/"
 obs_dataset = "/Era5_derived-era5-single-levels-daily-statistics/"
 
-variables = ['tasmax', 'tas', 'pr']
-transformations = [None, None, np.log]
-inverses = [None, None, np.exp]
+variables_obs = ['tasmax', 'tas', 'pr']
+variables_mod = ['tasmax', 'tas', 'pr']
+variables_out = ['tasmax', 'tax', 'pr']
 
+def log1(x):
+    return np.log(np.exp(x) -1)
+
+def exp1(y):
+    return np.log(np.exp(y) + 1)
+
+transformations = [None, None, log1]
+inverses = [None, None, exp1]
+
+def make_all_variable_inputs(variables_obs, variables_mod, variables_out, 
+                             transformations, inverses, *args, **kw):
+
+    for vobs, vmod, vout, tran, invr in zip(variable_obs, variable_mod, 
+                                            variable_out, transformations, inverses): 
+        make_variable_inputs(vobs, vmod, vout, tran, invr, *args, **kw)
 
 if __name__=="__main__":
     dir = "data/data/driving_data2526/nrt_raw/"
@@ -166,7 +191,8 @@ if __name__=="__main__":
     experiments = ["ALL", "NAT"]
     regions = ["Scottish Highlands"]
 
-    make_variable_inputs(variables[0], transformations[0], inverses[0], dir,
+    make_variable_inputs(variable_obs, variable_mod, variable_out, 
+    transformations, inverses, dir,
                          regions, model_dir, 
                          experiments, obs_dataset)
-
+"
