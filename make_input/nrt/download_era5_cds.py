@@ -222,18 +222,16 @@ variables = [["total_precipitation", "daily_mean", "pr"],
              ["2m_temperature", "daily_mean", "tas"],
              ["2m_dewpoint_temperature", "daily_minimum", "tasdew"],
              ["2m_temperature", "daily_minimum", "tasmin"],
-             #["volumetric_soil_water_layer_1", "daily_minimum", "mrsos"],
-             #["10m_u_component_of_wind", "daily_mean", "u-wind"],
-             #["10m_v_component_of_wind", "daily_mean", "v-wind"],
-             #["10m_wind_gust_since_previous_post_processing", "daily_maximum", "WindGust1"],
-             #["instantaneous_10m_wind_gust", "daily_maximum", "WindGust2"],
-             #["evaporation", "daily_mean", "evap"],
-             #["potential_evaporation", "daily_mean", "pevap"],
-             #["runoff", "daily_mean", "mrros"]
+             ["volumetric_soil_water_layer_1", "daily_minimum", "mrsos"],
+             ["10m_u_component_of_wind", "daily_mean", "u-wind"],
+             ["10m_v_component_of_wind", "daily_mean", "v-wind"],
+             ["10m_wind_gust_since_previous_post_processing", "daily_maximum", "WindGust1"],
+             ["instantaneous_10m_wind_gust", "daily_maximum", "WindGust2"],
+             ["evaporation", "daily_mean", "evap"],
+             ["potential_evaporation", "daily_mean", "pevap"],
+             ["runoff", "daily_mean", "mrros"]
             ]
 temp_dir_default = "/data/users/douglas.kelley/Bayesian_fire_models/data-cds/era5_nrt/"
-
-
 
 def run_for_report(shapefile_path, region_names,  out_dir, temp_dir = temp_dir_default):
     
