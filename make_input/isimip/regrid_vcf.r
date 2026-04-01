@@ -6,38 +6,49 @@ source("libs/add_date_time.r")
 
 path = 'data/data/vcf/VCF_MOD44B_250m/'
 temp_path = 'temp2/regrid_vcf/'
-output_path = 'data/data/driving_data2425/'
-output_path = 'data/data/driving_data_base/'
+output_path = 'data/data/driving_data2526/'
 newproj = "+proj=longlat +datum=WGS84"
 example_file = 'data/wwf_terr_ecos_0p5.nc'
 
 # for global set to NULL
-shape_dir = "data/BASE_shapes/"
-shape_names = list("Amazon", "Pantanal")
+shape_file = "data/data/driving_data2526/Focal_regions/SoW2526_Focal_MASTER_20260218.shp"
+shape_names = list("Northwest Iberia",
+                   "Midwestern Canadian Shield forests",
+                   "Chilean Temperate Forests and Matorral",
+                   "Scottish Highlands",
+                   "Southeast South Korea")
 
 # for global set to NULL
-hv = rbind(rep(7:14, each = 8), 7:14)
-
-area_names = c("Amazon", "Pantanal")
+hvs = list(cbind(c(17, 4), c(18, 4), 
+                 c(17, 5), c(18, 5)),
+           cbind(c(11, 2), c(12, 2), c(13, 2),
+                 c(11, 3), c(12, 3), c(13, 3), 
+                 c(11, 4), c(12, 4), c(13, 4)),          
+           cbind(c(10, 11), c(11, 11), c(12, 11),
+                 c(10, 12), c(11, 12), c(12, 12),
+                 c(10, 13), c(11, 13), c(12, 13),
+                 c(10, 14), c(11, 14), c(12, 14)),
+           cbind(c(17, 2), c(18, 3)),
+           cbind(c(27, 5), c(28, 5)))
 
 variables = c("tree" = 1, "nontree" = 2, "nonveg" = 3)
 correct_tov6 = FALSE
 
 ### open up global files
-
+if (is.null(shape_file)) shp = NULL  else shp = vect(shape_file)
 eg_raster = rast(example_file)
 eg_raster[!is.na(eg_raster)] = 1
 
-forRegion <- function(area_name, shape_name) {
-    if (is.null(shape_dir)) {
+forRegion <- function(shape_name, hv) {
+    area_name = gsub(' ', '_', shape_name, fixed = TRUE)
+    if (is.null(shp)) {
         shp_rgn = NULL
         extend = c(-180, 180, -90, 90)
     } else {
-        shp = vect(paste0(shape_dir, shape_name, '/', shape_name, '.shp'))
-        #shp_rgn = shp[grep(shape_name, shp$name, ignore.case = TRUE), ]  
-        extent = ext(shp)
+        shp_rgn = shp[grep(shape_name, shp$name, ignore.case = TRUE), ]  
+        extent = ext(shp_rgn)
         eg_raster = crop(eg_raster, extent)
-        eg_raster = mask(eg_raster, shp)
+        eg_raster = mask(eg_raster, shp_rgn)
     }
     
     extent = as.vector(extent)
@@ -242,4 +253,4 @@ forRegion <- function(area_name, shape_name) {
     }
 }
 
-mapply(forRegion, area_names, shape_names)
+mapply(forRegion, shape_names[-(1:3)], hvs[-(1:3)])
