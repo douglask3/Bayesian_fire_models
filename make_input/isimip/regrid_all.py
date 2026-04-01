@@ -25,6 +25,7 @@ def read_variable_from_netcdf_stack(filenames, example_cube = None,
     cubes = [read_variable_from_netcdf(file, *args, **kw) for file in filenames]
     cubes = [cube for cube in cubes if cube is not None]
     cubes = iris.cube.CubeList(cubes)
+    
     try:
         cubes = cubes.concatenate_cube()
     except:
@@ -48,7 +49,7 @@ def generate_temp_fname(string1, string2):
 def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
                                   subset_functions, subset_function_argss, region_name, 
                                   output_dir):
-    
+    print("\tStarting extraction to make experiment")
     def test_if_process(var, temp_file = None): 
         if temp_file is not None and os.path.isfile(temp_file) and grab_old_data:
             print("file found:" + temp_file)
@@ -129,13 +130,15 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
         
         save_ncdf(dat, name + '_jules-es')
         return dat
-
+    print("\tFinding Montly means for")
     for var, fun in zip(process_standard, process_function):
+        print("\t\t" + var)
         standard_Monthly_mean(var, fun) 
     
-    
+    print("\tprocessing variables")
     temp_file = generate_temp_fname(temp_out, 'cover')
     if test_if_process('cover', temp_file):
+        print("\t\tcover")
         tree_vars = ["bdldcd", "bdlevgtemp", "bdlevgtrop", "ndldcd", "ndlevg", \
                      "shrubdcd", "shrubevg"]
         herb_vars = ["c3crop", "c3grass", "c3pasture", "c4crop", "c4grass", "c4pasture"]
@@ -149,31 +152,31 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
         except:
             print("WARNING!: missing natural cover information")
     
-    try:
-        temp_file = generate_temp_fname(temp_out, 'crop')
-        if test_if_process('crop', temp_file)  : 
-            cal_cover(["c3crop", "c4crop"], 'crop')
-            open(temp_file, 'a').close()
-    except:
-            print("WARNING!: missing crop cover information")
+        try:
+            temp_file = generate_temp_fname(temp_out, 'crop')
+            if test_if_process('crop', temp_file)  : 
+                cal_cover(["c3crop", "c4crop"], 'crop')
+                open(temp_file, 'a').close()
+        except:
+                print("WARNING!: missing crop cover information")
     
 
-    try:
-        temp_file = generate_temp_fname(temp_out, 'pasture')
-        if test_if_process('pasture', temp_file): 
-            cal_cover(["c3pasture", "c4pasture"], 'pasture')
-            open(temp_file, 'a').close()
-    except:
-            print("WARNING!: missing pasture cover information")
+        try:
+            temp_file = generate_temp_fname(temp_out, 'pasture')
+            if test_if_process('pasture', temp_file): 
+                cal_cover(["c3pasture", "c4pasture"], 'pasture')
+                open(temp_file, 'a').close()
+        except:
+                print("WARNING!: missing pasture cover information")
 
-    try:
-        temp_file = generate_temp_fname(temp_out, 'urban')
-        if test_if_process('urban', temp_file): 
-            cal_cover(["urban"], 'urban')
-            open(temp_file, 'a').close()
-    except:
-            print("WARNING!: missing urban cover information")
-        
+        try:
+            temp_file = generate_temp_fname(temp_out, 'urban')
+            if test_if_process('urban', temp_file): 
+                cal_cover(["urban"], 'urban')
+                open(temp_file, 'a').close()
+        except:
+                print("WARNING!: missing urban cover information")
+    
     temp_file_tas = generate_temp_fname(temp_out, 'tas')
     temp_file_vpd = generate_temp_fname(temp_out, 'vpd')
     temp_file_lightn = generate_temp_fname(temp_out, 'lightn')
@@ -181,6 +184,7 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
    
     if test_if_process('tas', temp_file_tas) or test_if_process('vpd', temp_file_vpd)\
         or  test_if_process('lightn', temp_file_lightn):
+        print("\t\ttas")
         tas = open_variable('tas')
         tas_range = open_variable('tas_range')
         
@@ -188,6 +192,7 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
         tas_max.data  = tas_max.data + 0.5 * tas_range.data
 
         if test_if_process('vpd', temp_file_vpd):
+            print("\t\tvpd")
             def SVP(temp):
                 svp = temp.copy()
                 
@@ -215,6 +220,7 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
             open(temp_file_vpd, 'a').close()
             
         if test_if_process('lightn', temp_file_lightn):
+            print("\t\tlightn")
             full_lightn = monthly_mean(tas)
             lightn = read_variable_from_netcdf(lightn_file, subset_function = subset_functions, 
                                                subset_function_args = subset_function_argss)
@@ -239,6 +245,7 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
      
     temp_file = generate_temp_fname(temp_out, 'pr')       
     if test_if_process('pr', temp_file):
+        print("\t\tpr")
         pr = open_variable('pr', True)
         pr_mean = monthly_mean(sub_year_range(pr, year))
         
@@ -285,7 +292,7 @@ process_clim = ['vpd', 'tas', 'tas_range', 'pr', 'lightn']
 process_jules =['cover', 'crop', 'pasture', "urban"]
 
 example_cube = None
-grab_old_data = False
+grab_old_data = True
 
 
 
@@ -341,6 +348,7 @@ def for_region(subset_functions, subset_function_argss,
     dir_clim = "/data/users/douglas.kelley/isimip3a_driving/climate/atmosphere/counterclim/GSWP3-W5E5/gswp3-w5e5_counterclim_"
     dir_jules = dir_jules0 + "jules-es-vn6p3_gswp3-w5e5_counterclim_histsoc_default_pft-"  
     dataset_name = 'isimp3a/counterclim/GSWP3-W5E5'
+    print("Processing isimip3a")
     process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, years,
                            dataset_name, filenames, subset_functions, subset_function_argss,
                            region_name, output_dir,*args, **kw)  
@@ -378,9 +386,10 @@ def for_region(subset_functions, subset_function_argss,
     codes = ['r1i1p1f1', 'r1i1p1f1', 'r1i1p1f1', 'r1i1p1f1', 'r1i1p1f2']
     experiments = ['historical', 'ssp126', 'ssp370', 'ssp585']
     socs = ['histsoc', '2015soc-from-histsoc', '2015soc-from-histsoc', '2015soc-from-histsoc']
-    
+    print("Processing isimip3b")
     for experiment, soc, years in zip(experiments, socs, yearss):
         for model, code in zip(ismip3b_models, codes):
+            print(model + '\t' + experiment + '\t' + str(years[0][0]) + '-' + str(years[0][1]))
             dir_clim = '/data/exab/users/eleanor.burke/isimip3b/InputData/climate/atmosphere//' + \
                             experiment + '/'+  model + '/' + model.lower() + '_' + \
                             code + '_w5e5_' + \
