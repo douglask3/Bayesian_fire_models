@@ -3,15 +3,16 @@ import os.path
 import os
 
 import numpy as np
-
 import iris
 import iris.analysis
 import cftime
 import cf_units
+import sys
+sys.path.append('libs/')
+from constrain_cubes_standard import *
 
 import random
 import itertools
-
 
 import iris.quickplot as qplt
 import matplotlib.pyplot as plt
@@ -96,30 +97,32 @@ def crop_hadgem_era5_spatial_grids(era5, hadgem):
     )
     return era5_cropped, hadgem_interp_spatial
 
-def make_variable_inputs(variable, transformation, inverse, datadir, regions, model_dir, 
+def make_variable_inputs(variable_obs, variable_mod, variable_out, 
+                         scale_mod, transformation, inverse, 
+                         datadir, regions, model_dir, 
                          experiments, obs_dataset, hadgem_start_year = 2019, npairs = 10):
-
+    
     def make_region_input(region):
         
         def exp_files(experiment):
             dir = datadir + region.replace(' ', '_')  + '/'  + '/HadGEM_' + \
-                experiments[0] + '/' + variable + '/'
+                experiment + '/' + variable_mod + '/'
             
             files = [dir + file for file in  os.listdir(dir)]
             files = [file for file in files if str(hadgem_start_year) in file.split('/')[-1]]
             return files
         file_lists = [exp_files(experiment) for experiment in experiments]
         
-        all_pairs = list(itertools.product(file_lists[0], file_lists[1]))
+        all_pairs = list(itertools.product(sorted(file_lists[0]), sorted(file_lists[1])))
         # Sample N unique pairs with replacement
-        exp_files = set()
         
+        exp_files = []
+        random.seed(42)
         while len(exp_files) < npairs:
-            exp_files.add(random.choice(all_pairs))
-        #set_trace() 
-        exp_files = list(exp_files)
+            exp_files.append(random.choice(all_pairs))
         
-        dir = datadir + region.replace(' ', '_')  + '/'  + obs_dataset + '/' + variable + '/'
+        dir = datadir + region.replace(' ', '_')  + '/'  + obs_dataset + '/' + \
+                variable_obs + '/'
         files = os.listdir(dir)
         if len(files) > 1:
             years = np.array([int(file.split('_years')[1][0:4]) for file in files])
@@ -127,8 +130,10 @@ def make_variable_inputs(variable, transformation, inverse, datadir, regions, mo
         else:   
             files = files[0]
         obs_file = dir + files
-        def open_data(file):
+        def open_data(file, scale = 1):
             cube = iris.load_cube(file)
+            if not scale == 1:
+                cube.data *= scale
             if transformation is not None: 
                 cube.data = transformation(cube.data)
             return cube
@@ -136,22 +141,36 @@ def make_variable_inputs(variable, transformation, inverse, datadir, regions, mo
         era5 = open_data(obs_file)
         for i, exp_file in enumerate(exp_files):
             #set_trace()
-            ALL = open_data(exp_file[0])
-            correct = open_data(exp_file[1])
+            ALL = open_data(exp_file[0], scale_mod)
+            correct = open_data(exp_file[1], scale_mod)
+            [ALL, correct] = constrain_to_common_time([ALL, correct])
+            NAT = correct.copy()
             correct.data = correct.data - ALL.data
             era5, correct = cut_era5_hadgem_to_time(era5, correct)
             correct = interplate_hadgem_to_era5_time(era5, correct)
             era5, correct = crop_hadgem_era5_spatial_grids(era5, correct)
+            
             cf = era5.copy()
             cf.data += correct.data 
+            #if i == 1: 
+            #    set_trace()
             if inverse is not None:
+                era5.data = inverse(era5.data)
                 cf.data = inverse(cf.data)
+            
+            #out_dir = datadir.replace('nrt_raw', region.replace(' ', '_')) \
+            #            + 'nrt/EXPERIMENT/' + variable_out
+            #factual_file = out_dir.replace('EXPERIMENT', 'factual') + '.nc'
+            #
+            #counter_file = out_dir.replace('EXPERIMENT', 'counter') \
+            #                + '/ens-' + str(i)  + '.nc'   
+
             factual_file = exp_file[0].replace(experiments[0], 'Factual')
             factual_file = factual_file.replace('HadGEM', 'ERA5')
             factual_file = '/'.join(factual_file.split('/')[:-1]) + '.nc'
             counter_file = exp_file[0].replace(experiments[0], 'Counter')
             counter_file = '/'.join(counter_file.split('/')[:-1]) + '/ens-' + str(i)  + '.nc'
-            if os.path.isfile(factual_file):
+            if not os.path.isfile(factual_file):
                 os.makedirs(os.path.dirname(factual_file), exist_ok=True)
                 iris.save(era5, factual_file)
 
@@ -165,34 +184,42 @@ def make_variable_inputs(variable, transformation, inverse, datadir, regions, mo
 model_dir = "/hadgem_nrt/"
 obs_dataset = "/Era5_derived-era5-single-levels-daily-statistics/"
 
-variables_obs = ['tasmax', 'tas', 'pr']
-variables_mod = ['tasmax', 'tas', 'pr']
-variables_out = ['tasmax', 'tax', 'pr']
+
+variables_obs = ['hursmin', 'tasmax', 'tas', 'pr']
+variables_mod = ['hursmin', 'tasmax', 'tas', 'pr']
+variables_out = ['hursmin', 'tasmax', 'tax', 'pr']
+scales_mod = [1/100, 1, 1, 1]
 
 def log1(x):
-    return np.log(np.exp(x) -1)
+    return np.log(np.exp(x) - 0.9999999999)
 
 def exp1(y):
-    return np.log(np.exp(y) + 1)
+    return np.log(np.exp(y) + 0.9999999999)
 
-transformations = [None, None, log1]
-inverses = [None, None, exp1]
+def logit(x):
+    return np.log(x/(1-x))
 
-def make_all_variable_inputs(variables_obs, variables_mod, variables_out, 
+def logistic(y):
+    return 1/(1+np.exp(-y))
+
+transformations = [logit, None, None, log1]
+inverses = [logistic, None, None, exp1]
+
+def make_all_variable_inputs(variables_obs, variables_mod, variables_out, scales_mod,
                              transformations, inverses, *args, **kw):
 
-    for vobs, vmod, vout, tran, invr in zip(variable_obs, variable_mod, 
-                                            variable_out, transformations, inverses): 
-        make_variable_inputs(vobs, vmod, vout, tran, invr, *args, **kw)
+    for vobs, vmod, vout, sc, tran, invr in zip(variables_obs, variables_mod, variables_out, 
+                                            scales_mod, transformations, inverses): 
+        make_variable_inputs(vobs, vmod, vout, sc, tran, invr, *args, **kw)
 
 if __name__=="__main__":
     dir = "data/data/driving_data2526/nrt_raw/"
 
     experiments = ["ALL", "NAT"]
-    regions = ["Scottish Highlands"]
+    regions = ["Northwest Iberia"]
 
-    make_variable_inputs(variable_obs, variable_mod, variable_out, 
-    transformations, inverses, dir,
-                         regions, model_dir, 
-                         experiments, obs_dataset)
-"
+    make_all_variable_inputs(variables_obs, variables_mod, variables_out, 
+                             scales_mod, transformations, inverses, 
+                             dir, regions, model_dir, 
+                             experiments, obs_dataset)
+
