@@ -69,17 +69,22 @@ def make_extra_var(variables, FUN, out_name, region, dir, experiment, file):
     Path(out_filename).parent.mkdir(parents=True, exist_ok=True)
     iris.save(output, out_filename)
 
-
-if __name__=="__main__":
-    dir = "data/data/driving_data2526/nrt_raw/"
-    experiment = "Era5_derived-era5-single-levels-daily-statistics/"
-    regions = ["Scottish Highlands"]
-    files = ['_years2024-20262.nc']
-    variables = [["tasdew", "tasmax"], ["tasdew", "tas"]]
-    FUNs = [make_humid, make_humid]
-    output_names = ['hursmin', 'hurs']
-    
+def make_era5_extra_vars(dir, regions, 
+                         experiment = "Era5_derived-era5-single-levels-daily-statistics/",
+                         files = ['_years2024-20262.nc'],
+                         variables = [["tasdew", "tasmax"], ["tasdew", "tas"]],
+                         FUNs = [make_humid, make_humid],
+                         output_names = ['hursmin', 'hurs']):
     for region in regions:
         for file in files:
             for vars, FUN, outname in zip(variables, FUNs, output_names):
                 make_extra_var(vars, FUN, outname, region, dir, experiment, file)
+
+if __name__=="__main__":
+    dir = "data/data/driving_data2526/nrt_raw/"
+    
+    regions = ["Scottish Highlands"]
+    
+    make_era5_extra_vars(dir, regions)
+    
+    
