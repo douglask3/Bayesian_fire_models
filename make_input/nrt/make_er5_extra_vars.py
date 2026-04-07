@@ -30,25 +30,6 @@ def make_humid(inputs):
     return iris.cube.CubeList(out).concatenate_cube()
     
 
-def constrain_to_common_time(cubes):
-    # Extract valid_time points from each cube
-    time_arrays = [cube.coord('valid_time').points for cube in cubes]
-    
-    # Find common times (intersection across all cubes)
-    common_times = set(time_arrays[0])
-    for t in time_arrays[1:]:
-        common_times = common_times.intersection(t)
-    
-    # Convert back to sorted numpy array
-    common_times = np.array(sorted(common_times))
-    constrained_cubes = []
-
-    for cube in cubes:
-        times = cube.coord('valid_time').points
-        mask = np.isin(times, common_times)
-        constrained_cubes.append(cube[mask])
-    return constrained_cubes
-    
 def make_extra_var(variables, FUN, out_name, region, dir, experiment, file):
     def open_var(var):
         filename = dir + region.replace(' ', '_')  + '/'  + experiment + '/' + var + '/' + file
@@ -83,7 +64,7 @@ def make_era5_extra_vars(dir, regions,
 if __name__=="__main__":
     dir = "data/data/driving_data2526/nrt_raw/"
     
-    regions = ["Scottish Highlands"]
+    regions = ["Northwest Iberia", "Scottish Highlands"]
     
     make_era5_extra_vars(dir, regions)
     

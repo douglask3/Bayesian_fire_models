@@ -445,4 +445,23 @@ def constrain_BR_biomes(cube, biome_ID):
     return constrain_cube_by_cube_and_numericIDs (cube, mask, biome_ID)
 
 
+def constrain_to_common_time(cubes):
+    time_name = cubes[0].coords()[0].name()
+    # Extract valid_time points from each cube
+    time_arrays = [cube.coord(time_name).points for cube in cubes]
+    
+    # Find common times (intersection across all cubes)
+    common_times = set(time_arrays[0])
+    for t in time_arrays[1:]:
+        common_times = common_times.intersection(t)
+    
+    # Convert back to sorted numpy array
+    common_times = np.array(sorted(common_times))
+    constrained_cubes = []
 
+    for cube in cubes:
+        times = cube.coord(time_name).points
+        mask = np.isin(times, common_times)
+        constrained_cubes.append(cube[mask])
+    return constrained_cubes
+    
