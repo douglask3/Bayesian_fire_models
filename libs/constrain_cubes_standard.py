@@ -146,7 +146,7 @@ def make_time_series(cube, annual_aggregate = None, year_range = None):
         
     return collapsed_cube
 
-def sub_year_range(cube, year_range):
+def sub_year_range(cube, year_range, time_coord_name = None):
     """Selects months of a year from data   
     Arguments:
         cube -- iris cube with time array with year information.
@@ -154,10 +154,12 @@ def sub_year_range(cube, year_range):
     Returns:
         cube of just years between to years provided.
     """
+    if time_coord_name is None:
+        time_name = cube.coords()[0].name()
     if len(year_range) == 1: year_range = [year_range[0], year_range[0]]
      
     try:
-        icc.add_year(cube, 'time')
+        icc.add_year(cube, time_coord_name)
     except:
         pass
     
@@ -292,6 +294,7 @@ def constrain_olson(cube, ecoregions):
     return constrain_cube_by_cube_and_numericIDs(cube, biomes, ecoregions)
 
 def contrain_to_shape(cube, geom, constrain = True, mask = True):
+    
     if constrain: 
         minx, miny, maxx, maxy = geom.bounds
         cube = contrain_coords(cube, (minx, maxx, miny, maxy))
@@ -331,7 +334,9 @@ def contrain_to_shapefile(cube, shp_filename, name = None, *args, **kw):
     return contrain_to_shape(cube, geom, *args, **kw)
 
 def contrain_to_sow_shapefile(cube, shp_filename, name, *args, **kw):
+    
     shp = gp.read_file(shp_filename)
+    
     try:
         geom = shp[shp['name'].str.contains(name, case=False, na=False)].geometry.unary_union
     except:
