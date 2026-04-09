@@ -67,8 +67,8 @@ def download_era5(variables, years = [1940], months = range(13),
                   dataset = "derived-era5-single-levels-daily-statistics", 
                   out_dir = 'data/',
                   temp_dir = 'temp/',
-                  shapefile_path = None, region_in_shapefile = False):
-   
+                  shapefile_path = None, region_in_shapefile = True):
+    
     if shapefile_path is not None: 
         shapes = gpd.read_file(shapefile_path)
         shapes["geometry"] = shapes["geometry"].buffer(0)
@@ -187,6 +187,7 @@ def download_era5(variables, years = [1940], months = range(13),
                 out = crop_cube(file)
             else:
                 out = iris.load_cube(file)
+            
             return out     
             
         
@@ -204,7 +205,6 @@ def download_era5(variables, years = [1940], months = range(13),
         except:
             set_trace()
         iris.save(cubes, out_file)
-        
         return out_file
         
     for var in variables:
@@ -212,7 +212,7 @@ def download_era5(variables, years = [1940], months = range(13),
 
 yr_now = DT.now().year
 yearss = [range(yr_now-2, yr_now + 1),  range(2010, yr_now + 1), range(2002, yr_now + 1)] #range(2020, yr_now + 1),
-mnth_now = DT.now().month - 1
+mnth_now = DT.now().month - 2
 
 area = [90, -180, -60, 180]
 dataset = "derived-era5-single-levels-daily-statistics"
