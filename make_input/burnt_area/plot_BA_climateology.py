@@ -54,7 +54,7 @@ def open_netcdf_and_find_clim(filename):
     anomaly.data[0:12] = anomaly.data[0:12] - climatology.data
     anomaly.data[12:24] = anomaly.data[12:24] - climatology.data
     
-    return anomaly[6:], climatology
+    return anomaly[6:], climatology, last_year_cube
 
 def load_shapefile(shapefile_path):
     # Load the shapefile
@@ -170,11 +170,15 @@ def plot_all_climatology(climatology, #title="Annual Mean Burnt Area per Month",
     plt.close()
 
 def plot_region(filename, shapefile_path, cmap, dcmap, levels, dlevels, *args, **kw):
-    anomaly, climatology = open_netcdf_and_find_clim(filename)
+    anomaly, climatology, last_year = open_netcdf_and_find_clim(filename)
     shapefile_geometries = load_shapefile(shapefile_path)
     
     custom_cmap = LinearSegmentedColormap.from_list("cmap_interp", cmap, N=len(levels))
     plot_all_climatology(climatology, cmap = custom_cmap, c_bins = levels,
+                        extend='max', *args, **kw)
+
+    
+    plot_all_climatology(last_year[12:], "burnt_area_LYy", cmap = custom_cmap, c_bins = levels,
                         extend='max', *args, **kw)
 
     custom_cmap = LinearSegmentedColormap.from_list("dcmap_interp", dcmap[1:-1], 
@@ -209,8 +213,9 @@ if __name__=="__main__":
     for i in range(len(Region_dirs)):
         filename = "data/data/driving_data2425/" + Region_dirs[i] +"/burnt_area.nc"
         filename = "data/data/driving_data_base/" + Region_dirs[i] +"/burnt_area.nc"
-
-    
+        filename = "data/data/driving_data_base/" + Region_dirs[i] + "/nrt/era5_monthly/Fire_fraction.nc"
+        #set_trace()
+     
         levels = [0, 0.1, 0.5, 1, 2, 5, 10]
         dlevels = [-10, -5, -2, -1, -0.5, 0, 0.5, 1, 2, 5, 10]
         
