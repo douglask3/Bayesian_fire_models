@@ -5,6 +5,7 @@ sys.path.append('make_inputs/nrt/')
 
 from download_era5_cds import *
 from HadGEM_extract import *
+from make_er5_extra_vars import *
 
 
 if __name__=="__main__":  
@@ -18,7 +19,7 @@ if __name__=="__main__":
                     "Southeast South Korea"
                     ]
     run_for_report(shapefile_path, region_names,  out_dir)
-    
+    make_era5_extra_vars(data_dir + '/nrt_raw', region_names)
     temp_dir = data_dir + "/hadgem_nrt2/"
 
     for start_year in start_years:
