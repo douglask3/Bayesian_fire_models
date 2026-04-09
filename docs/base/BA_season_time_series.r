@@ -1,4 +1,5 @@
 graphics.off()
+library(terra)
 
 cols = c("#cfe9ff", "#fc6", "#f68373", "#c7384e", "#862976")
 cols = c("#7a44ff", "#0096a1", "#e98400", "#b50000")
@@ -9,7 +10,7 @@ dir = 'data/data/driving_data_base/'
 open_BA_dat <- function(region, q95) {
     dir = paste0(dir, region, '/nrt/era5_monthly/')
     ba_file = list.files(dir, full.names=TRUE)
-    ba_file = ba_file[grepl('Fire_f', ba_file)][1]
+    ba_file = ba_file[grepl('Fire_f', ba_file)][2]
     
     dat = rast(ba_file)
     
@@ -41,6 +42,7 @@ open_BA_dat <- function(region, q95) {
     time = time(dat)
     cBA = sapply(1:12, function(mn) mean(BA[seq(mn, length(BA), by = 12)]))
     cBA = rep(cBA, length.out = length(BA))
+    
     return(list(time, BA, cBA))
 }
 
@@ -148,21 +150,21 @@ plot_BA_type <- function(region, q95 = FALSE, xtitle = '', ytitle = '') {
     return(list(cols, years))
 }
 
-png("figs/BA_Base_TS.png", height = 9, width = 6, units = 'in', res = 300)
-layout(rbind(t(matrix(1:4, ncol = 2)), 5))
+png("figs/BA_Base_TS.png", height = 6, width = 6, units = 'in', res = 300)
+layout(rbind(t(matrix(1:2, ncol = 1)), 3))
 par( mar = rep(0.9, 4), oma = c(1.8, 1.2, 1.8, 1.2))
 dat = read.csv('data/data/driving_data_base/Amazon/burnt_area_data.csv', 
                stringsAsFactors = FALSE)
-plot_BA_type('Amazon', FALSE, 'Amazonia', 'All region')
+plot_BA_type('Amazon', FALSE, '', 'Amazonia')#'All region')
 
 #plot_BA_type('p95_burnt_area', 'p95_burnt_area_climateology', '', 'Sub-regional extremes')
-plot_BA_type('Amazon', TRUE, '', 'Sub-regional extremes')
-dat = read.csv('data/data/driving_data_base/Pantanal/burnt_area_data.csv', 
-                stringsAsFactors = FALSE)
+#plot_BA_type('Amazon', TRUE, '', 'Sub-regional extremes')
+#dat = read.csv('data/data/driving_data_base/Pantanal/burnt_area_data.csv', 
+#                stringsAsFactors = FALSE)
 #plot_BA_type('mean_burnt_area', 'mean_burnt_area_climateology', 'Pantanal', '')
-plot_BA_type('Pantanal', FALSE, 'Pantanal', '')
+cols = plot_BA_type('Pantanal', FALSE, '', 'Pantanal')
 #cols = plot_BA_type('p95_burnt_area', 'p95_burnt_area_climateology', '', '')
-cols = plot_BA_type('Pantanal', TRUE, '', '')
+#cols = plot_BA_type('Pantanal', TRUE, '', '')
 years = cols[[2]]; cols = cols[[1]]
 plot.new()
 legs = unique(years)
@@ -174,5 +176,5 @@ legs = c(legs, 'Climateology')
 lty = c(lty, 1)
 lwd = c(lwd, 3)
 cols = c(cols, 'black')
-legend('top',legs , ncol = 5, col = cols, lty = lty, lwd = lwd)
+legend('top',legs , ncol = 3, col = cols, lty = lty, lwd = lwd)
 dev.off()
