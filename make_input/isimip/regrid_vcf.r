@@ -253,4 +253,4 @@ forRegion <- function(shape_name, hv) {
     }
 }
 
-mapply(forRegion, shape_names[-(1:3)], hvs[-(1:3)])
+mapply(forRegion, shape_names, hvs)
