@@ -166,9 +166,9 @@ dir = "/data/users/opatt/HadGEM3-A-N216/"
 sub_dir = '/day/'  
 start_years = [2019, 2023]
 
-variables = ['pr', 'tasmax','hursmin', 'tas','sfcWind', 'uas', 'vas',  'mrros'][1:]
-variables = ['tas','sfcWind', 'uas', 'vas',  'mrros']
-variables = ['sfcWind', 'uas', 'vas',  'mrros']
+variables = ['pr', 'tasmax','hursmin', 'tas','sfcWind', 'uas', 'vas',  'mrros']
+#variables = ['tas','sfcWind', 'uas', 'vas',  'mrros']
+#variables = ['sfcWind', 'uas', 'vas',  'mrros']
 experiments = [['historicalNatExt', 'NAT'], ['historicalExt', 'ALL']]
     
 
