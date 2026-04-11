@@ -75,13 +75,14 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
             set_trace()
         
         cube = iris.load(mfiles)
+        
         #except:
         #    set_trace()
         for cb in cube:
             cb.coord('time').bounds = None
         for i in range(len(cube)):
             cube[i].coord('time').bounds = None
-            cube[i] = cube[i][0:90]
+            #cube[i] = cube[i][0:90]
         iris.util.equalise_attributes(cube)
         iris.util.unify_time_units(cube)
         all_slices = []
@@ -118,6 +119,20 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
         else:
             cube = cube[0]
         print("yay")
+        
+
+        icc.add_year(cube, 'time')
+        icc.add_day_of_year(cube, 'time')
+        cyrs = cube.coord('year').points
+        cdys = cube.coord('day_of_year').points
+        def test_year(year):
+            days = cdys[cyrs == year]
+            missing = np.setdiff1d(np.arange(1, 361), days)
+            if len(missing) > 0 and year < 2025:
+                set_trace()
+
+        #[test_year(year) for year in np.unique(cyrs)]
+
         def process_region(cube, region_name):
             out_file = out_dir + '/' + region_name.replace(' ', '_') + \
                        '/HadGEM_' + experiment[1] + \
@@ -127,6 +142,8 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
             print(region_name) 
             print(out_file) 
             
+            
+
             os.makedirs(os.path.dirname(out_file), exist_ok=True)
             
             cube.coord("longitude").circular = True
