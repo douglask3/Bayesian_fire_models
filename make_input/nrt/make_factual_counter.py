@@ -97,6 +97,26 @@ def crop_hadgem_era5_spatial_grids(era5, hadgem):
     )
     return era5_cropped, hadgem_interp_spatial
 
+#[exp_file[2]]
+def grad_year_info_hadgem(ALL, NAT, year):
+    
+    def syr(cube, yr):
+        return sub_year_range(cube.copy(), [yr])
+    sALL = syr(ALL, year)
+    sNAT = syr(NAT, year)
+    if  sALL.shape[0] < 360 or sNAT.shape[0] <360:
+
+        #icc.add_day_of_year(scube)
+        set_trace() 
+        try:
+            sALL = syr(ALL, year + 1)
+            sNAT = syr(NAT, year + 1)
+        except:
+            sALL = syr(ALL, year - 1)
+            sNAT = syr(NAT, year - 1)
+        
+    return sALL, sNAT        
+
 def make_variable_inputs(variable_obs, variable_mod, variable_out, 
                          scale_mod, transformation, inverse, 
                          datadir, regions, model_dir, 
@@ -113,23 +133,26 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
             return files
         file_lists = [exp_files(experiment) for experiment in experiments]
         
-        all_pairs = list(itertools.product(sorted(file_lists[0]), sorted(file_lists[1])))
+        all_pairs = list(itertools.product(file_lists[0], file_lists[1]))
         # Sample N unique pairs with replacement
         
         exp_files = []
         random.seed(42)
         while len(exp_files) < npairs:
-            exp_files.append(random.choice(all_pairs))
+            exp_files.append(random.choice(all_pairs) + \
+                            (random.choice([2020, 2021, 2022, 2023,2024]),))
         
         dir = datadir + region.replace(' ', '_')  + '/'  + obs_dataset + '/' + \
                 variable_obs + '/'
         files = os.listdir(dir)
+        
         if len(files) > 1:
             years = np.array([int(file.split('_years')[1][0:4]) for file in files])
             files = files[np.argmin(years)]#set_trace()
         else:   
             files = files[0]
         obs_file = dir + files
+        
         def open_data(file, scale = 1):
             cube = iris.load_cube(file)
             if not scale == 1:
@@ -140,22 +163,25 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
     
         era5 = open_data(obs_file)
         for i, exp_file in enumerate(exp_files):
-            #set_trace()
             ALL = open_data(exp_file[0], scale_mod)
             correct = open_data(exp_file[1], scale_mod)
             [ALL, correct] = constrain_to_common_time([ALL, correct])
+            ALL, correct = grad_year_info_hadgem(ALL, correct, 2024)#exp_file[2])    
             NAT = correct.copy()
             correct.data = correct.data - ALL.data
-            era5, correct = cut_era5_hadgem_to_time(era5, correct)
-            correct = interplate_hadgem_to_era5_time(era5, correct)
-            era5, correct = crop_hadgem_era5_spatial_grids(era5, correct)
             
-            cf = era5.copy()
+            cf_blank, correct = cut_era5_hadgem_to_time(era5, correct)
+            
+            correct = interplate_hadgem_to_era5_time(cf_blank, correct)
+            cf_blank, correct = crop_hadgem_era5_spatial_grids(cf_blank, correct)
+            era5_f, nn = crop_hadgem_era5_spatial_grids(era5, correct)
+            
+            cf = cf_blank.copy()
             cf.data += correct.data 
             #if i == 1: 
             #    set_trace()
             if inverse is not None:
-                era5.data = inverse(era5.data)
+                era5_f.data = inverse(era5_f.data)
                 cf.data = inverse(cf.data)
             
             #out_dir = datadir.replace('nrt_raw', region.replace(' ', '_')) \
@@ -172,7 +198,7 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
             counter_file = '/'.join(counter_file.split('/')[:-1]) + '/ens-' + str(i)  + '.nc'
             if not os.path.isfile(factual_file):
                 os.makedirs(os.path.dirname(factual_file), exist_ok=True)
-                iris.save(era5, factual_file)
+                iris.save(era5_f, factual_file)
 
             os.makedirs(os.path.dirname(counter_file), exist_ok=True)
             iris.save(cf, counter_file)
