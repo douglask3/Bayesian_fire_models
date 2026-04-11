@@ -168,8 +168,6 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
         except:
             pass 
     [process_memember_try(member) for member in ensembles]
-    
-
 
 def process_variables(experiments, variables, *args, **kw):
     for experiment in experiments:
