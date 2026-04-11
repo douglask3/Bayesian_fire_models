@@ -28,8 +28,14 @@ def make_humid(inputs):
         
     out = [humid(i, min(50, inputs[0].shape[0]-i)) for i in range(0, inputs[0].shape[0], 50)]
     return iris.cube.CubeList(out).concatenate_cube()
-    
 
+
+def make_wind(inputs):
+    out = inputs[0].copy()
+    out.data = np.sqrt(inputs[0].data**2 + inputs[1].data**2) 
+    out.rename('wind speed')
+    return out
+    
 def make_extra_var(variables, FUN, out_name, region, dir, experiment, file):
     def open_var(var):
         filename = dir + region.replace(' ', '_')  + '/'  + experiment + '/' + var + '/' + file
@@ -52,10 +58,11 @@ def make_extra_var(variables, FUN, out_name, region, dir, experiment, file):
 
 def make_era5_extra_vars(dir, regions, 
                          experiment = "Era5_derived-era5-single-levels-daily-statistics/",
-                         files = ['_years2024-20262.nc'],
-                         variables = [["tasdew", "tasmax"], ["tasdew", "tas"]],
-                         FUNs = [make_humid, make_humid],
-                         output_names = ['hursmin', 'hurs']):
+                         files = ['_years2002-20262.nc'],
+                         variables = [["u-wind", "v-wind"], 
+                                      ["tasdew", "tasmax"], ["tasdew", "tas"]],
+                         FUNs = [make_wind, make_humid, make_humid],
+                         output_names = ['wind', 'hursmin', 'hurs']):
     for region in regions:
         for file in files:
             for vars, FUN, outname in zip(variables, FUNs, output_names):
