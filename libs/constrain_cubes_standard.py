@@ -155,7 +155,8 @@ def sub_year_range(cube, year_range, time_coord_name = None):
         cube of just years between to years provided.
     """
     if time_coord_name is None:
-        time_name = cube.coords()[0].name()
+        time_coord_name = cube.coords()[0].name()
+    
     if len(year_range) == 1: year_range = [year_range[0], year_range[0]]
      
     try:
