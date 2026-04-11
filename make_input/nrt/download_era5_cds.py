@@ -211,7 +211,7 @@ def download_era5(variables, years = [1940], months = range(13),
         process_var(var[0], var[1], var[2])
 
 yr_now = DT.now().year
-yearss = [range(yr_now-2, yr_now + 1),  range(2010, yr_now + 1), range(2002, yr_now + 1)] #range(2020, yr_now + 1),
+yearss = [range(2002, yr_now + 1)] #range(2020, yr_now + 1), range(yr_now-2, yr_now + 1),  range(2010, yr_now + 1),
 mnth_now = DT.now().month - 2
 
 area = [90, -180, -60, 180]
@@ -234,7 +234,7 @@ variables = [["total_precipitation", "daily_mean", "pr"],
 temp_dir_default = "/data/users/douglas.kelley/Bayesian_fire_models/data-cds/era5_nrt/"
 
 def run_for_report(shapefile_path, region_names,  out_dir, temp_dir = temp_dir_default):
-    
+
     for region_name in region_names:
         for years in yearss:
             download_era5(variables, years, months = range(12), 
@@ -244,6 +244,7 @@ def run_for_report(shapefile_path, region_names,  out_dir, temp_dir = temp_dir_d
                           out_dir = out_dir, 
                           temp_dir = temp_dir,
                           shapefile_path = shapefile_path)
+    '''    
     for years in yearss:
         download_era5(variables, years, months = range(12), 
                           yr_now = yr_now, mnth_now = mnth_now,
@@ -251,6 +252,7 @@ def run_for_report(shapefile_path, region_names,  out_dir, temp_dir = temp_dir_d
                           dataset = dataset, 
                           out_dir = out_dir, 
                           temp_dir = temp_dir)    
+    '''
 
 if __name__=="__main__":    
     data_dir = "data/data/driving_data2425"
