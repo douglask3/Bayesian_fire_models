@@ -22,6 +22,10 @@ from fix_joeys_weird_time_coords import *
 import cf_units
 import datetime
 from iris.coords import DimCoord
+from datetime import date
+
+import iris.quickplot as qplt
+import matplotlib.pyplot as plt
 
 def regrid_to_eg_cube(cube, eg_cube):
     if cube.ndim == 3:
@@ -38,13 +42,17 @@ def regrid_to_eg_cube(cube, eg_cube):
         set_trace()
     cube.coord(lat_name).rename(eg_cube.coords()[0].name())
     cube.coord(lon_name).rename(eg_cube.coords()[1].name())
-
-    return cube.regrid(eg_cube, iris.analysis.Linear())
     
-def combine_2d_cubes(cubes, files, time_unit):
-    years = [int(file[-10:-6]) for file in files]
-    months = [int(file[-5:-3]) for file in files]
+    cube.coord('latitude').units = eg_cube.coord('latitude').units
+    cube.coord('longitude').units = eg_cube.coord('longitude').units
+    try:
+        out =  cube.regrid(eg_cube, iris.analysis.Linear())
+    except:
+        set_trace()
+    return out
 
+
+def add_time_based_on_mnth_year(cubes, years, months, time_unit):
     unit = cf_units.Unit(time_unit, calendar='gregorian')
     
     datetimes = [
@@ -54,8 +62,17 @@ def combine_2d_cubes(cubes, files, time_unit):
     time_points = unit.date2num(datetimes)
 
     new_cubes = []
-    for cube, t in zip(cubes, time_points):
+    
+    #for cube, t in zip(cubes, time_points):
+    try:
+        ncubes = cubes.shape[0]
+    except:
+        ncubes = len(cubes)
         
+    for i in range(ncubes):
+        cube = cubes[i]
+        t = time_points[i]
+        #set_trace()
        # Fix latitude
         if cube.coords('lat'):
             coord = cube.coord('lat')
@@ -77,12 +94,47 @@ def combine_2d_cubes(cubes, files, time_unit):
             standard_name='time',
             units=unit
         )
+        #cube0 = cube.copy()
+        try:
+            cube.remove_coord('time')
+        except:
+            pass
         cube.add_aux_coord(time_coord)
         cube = iris.util.new_axis(cube, 'time')  # promote to dimension
+        
         new_cubes.append(cube)
     iris.util.equalise_attributes(new_cubes)
     
     return iris.cube.CubeList(new_cubes).concatenate_cube()
+    
+def combine_2d_cubes(cubes, files, time_unit):
+    years = [int(file[-10:-6]) for file in files]
+    months = [int(file[-5:-3]) for file in files]
+    return add_time_based_on_mnth_year(cubes, years, months, time_unit)
+        
+def combine_3d_cubes_blank_time(cube, file, time_unit):
+    years = np.tile(int(file[-7:-3]), cube.shape[0])
+    months = np.arange(1, cube.shape[0]+1, dtype=int)
+    
+    return add_time_based_on_mnth_year (cube, years, months, time_unit)
+
+
+def set_calendar(cube, target_time_unit):
+    try:
+        cube.coord('time').convert_units(target_time_unit)
+    except:
+        time_coord = cube.coord('time')
+        
+        datetimes = time_coord.units.num2date(time_coord.points)
+        
+        new_unit = cf_units.Unit('hours since 2003-01-15 00:00:00',
+                                 calendar='proleptic_gregorian')
+    
+        time_coord.points = new_unit.date2num(datetimes)
+        time_coord.units = new_unit
+        cube.coord('time').convert_units(target_time_unit)
+    return cube
+    
 
 def combine_3d_cubes(cubes, region, files):
     vname = cubes[0].name()
@@ -103,9 +155,13 @@ def combine_3d_cubes(cubes, region, files):
         try:
             cube.coord('time').convert_units(target_time_unit)
         except:
-            cube = fix_joeys_weird_time_coords(cube, file)
+            try:
+                cube = fix_joeys_weird_time_coords(cube, file)
+            except:
+                cube = combine_3d_cubes_blank_time(cube, file, target_time_unit)
+                
+        set_calendar(cube, target_time_unit)
         
-        cube.coord('time').convert_units(target_time_unit)
         if file == files[0]:
             template_coord = cube.coord('time')
         else:
@@ -117,7 +173,10 @@ def combine_3d_cubes(cubes, region, files):
             target_coord.attributes = template_coord.attributes.copy()
             target_coord.coord_system = template_coord.coord_system
         cube.coord('time').points = cube.coord('time').points.astype('float64')
-        
+        try:
+            cube.units = new_cubes[0].units
+        except:
+            pass
         new_cubes.append(cube)
             
     cubes = iris.cube.CubeList(new_cubes)
@@ -136,6 +195,9 @@ def combine_3d_cubes(cubes, region, files):
         
             final_cube = new_cubes.concatenate_cube() 
         except:
+            #try:
+            #    final_cube = new_cubes.concatenate()
+                
             set_trace()
             cube = cubes[-1]
             time_coord = cube.coord('time')
@@ -150,7 +212,8 @@ def make_input(variable, region, dir, eg_file, start_year = 2002):
     region = region.replace(' ', '_')
     eg_file = eg_file.replace('REGION_NAME', region)
     eg_cube = iris.load_cube(eg_file)
-    target_time_unit = eg_cube.coord('valid_time').units
+    
+    target_time_unit = eg_cube.coord('time').units
     eg_cube = eg_cube[0]
 
     if f_dir[0] == '.' or f_dir[0] == '~' or f_dir[0] == '/':
@@ -179,13 +242,21 @@ def make_input(variable, region, dir, eg_file, start_year = 2002):
         icc.add_month(cube, time_coord)
     except:
         pass
+   
+    year_today = date.today().year
+    cube = sub_year_range(cube, [start_year, year_today])
     
-    cube = sub_year_range(cube, [start_year, 9999])
     cube = cube.aggregated_by(['year', 'month'], FUN)
+    icc.add_month_number(cube, 'time')
+    index = np.any(np.array([cube.coord('month_number').points < 3,
+                             cube.coord('year').points < year_today]), 
+                   axis = 0)
+    cube = cube[index]
+
     cube = regrid_to_eg_cube(cube, eg_cube)
+
     out_file = dir.replace('nrt_raw', region) + '/nrt/factual/' + out_name + '.nc'
-    os.makedirs(os.path.dirname(out_file), exist_ok=True)
-    
+    os.makedirs(os.path.dirname(out_file), exist_ok=True)    
     iris.save(cube, out_file)
     
 if __name__=="__main__":
@@ -199,20 +270,30 @@ if __name__=="__main__":
 
     Joeys_data = "/data/users/douglas.kelley/Bayesian_fire_models/Joeys/SOW_FORCINGS/"
                 #outname, inname, factual dir, count dir
-    variables = [#["DFMC_Wood", "FUEL/DFMC_timemean_*.nc", Joeys_data, None, "DFMC_Wood",    
-                 # iris.analysis.MEAN],
-                 #["DFMC_Foliage", "FUEL/DFMC_timemean_*.nc", Joeys_data, None, "DFMC_Foliage",  
-                 # iris.analysis.MEAN],
+    variables = [["DFMC_Wood", "FUEL/DFMC_timemean_*.nc", Joeys_data, None, "DFMC_Wood",    
+                  iris.analysis.MEAN],
+                 ["DFMC_Foliage", "FUEL/DFMC_timemean_*.nc", Joeys_data, None, "DFMC_Foliage",  
+                  iris.analysis.MEAN],
+                 ["LAI", "VEG/month_lai_*.nc", Joeys_data, None, None, 
+                  iris.analysis.MEAN],
+                 ["lle_pred", "FUEL/Fuel_pred_clip_*.nc", Joeys_data, None, "lle_pred", 
+                  iris.analysis.MEAN],
+                 ["lwo_pred", "FUEL/Fuel_pred_clip_*.nc", Joeys_data, None, "lwo_pred", 
+                  iris.analysis.MEAN],
+                 ["dfo_pred,", "FUEL/Fuel_pred_clip_*.nc", Joeys_data, None, "dfo_pred,", 
+                  iris.analysis.MEAN],
+                 ["dwo_pred,", "FUEL/Fuel_pred_clip_*.nc", Joeys_data, None, "dwo_pred,", 
+                  iris.analysis.MEAN],
                  #["LAI_high", "VEG/month_laih*_C.nc", Joeys_data, None, None, 
                  # iris.analysis.MEAN],
-                ["LAI_lowh", "VEG/month_lail*_C.nc", Joeys_data, None, None, 
-                  iris.analysis.MEAN],
-                ["cvh", "VEG/cvh*_BA.nc", Joeys_data, None, None, 
-                  iris.analysis.MEAN],
-                ["cvl", "VEG/cvl*_BA.nc", Joeys_data, None, None, 
-                  iris.analysis.MEAN],
-                ["tvl", "VEG/tvl*_BA.nc", Joeys_data, None, None, 
-                  iris.analysis.MEAN],
+                 #["LAI_lowh", "VEG/month_lail*_C.nc", Joeys_data, None, None, 
+                 # iris.analysis.MEAN],
+                 #["cvh", "VEG/cvh*_BA.nc", Joeys_data, None, None, 
+                 # iris.analysis.MEAN],
+                 #["cvl", "VEG/cvl*_BA.nc", Joeys_data, None, None, 
+                 # iris.analysis.MEAN],
+                 #["tvl", "VEG/tvl*_BA.nc", Joeys_data, None, None, 
+                 # iris.analysis.MEAN],
                  ["LFMC_high", "FUEL/LFMC_timemean_*.nc", Joeys_data, None, "LFMC_high",  
                   iris.analysis.MEAN],
                  ["LFMC_low", "FUEL/LFMC_timemean_*.nc", Joeys_data, None, "LFMC_low",  
@@ -220,6 +301,10 @@ if __name__=="__main__":
                  #["LAI_low", "VEG/month_lail*_BA.nc", Joeys_data, None, None, 
                  # iris.analysis.MEAN],
                  #["tas", "tas.nc", "ERA5_Factual", "HadGEM_Counter", None,
+                 # iris.analysis.MEAN],
+                 #["tasmax", "tasmax.nc", "ERA5_Factual", "HadGEM_Counter", None,
+                 # iris.analysis.MAX],
+                 #["pr", "pr.nc", "ERA5_Factual", "HadGEM_Counter", None,
                  # iris.analysis.MEAN]
                  ]
     for variable in variables:
