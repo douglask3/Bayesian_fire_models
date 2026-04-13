@@ -204,6 +204,8 @@ def make_input(variable, region, dir, eg_file, start_year = 2002):
     
     out_name, in_file, f_dir, cf_dir, varname, FUN = variable
 
+    if not isinstance(FUN, list): 
+        FUN = [None, FUN]
     region = region.replace(' ', '_')
     eg_file = eg_file.replace('REGION_NAME', region)
     eg_cube = iris.load_cube(eg_file)
@@ -219,7 +221,7 @@ def make_input(variable, region, dir, eg_file, start_year = 2002):
     files = sorted(glob.glob(filename))
     
     cubes = iris.load(files, varname)
-    
+     
     if len(cubes) == 1: 
         cube = cubes[0]
     else:
@@ -238,22 +240,46 @@ def make_input(variable, region, dir, eg_file, start_year = 2002):
     except:
         pass
    
+    if FUN[0] is not None:
+        cube = FUN[0](cube)
+
     year_today = date.today().year
     cube = sub_year_range(cube, [start_year, year_today])
     
-    cube = cube.aggregated_by(['year', 'month'], FUN)
+    cube = cube.aggregated_by(['year', 'month'], FUN[1])
     icc.add_month_number(cube, 'time')
     index = np.any(np.array([cube.coord('month_number').points < 3,
                              cube.coord('year').points < year_today]), 
                    axis = 0)
     cube = cube[index]
-
     cube = regrid_to_eg_cube(cube, eg_cube)
-
+    
     out_file = dir.replace('nrt_raw', region) + '/nrt/factual/' + out_name + '.nc'
-    os.makedirs(os.path.dirname(out_file), exist_ok=True)    
+    os.makedirs(os.path.dirname(out_file), exist_ok=True)  
+    
     iris.save(cube, out_file)
     
+    
+def dry_day(cube):
+    mask = cube.data < 0.0001
+    cube.data[:] = 0
+    cube.data[mask] = 1
+    cube.rename('Dry days')
+    cube.units = 'day'
+    return cube
+
+def cummulative_dry_day(cube):
+    cube = dry_day(cube)
+    cube_count = cube.data[0].copy()
+    for i in range(1, cube.shape[0]):
+        cube_count += 1
+        mask = cube.data[i] == 0
+        cube_count[mask] = 0
+        cube.data[i] = cube_count
+
+    cube.rename('Cummlative dry days')
+    return cube
+
 if __name__=="__main__":
     dir = "data/data/driving_data2526/nrt_raw/"
     
@@ -265,7 +291,15 @@ if __name__=="__main__":
 
     Joeys_data = "/data/users/douglas.kelley/Bayesian_fire_models/Joeys/SOW_FORCINGS/"
                 #outname, inname, factual dir, count dir
-    variables = [["DFMC_Wood", "FUEL/DFMC_timemean_*.nc", Joeys_data, None, "DFMC_Wood",    
+    variables = [["dry_days", "pr.nc", "ERA5_Factual", "HadGEM_Counter", None,
+                  [dry_day, iris.analysis.MEAN]],
+                 ["cumm_dry_days_mean", "pr.nc", "ERA5_Factual", "HadGEM_Counter", None,
+                  [cummulative_dry_day, iris.analysis.MEAN]],
+                 ["cumm_dry_days_max", "pr.nc", "ERA5_Factual", "HadGEM_Counter", None,
+                  [cummulative_dry_day, iris.analysis.MAX]],
+                 ["tasmax", "tasmax.nc", "ERA5_Factual", "HadGEM_Counter", None,
+                  iris.analysis.MAX],
+                 ["DFMC_Wood", "FUEL/DFMC_timemean_*.nc", Joeys_data, None, "DFMC_Wood",    
                   iris.analysis.MEAN],
                  ["DFMC_Foliage", "FUEL/DFMC_timemean_*.nc", Joeys_data, None, "DFMC_Foliage",  
                   iris.analysis.MEAN],
@@ -275,20 +309,18 @@ if __name__=="__main__":
                   iris.analysis.MEAN],
                  ["lwo_pred", "FUEL/Fuel_pred_clip_*.nc", Joeys_data, None, "lwo_pred", 
                   iris.analysis.MEAN],
-                 ["dfo_pred,", "FUEL/Fuel_pred_clip_*.nc", Joeys_data, None, "dfo_pred,", 
+                 ["dfo_pred", "FUEL/Fuel_pred_clip_*.nc", Joeys_data, None, "dfo_pred", 
                   iris.analysis.MEAN],
-                 ["dwo_pred,", "FUEL/Fuel_pred_clip_*.nc", Joeys_data, None, "dwo_pred,", 
+                 ["dwo_pred", "FUEL/Fuel_pred_clip_*.nc", Joeys_data, None, "dwo_pred", 
                   iris.analysis.MEAN],
                  ["LFMC_high", "FUEL/LFMC_timemean_*.nc", Joeys_data, None, "LFMC_high",  
                   iris.analysis.MEAN],
                  ["LFMC_low", "FUEL/LFMC_timemean_*.nc", Joeys_data, None, "LFMC_low",  
                   iris.analysis.MEAN],
-                 #["tas", "tas.nc", "ERA5_Factual", "HadGEM_Counter", None,
-                 # iris.analysis.MEAN],
-                 #["tasmax", "tasmax.nc", "ERA5_Factual", "HadGEM_Counter", None,
-                 # iris.analysis.MAX],
-                 #["pr", "pr.nc", "ERA5_Factual", "HadGEM_Counter", None,
-                 # iris.analysis.MEAN]
+                 ["tas", "tas.nc", "ERA5_Factual", "HadGEM_Counter", None,
+                  iris.analysis.MEAN],
+                 ["pr", "pr.nc", "ERA5_Factual", "HadGEM_Counter", None,
+                  iris.analysis.MEAN]
                  ]
     for variable in variables:
         make_input(variable, region, dir, eg_file, start_year)
