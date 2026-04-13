@@ -62,8 +62,6 @@ def add_time_based_on_mnth_year(cubes, years, months, time_unit):
     time_points = unit.date2num(datetimes)
 
     new_cubes = []
-    
-    #for cube, t in zip(cubes, time_points):
     try:
         ncubes = cubes.shape[0]
     except:
@@ -72,7 +70,7 @@ def add_time_based_on_mnth_year(cubes, years, months, time_unit):
     for i in range(ncubes):
         cube = cubes[i]
         t = time_points[i]
-        #set_trace()
+        
        # Fix latitude
         if cube.coords('lat'):
             coord = cube.coord('lat')
@@ -94,7 +92,7 @@ def add_time_based_on_mnth_year(cubes, years, months, time_unit):
             standard_name='time',
             units=unit
         )
-        #cube0 = cube.copy()
+        
         try:
             cube.remove_coord('time')
         except:
@@ -138,7 +136,7 @@ def set_calendar(cube, target_time_unit):
 
 def combine_3d_cubes(cubes, region, files):
     vname = cubes[0].name()
-    cubes0 = cubes.copy()
+    
     try:
         target_time_unit = cubes[0].coord('time').units
     except:
@@ -195,9 +193,6 @@ def combine_3d_cubes(cubes, region, files):
         
             final_cube = new_cubes.concatenate_cube() 
         except:
-            #try:
-            #    final_cube = new_cubes.concatenate()
-                
             set_trace()
             cube = cubes[-1]
             time_coord = cube.coord('time')
@@ -284,22 +279,10 @@ if __name__=="__main__":
                   iris.analysis.MEAN],
                  ["dwo_pred,", "FUEL/Fuel_pred_clip_*.nc", Joeys_data, None, "dwo_pred,", 
                   iris.analysis.MEAN],
-                 #["LAI_high", "VEG/month_laih*_C.nc", Joeys_data, None, None, 
-                 # iris.analysis.MEAN],
-                 #["LAI_lowh", "VEG/month_lail*_C.nc", Joeys_data, None, None, 
-                 # iris.analysis.MEAN],
-                 #["cvh", "VEG/cvh*_BA.nc", Joeys_data, None, None, 
-                 # iris.analysis.MEAN],
-                 #["cvl", "VEG/cvl*_BA.nc", Joeys_data, None, None, 
-                 # iris.analysis.MEAN],
-                 #["tvl", "VEG/tvl*_BA.nc", Joeys_data, None, None, 
-                 # iris.analysis.MEAN],
                  ["LFMC_high", "FUEL/LFMC_timemean_*.nc", Joeys_data, None, "LFMC_high",  
                   iris.analysis.MEAN],
                  ["LFMC_low", "FUEL/LFMC_timemean_*.nc", Joeys_data, None, "LFMC_low",  
                   iris.analysis.MEAN],
-                 #["LAI_low", "VEG/month_lail*_BA.nc", Joeys_data, None, None, 
-                 # iris.analysis.MEAN],
                  #["tas", "tas.nc", "ERA5_Factual", "HadGEM_Counter", None,
                  # iris.analysis.MEAN],
                  #["tasmax", "tasmax.nc", "ERA5_Factual", "HadGEM_Counter", None,
