@@ -7,14 +7,17 @@ import iris.plot as iplt
 from pdb import set_trace
 
 
-dir = "data/data/driving_data2526/Northwest_Iberia/nrt/factual/"
+dir = "data/data/driving_data2526/Midwestern_Canadian_Shield_forests/nrt/factual/"
 files = glob.glob(dir + "*.nc")
 
 time_series_cubes = []
 
 for f in files:
-    cube = iris.load_cube(f)
-
+    try:
+        cube = iris.load_cube(f)
+    except:
+        set_trace()
+    
     # Ensure lat/lon bounds exist (needed for area weights)
     if not cube.coord('latitude').has_bounds():
         cube.coord('latitude').guess_bounds()
@@ -30,8 +33,8 @@ for f in files:
         iris.analysis.MEAN,
         weights=weights
     )
-
-    time_series_cubes.append((cube.name(), ts))
+    #set_trace()
+    time_series_cubes.append((f.split('/')[-1].split('.nc')[0], ts))
 
 import matplotlib.dates as mdates
 import pandas as pd
@@ -102,7 +105,7 @@ for name, ts in time_series_cubes:
     plt.gcf().autofmt_xdate()
     
     plt.xticks(rotation=45)
-
+    
     plt.title(name)
     #plt.xlabel('Time')
     plt.ylabel(str(ts.units))
