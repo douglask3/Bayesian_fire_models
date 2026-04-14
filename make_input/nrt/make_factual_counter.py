@@ -18,11 +18,11 @@ import iris.quickplot as qplt
 import matplotlib.pyplot as plt
 
 
-def interplate_hadgem_to_era5_time(era5_cut, hadgem_cut, era5_time = 'valid_time', hadgem_time = 'time'):
+def interplate_hadgem_to_era5_time(era5_cut, hadgem_cut, era5_time = 'time', hadgem_time = 'time'):
 
     # Original cubes
-    era5_coord = era5_cut.coord('valid_time')
-    hadgem_coord = hadgem_cut.coord('time')
+    era5_coord = era5_cut.coord(era5_time)
+    hadgem_coord = hadgem_cut.coord(hadgem_time)
 
     # Convert ERA5 points to cftime.Datetime360Day using HadGEM calendar
     target_dates_360 = [cftime.Datetime360Day(d.year, d.month, min(d.day, 30))
@@ -30,15 +30,15 @@ def interplate_hadgem_to_era5_time(era5_cut, hadgem_cut, era5_time = 'valid_time
 
     # Interpolate HadGEM onto these target dates
     hadgem_interp = hadgem_cut.interpolate(
-        [('time', [hadgem_coord.units.date2num(d) for d in target_dates_360])],
+        [(hadgem_time, [hadgem_coord.units.date2num(d) for d in target_dates_360])],
         iris.analysis.Linear()
     )
     
     # Rename coordinate to match ERA5
-    hadgem_interp.coord('time').rename('valid_time')
+    hadgem_interp.coord(hadgem_time).rename(era5_time)
     return hadgem_interp
 
-def cut_era5_hadgem_to_time(era5, hadgem, era5_time = 'valid_time', hadgem_time = 'time'):
+def cut_era5_hadgem_to_time(era5, hadgem, era5_time = 'time', hadgem_time = 'time'):
         
     # Extract coords
     era5_time = era5.coord(era5_time)
@@ -162,6 +162,7 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
             return cube
     
         era5 = open_data(obs_file)
+        era5.coord('valid_time').rename('time')
         for i, exp_file in enumerate(exp_files):
             ALL = open_data(exp_file[0], scale_mod)
             correct = open_data(exp_file[1], scale_mod)
@@ -190,11 +191,12 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
             #
             #counter_file = out_dir.replace('EXPERIMENT', 'counter') \
             #                + '/ens-' + str(i)  + '.nc'   
-
-            factual_file = exp_file[0].replace(experiments[0], 'Factual')
+            out_file = exp_file[0].replace(variable_mod, variable_out)
+            print(out_file)
+            factual_file = out_file.replace(experiments[0], 'Factual')
             factual_file = factual_file.replace('HadGEM', 'ERA5')
             factual_file = '/'.join(factual_file.split('/')[:-1]) + '.nc'
-            counter_file = exp_file[0].replace(experiments[0], 'Counter')
+            counter_file = out_file.replace(experiments[0], 'Counter')
             counter_file = '/'.join(counter_file.split('/')[:-1]) + '/ens-' + str(i)  + '.nc'
             if not os.path.isfile(factual_file):
                 os.makedirs(os.path.dirname(factual_file), exist_ok=True)
@@ -211,10 +213,10 @@ model_dir = "/hadgem_nrt/"
 obs_dataset = "/Era5_derived-era5-single-levels-daily-statistics/"
 
 
-variables_obs = ['hursmin', 'tasmax', 'tas', 'pr']
-variables_mod = ['hursmin', 'tasmax', 'tas', 'pr']
-variables_out = ['hursmin', 'tasmax', 'tax', 'pr']
-scales_mod = [1/100, 1, 1, 1]
+variables_obs = ['hursmin', 'tasmax', 'tas', 'pr', 'wind', 'WindGust1', 'WindGust2']
+variables_mod = ['hursmin', 'tasmax', 'tas', 'pr', 'sfcWind', 'sfcWind', 'sfcWind']
+variables_out = ['hursmin', 'tasmax', 'tax', 'pr', 'wind', 'WindGust1', 'WindGust2']
+scales_mod = [1/100, 1, 1, 1, 1, 1, 1]
 
 def log1(x):
     return np.log(np.exp(x) - 0.9999999999)
@@ -228,8 +230,14 @@ def logit(x):
 def logistic(y):
     return 1/(1+np.exp(-y))
 
-transformations = [logit, None, None, log1]
-inverses = [logistic, None, None, exp1]
+def slog(x):
+    return np.log(x + 0.0000000001)
+
+def sexp(y):
+    return np.exp(y) - 0.0000000001
+
+transformations = [logit, None, None, log1, slog, slog, slog]
+inverses = [logistic, None, None, exp1, sexp, sexp, sexp]
 
 def make_all_variable_inputs(variables_obs, variables_mod, variables_out, scales_mod,
                              transformations, inverses, *args, **kw):
@@ -242,7 +250,13 @@ if __name__=="__main__":
     dir = "data/data/driving_data2526/nrt_raw/"
 
     experiments = ["ALL", "NAT"]
-    regions = ["Northwest Iberia"]
+    regions = [
+               "Midwestern Canadian Shield forests", 
+               "Chilean Temperate Forests and Matorral", 
+               "Southeast South Korea", 
+               "Northwest Iberia", 
+               "Scottish Highlands"
+               ]
 
     make_all_variable_inputs(variables_obs, variables_mod, variables_out, 
                              scales_mod, transformations, inverses, 
