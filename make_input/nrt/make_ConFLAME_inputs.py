@@ -69,6 +69,7 @@ def add_time_based_on_mnth_year(cubes, years, months, time_unit):
         
     for i in range(ncubes):
         cube = cubes[i]
+        
         t = time_points[i]
         
        # Fix latitude
@@ -206,58 +207,76 @@ def make_input(variable, region, dir, eg_file, start_year = 2002):
 
     if not isinstance(FUN, list): 
         FUN = [None, FUN]
+
     region = region.replace(' ', '_')
     eg_file = eg_file.replace('REGION_NAME', region)
     eg_cube = iris.load_cube(eg_file)
     
     target_time_unit = eg_cube.coord('time').units
     eg_cube = eg_cube[0]
+    
+    def make_subout(i_dir, o_dir, counter = False):
+        
+        def make_file(files, ens = None):
+            cubes = iris.load(files, varname)
+            
+            if len(cubes) == 1: 
+                cube = cubes[0]
+            else:
+                if cubes[0].ndim == 2:
+                    cube = combine_2d_cubes(cubes, files, target_time_unit)
+                else:
+                    cube = combine_3d_cubes(cubes, region, files)
+            time_coord = cube.coords()[0].name()
+            
+            try:
+                icc.add_year(cube, time_coord)
+            except:
+                pass
+            try:
+                icc.add_month(cube, time_coord)
+            except:
+                pass
+            
+            if FUN[0] is not None:
+                cube = FUN[0](cube)
+            
+            year_today = date.today().year
+            cube = sub_year_range(cube, [start_year, year_today])
+            
+            cube = cube.aggregated_by(['year', 'month'], FUN[1])
+            icc.add_month_number(cube, 'time')
+            index = np.any(np.array([cube.coord('month_number').points < 3,
+                                     cube.coord('year').points < year_today]), 
+                           axis = 0)
+            cube = cube[index]
+            cube = regrid_to_eg_cube(cube, eg_cube)
+            if ens is not None:
+                ens_txt = '/ens-' + str(ens)
+            else:
+                ens_txt = ''
+            out_file = dir.replace('nrt_raw', region) + '/nrt/' + o_dir + '/' + \
+                        out_name + ens_txt + '.nc'
+            os.makedirs(os.path.dirname(out_file), exist_ok=True)  
+            
+            iris.save(cube, out_file)
 
-    if f_dir[0] == '.' or f_dir[0] == '~' or f_dir[0] == '/':
-        filename = f_dir + '/' + in_file
-    else:
-        filename = dir + region +'/' + f_dir + '/' + in_file
-    
-    files = sorted(glob.glob(filename))
-    
-    cubes = iris.load(files, varname)
-     
-    if len(cubes) == 1: 
-        cube = cubes[0]
-    else:
-        if cubes[0].ndim == 2:
-            cube = combine_2d_cubes(cubes, files, target_time_unit)
+        sl = '/' if counter else ''
+        if i_dir[0] == '.' or i_dir[0] == '~' or i_dir[0] == '/':
+            filename = i_dir + '/' + in_file + sl + '*'
         else:
-            cube = combine_3d_cubes(cubes, region, files)
-    time_coord = cube.coords()[0].name()
+            filename = dir + region +'/' + i_dir + '/' + in_file + sl + '*'
+        
+        files = sorted(glob.glob(filename, recursive = True))   
+        if counter:
+            [make_file(file, i) for i, file in enumerate(files)]
+        else:
+            make_file(files)
     
-    try:
-        icc.add_year(cube, time_coord)
-    except:
-        pass
-    try:
-        icc.add_month(cube, time_coord)
-    except:
-        pass
-   
-    if FUN[0] is not None:
-        cube = FUN[0](cube)
+    make_subout(f_dir, 'factual')
 
-    year_today = date.today().year
-    cube = sub_year_range(cube, [start_year, year_today])
-    
-    cube = cube.aggregated_by(['year', 'month'], FUN[1])
-    icc.add_month_number(cube, 'time')
-    index = np.any(np.array([cube.coord('month_number').points < 3,
-                             cube.coord('year').points < year_today]), 
-                   axis = 0)
-    cube = cube[index]
-    cube = regrid_to_eg_cube(cube, eg_cube)
-    
-    out_file = dir.replace('nrt_raw', region) + '/nrt/factual/' + out_name + '.nc'
-    os.makedirs(os.path.dirname(out_file), exist_ok=True)  
-    
-    iris.save(cube, out_file)
+    if cf_dir is not None:
+        make_subout(cf_dir, 'countfactual', True)
     
     
 def dry_day(cube):
@@ -283,7 +302,12 @@ def cummulative_dry_day(cube):
 if __name__=="__main__":
     dir = "data/data/driving_data2526/nrt_raw/"
     
-    regions = ["Northwest Iberia", "Scottish Highlands"]
+    regions = [#"Midwestern Canadian Shield forests", 
+               #"Chilean Temperate Forests and Matorral", 
+               #"Southeast South Korea", 
+               #"Northwest Iberia", 
+               "Scottish Highlands"
+               ]
     
     region = regions[0]
     start_year = 2002
@@ -291,35 +315,49 @@ if __name__=="__main__":
 
     Joeys_data = "/data/users/douglas.kelley/Bayesian_fire_models/Joeys/SOW_FORCINGS/"
                 #outname, inname, factual dir, count dir
-    variables = [["dry_days", "pr.nc", "ERA5_Factual", "HadGEM_Counter", None,
+    variables = [["dry_days", "pr", "ERA5_Factual", "HadGEM_Counter", None,
                   [dry_day, iris.analysis.MEAN]],
-                 ["cumm_dry_days_mean", "pr.nc", "ERA5_Factual", "HadGEM_Counter", None,
+                 ["cumm_dry_days_mean", "pr", "ERA5_Factual", "HadGEM_Counter", None,
                   [cummulative_dry_day, iris.analysis.MEAN]],
-                 ["cumm_dry_days_max", "pr.nc", "ERA5_Factual", "HadGEM_Counter", None,
+                 ["cumm_dry_days_max", "pr", "ERA5_Factual", "HadGEM_Counter", None,
                   [cummulative_dry_day, iris.analysis.MAX]],
-                 ["tasmax", "tasmax.nc", "ERA5_Factual", "HadGEM_Counter", None,
+                 ["tasmax", "tasmax", "ERA5_Factual", "HadGEM_Counter", None,
                   iris.analysis.MAX],
-                 ["DFMC_Wood", "FUEL/DFMC_timemean_*.nc", Joeys_data, None, "DFMC_Wood",    
+                 ["tas", "tas", "ERA5_Factual", "HadGEM_Counter", None,
                   iris.analysis.MEAN],
-                 ["DFMC_Foliage", "FUEL/DFMC_timemean_*.nc", Joeys_data, None, "DFMC_Foliage",  
+                 ["pr", "pr", "ERA5_Factual", "HadGEM_Counter", None,
                   iris.analysis.MEAN],
-                 ["LAI", "VEG/month_lai_*.nc", Joeys_data, None, None, 
+                 ["wind_mean", "wind", "ERA5_Factual", "HadGEM_Counter", None,
                   iris.analysis.MEAN],
-                 ["lle_pred", "FUEL/Fuel_pred_clip_*.nc", Joeys_data, None, "lle_pred", 
+                 ["wind_max", "wind", "ERA5_Factual", "HadGEM_Counter", None,
+                  iris.analysis.MAX],
+                 ["gust1_mean", "WindGust1", "ERA5_Factual", "HadGEM_Counter", None,
                   iris.analysis.MEAN],
-                 ["lwo_pred", "FUEL/Fuel_pred_clip_*.nc", Joeys_data, None, "lwo_pred", 
+                 ["gust1_max", "WindGust1", "ERA5_Factual", "HadGEM_Counter", None,
+                  iris.analysis.MAX],
+                 ["gust2_mean", "WindGust2", "ERA5_Factual", "HadGEM_Counter", None,
                   iris.analysis.MEAN],
-                 ["dfo_pred", "FUEL/Fuel_pred_clip_*.nc", Joeys_data, None, "dfo_pred", 
+                 ["gust2_max", "WindGust2", "ERA5_Factual", "HadGEM_Counter", None,
+                  iris.analysis.MAX],
+                 ["hursmin", "hursmin", "ERA5_Factual", "HadGEM_Counter", None,
+                  iris.analysis.MIN],
+                 ["DFMC_Wood", "FUEL/DFMC_timemean_", Joeys_data, None, "DFMC_Wood",    
                   iris.analysis.MEAN],
-                 ["dwo_pred", "FUEL/Fuel_pred_clip_*.nc", Joeys_data, None, "dwo_pred", 
+                 ["DFMC_Foliage", "FUEL/DFMC_timemean_", Joeys_data, None, "DFMC_Foliage",  
                   iris.analysis.MEAN],
-                 ["LFMC_high", "FUEL/LFMC_timemean_*.nc", Joeys_data, None, "LFMC_high",  
+                 ["LAI", "VEG/month_lai_", Joeys_data, None, None, 
                   iris.analysis.MEAN],
-                 ["LFMC_low", "FUEL/LFMC_timemean_*.nc", Joeys_data, None, "LFMC_low",  
+                 ["lle_pred", "FUEL/Fuel_pred_clip_", Joeys_data, None, "lle_pred", 
                   iris.analysis.MEAN],
-                 ["tas", "tas.nc", "ERA5_Factual", "HadGEM_Counter", None,
+                 ["lwo_pred", "FUEL/Fuel_pred_clip_", Joeys_data, None, "lwo_pred", 
                   iris.analysis.MEAN],
-                 ["pr", "pr.nc", "ERA5_Factual", "HadGEM_Counter", None,
+                 ["dfo_pred", "FUEL/Fuel_pred_clip_", Joeys_data, None, "dfo_pred", 
+                  iris.analysis.MEAN],
+                 ["dwo_pred", "FUEL/Fuel_pred_clip_", Joeys_data, None, "dwo_pred", 
+                  iris.analysis.MEAN],
+                 ["LFMC_high", "FUEL/LFMC_timemean_", Joeys_data, None, "LFMC_high",  
+                  iris.analysis.MEAN],
+                 ["LFMC_low", "FUEL/LFMC_timemean_", Joeys_data, None, "LFMC_low",  
                   iris.analysis.MEAN]
                  ]
     for variable in variables:
