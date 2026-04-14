@@ -103,16 +103,26 @@ def add_time_based_on_mnth_year(cubes, years, months, time_unit):
         
         new_cubes.append(cube)
     iris.util.equalise_attributes(new_cubes)
-    
-    return iris.cube.CubeList(new_cubes).concatenate_cube()
-    
+    new_cubes = iris.cube.CubeList(new_cubes)
+    try:
+        new_cubes = new_cubes.concatenate_cube(new_cubes)
+    except:
+        for cube in new_cubes:
+            cube.rename(new_cubes[0].name())
+        new_cubes = new_cubes.concatenate_cube(new_cubes)
+    return new_cubes
 def combine_2d_cubes(cubes, files, time_unit):
-    years = [int(file[-10:-6]) for file in files]
-    months = [int(file[-5:-3]) for file in files]
+    years = [int('20' + file.split('_20')[1][0:2]) for file in files]
+    months = [int(file.split('_20')[1][3:5]) for file in files]
+    #years = [int(file[-10:-6]) for file in files]
+    #months = [int(file[-5:-3]) for file in files]
     return add_time_based_on_mnth_year(cubes, years, months, time_unit)
         
 def combine_3d_cubes_blank_time(cube, file, time_unit):
-    years = np.tile(int(file[-7:-3]), cube.shape[0])
+    
+    year = '20' + file.split('_20')[1][0:2]
+    years = np.tile(int(year), cube.shape[0])
+    
     months = np.arange(1, cube.shape[0]+1, dtype=int)
     
     return add_time_based_on_mnth_year (cube, years, months, time_unit)
@@ -223,6 +233,11 @@ def make_input(variable, region, dir, eg_file, start_year = 2002):
             if len(cubes) == 1: 
                 cube = cubes[0]
             else:
+                if len(files[0].split('LI/LI_'))== 2:
+                    new_cubes = []
+                    for cube in cubes:
+                        new_cubes.append(cube[0])
+                    cubes = iris.cube.CubeList(new_cubes)
                 if cubes[0].ndim == 2:
                     cube = combine_2d_cubes(cubes, files, target_time_unit)
                 else:
@@ -268,6 +283,7 @@ def make_input(variable, region, dir, eg_file, start_year = 2002):
             filename = dir + region +'/' + i_dir + '/' + in_file + sl + '*'
         
         files = sorted(glob.glob(filename, recursive = True))   
+        
         if counter:
             [make_file(file, i) for i, file in enumerate(files)]
         else:
@@ -277,6 +293,7 @@ def make_input(variable, region, dir, eg_file, start_year = 2002):
 
     if cf_dir is not None:
         make_subout(cf_dir, 'countfactual', True)
+    
     
     
 def dry_day(cube):
@@ -302,7 +319,7 @@ def cummulative_dry_day(cube):
 if __name__=="__main__":
     dir = "data/data/driving_data2526/nrt_raw/"
     
-    regions = [#"Midwestern Canadian Shield forests", 
+    regions = ["Midwestern Canadian Shield forests", 
                #"Chilean Temperate Forests and Matorral", 
                #"Southeast South Korea", 
                #"Northwest Iberia", 
@@ -314,8 +331,14 @@ if __name__=="__main__":
     eg_file = "data/data/driving_data2526/nrt_raw/REGION_NAME/ERA5_Factual/pr.nc"
 
     Joeys_data = "/data/users/douglas.kelley/Bayesian_fire_models/Joeys/SOW_FORCINGS/"
+    BA_dir = "/home/users/douglas.kelley/Bayesian_fire_models/data/data"
                 #outname, inname, factual dir, count dir
-    variables = [["dry_days", "pr", "ERA5_Factual", "HadGEM_Counter", None,
+    variables = [
+                 ["LI", "LI/LI_*C*", Joeys_data, None, "litoti",    
+                  iris.analysis.MEAN],
+                 ["burned_area", "burned_area_global.nc", BA_dir, "None", None,
+                  iris.analysis.MEAN],
+                 ["dry_days", "pr", "ERA5_Factual", "HadGEM_Counter", None,
                   [dry_day, iris.analysis.MEAN]],
                  ["cumm_dry_days_mean", "pr", "ERA5_Factual", "HadGEM_Counter", None,
                   [cummulative_dry_day, iris.analysis.MEAN]],
