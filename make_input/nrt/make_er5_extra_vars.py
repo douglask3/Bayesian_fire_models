@@ -71,7 +71,13 @@ def make_era5_extra_vars(dir, regions,
 if __name__=="__main__":
     dir = "data/data/driving_data2526/nrt_raw/"
     
-    regions = ["Northwest Iberia", "Scottish Highlands"]
+    regions = [
+               "Midwestern Canadian Shield forests", 
+               "Chilean Temperate Forests and Matorral", 
+               "Southeast South Korea", 
+               "Northwest Iberia", 
+               "Scottish Highlands"
+               ]
     
     make_era5_extra_vars(dir, regions)
     
