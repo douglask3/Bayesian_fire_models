@@ -289,12 +289,20 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None,
                 CA = CA[cells_we_want]
             else:
                 # Apply conditions separately to X and Y
+                
                 X_mask = np.all((X > -9e9) & (X < 9e9), axis=1)  # Check all columns in X
                 Y_mask = (Y > -9e9) & (Y < 9e9)  # Apply directly to Y
         
                 # Combine the two masks
-                if cells_we_want is None: cells_we_want = X_mask & Y_mask
-                
+                if cells_we_want is None: 
+                    cells_we_want = X_mask & Y_mask
+                    cells_we_want = cells_we_want.data.reshape([time_points.shape[0],  
+                                             int(len(cells_we_want)/time_points.shape[0])])
+                    
+                    cells_we_want = np.all(cells_we_want, axis = 0)
+                    
+                    cells_we_want = np.tile(cells_we_want, time_points.shape[0])
+                    
             Y = Y[cells_we_want]
             X = X[cells_we_want, :]
             
