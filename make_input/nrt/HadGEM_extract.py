@@ -129,9 +129,11 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
             days = cdys[cyrs == year]
             missing = np.setdiff1d(np.arange(1, 361), days)
             if len(missing) > 0 and year < 2025:
-                set_trace()
+                txt = experiment[1] + ', ' +  variable + ', ' + member  + ', ' + str(year) + ', '
+                for dy in missing: txt = txt + ' ' + dy
+                print(txt)
 
-        #[test_year(year) for year in np.unique(cyrs)]
+        [test_year(year) for year in np.unique(cyrs)]
 
         def process_region(cube, region_name):
             out_file = out_dir + '/' + region_name.replace(' ', '_') + \
@@ -141,8 +143,6 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
             #    return
             print(region_name) 
             print(out_file) 
-            
-            
 
             os.makedirs(os.path.dirname(out_file), exist_ok=True)
             
