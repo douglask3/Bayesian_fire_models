@@ -14,6 +14,7 @@ sys.path.append('.')
 sys.path.append('src/')
 sys.path.append('libs/')
 sys.path.append('SoW_info/')
+from above_percentile_mean import *
 from state_of_wildfires_colours  import SoW_cmap
 from state_of_wildfires_region_info  import get_region_info
 from logit_axis import *
@@ -372,7 +373,65 @@ def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name,
 
     return effect_ratio[mask]
 
+import iris
+import iris.analysis.cartography
+import os
 
+def tile_fractional(arr, reps):
+    # Number of full repetitions
+    full_reps = int(reps)
+    # Number of extra elements to append (fractional part)
+    num_extra = int(round(len(arr) * (reps - full_reps)))
+    
+    return np.concatenate([np.tile(arr, full_reps), arr[:num_extra]])
+
+
+def open_burned_area_observation_time_series(file, 
+                    fields = ['time', 'mean_burned_area', 'p95_burned_area']):
+    if os.path.isfile(file):
+        obs = pd.read_csv(file)
+    else:
+        cube = iris.load_cube(file[:-3] + 'nc')
+        try:
+            cube.coord('latitude').guess_bounds()
+        except:
+            pass
+        try:
+            cube.coord('longitude').guess_bounds()
+        except:
+            pass
+        grid_areas = iris.analysis.cartography.area_weights(cube)
+        cube_mean = cube.collapsed(['longitude', 'latitude'], \
+                                   iris.analysis.MEAN, weights=grid_areas)
+        cube_95 = np.array([above_percentile_mean(cube[i]) for i in range(cube.shape[0])])
+        
+
+        def cyclic_mean(arr, n = 12):
+            out =  np.array([arr[i::n].mean() for i in range(n)])
+            return tile_fractional(out, cube_mean.shape[0]/12)
+        cube_cmean = cyclic_mean(cube_mean.data)
+        cube_c95 = cyclic_mean(cube_95)
+        
+        
+        mnth = cube.coord('month_number').points
+        mnth = ['0' + str(mn) if mn < 10 else str(mn) for mn in mnth]
+        year = cube.coord('year').points
+        time = [str(yr) + '-' + mn + '-' + '15' for yr, mn in zip(year, mnth)]
+        cube_mean = cube_mean.data
+        obs = pd.DataFrame({
+            "time": time, 
+            "mean_burned_area": cube_mean,
+            "mean_burned_area_climateology": cube_cmean,
+            "mean_burned_area_anomaly": cube_mean - cube_cmean,
+            "mean_burned_area_ratio": cube_mean / cube_cmean,
+            "p95_burned_area": cube_95, 
+            "p95_burned_area_climateology": cube_c95,
+            "p95_burned_anomaly": cube_95 - cube_c95,
+            "p95_burned_ratio":  cube_95 / cube_c95
+        })
+        obs.to_csv(file)
+    
+    return obs[fields]
 
 def plot_for_region(region, metric, plot_FUN, 
                     dir1, dir2, obs_dir, obs_file, 
@@ -383,7 +442,6 @@ def plot_for_region(region, metric, plot_FUN,
     
     if region != "":
         region_info = get_region_info(region)[region]
-    
         if years is None:
             years = region_info['years']
         if mnths is None:
@@ -400,9 +458,8 @@ def plot_for_region(region, metric, plot_FUN,
         factual = pd.read_csv(dir + factual_name + "-/" + metric + \
                                      "/points-Evaluate.csv")
         counterfactual = pd.read_csv(dir + counterfactual_name +  "/" + metric + "/points-Evaluate.csv")
-    obs = pd.read_csv(obs_dir + '/' + region + '/' + obs_file)
-    obs = obs[['time', 'mean_burnt_area', 'p95_burnt_area']]
-    
+     
+    obs = open_burned_area_observation_time_series(obs_dir + '/' + region + '/' + obs_file)
     # Extra years and flatten the arrays to 1D
     if all_mod_years:
         mod_years = None
@@ -508,7 +565,7 @@ def plot_attribution_scatter(regions, figname, plot_FUN = plot_fact_vs_ratio, ou
     else:
         fig.text(0.5, 0.04, "Factual burned area (%)", ha='center', va='top', fontsize=12)
     fig.text(0.33, 0.9, "Entire region", ha='center', va='bottom', fontsize=14)
-    fig.text(0.73, 0.9, "High burnt areas", ha='center', va='bottom', fontsize=14)
+    fig.text(0.73, 0.9, "High burned areas", ha='center', va='bottom', fontsize=14)
     
     plt.savefig(out_dir + figname + ".png")
     return out
@@ -603,7 +660,7 @@ if __name__=="__main__":
                     'Southern California','Congo Basin']
     #retgions = {key: regions_info[key] for key in region_names if key in regions_info}
     obs_dir = 'data/data/driving_data2425//'
-    obs_file = 'burnt_area_data.csv'
+    obs_file = 'burned_area_data.csv'
     '''
     outs_era5 = plot_attribution_scatter(regions, "attribution_scatter_era5_2425",
                              dir1 = dir1, dir2 = dir2,

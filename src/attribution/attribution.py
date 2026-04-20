@@ -38,8 +38,8 @@ def plot_all_attribution_scatter(dir1, dir2, regions, obs_dir, obs_file, *args, 
     #plot_attribution_scatter_generic("counterfactual-extraNoise-", "rr_line",
     #                                 effect_ratio_and_rr_over_range)
     
-def attribution_analysis(dir1, dir2, obs_dir, obs_file_nc = "burnt_area.nc",
-                         obs_file_csv = 'burnt_area_data.csv', region = "", *args, **kw):
+def attribution_analysis(dir1, dir2, obs_dir, obs_file_nc = "burned_area.nc",
+                         obs_file_csv = 'burned_area.csv', region = "", *args, **kw):
 
      
     plot_all_attribution_scatter(dir1, '/time_series/' +dir2, region, obs_dir, obs_file_csv,
@@ -76,9 +76,9 @@ if __name__=="__main__":
     #region = "Amazon"
 
     obs_dir = 'data/data/driving_data_base//'
-    obs_file = 'burnt_area_data.csv'  
+    obs_file = 'burned_area_data.csv'  
 
-    attribution_analysis(dir1, dir2, obs_dir, region = region, obs_file_nc = "burnt_area.nc",
-                         obs_file_csv = 'burnt_area_data.csv')
+    attribution_analysis(dir1, dir2, obs_dir, region = region, obs_file_nc = "burned_area.nc",
+                         obs_file_csv = 'burned_area_data.csv')
      
     
