@@ -13,6 +13,7 @@ import sys
 sys.path.append('libs/')
 sys.path.append('src/attribution/')
 from climtatology_difference import *
+from above_percentile_mean import *
 from plot_maps import *
 from plot_multimaps import *
 from attribution import *
@@ -25,6 +26,7 @@ except:
 
 def call_eval(training_namelist, namelist,
               control_run_name, extra_params = None, run_only = True, *args, **kw):
+    
     return evaluate_MaxEnt_model_from_namelist(training_namelist, namelist,
                                                run_only = run_only, 
                                                control_run_name = control_run_name,
@@ -142,32 +144,6 @@ def Potential_climateology_limitation(training_namelist, namelist,
     
     return [outs]
 
-
-def above_percentile_mean(cube, cube_assess = None, percentile = 0.95):
-    if cube_assess is None: cube_assess = cube
-    area_cube = iris.analysis.cartography.area_weights(cube_assess)
-    
-    # Sort the cube by fractional burnt values in descending order
-    sorted_indices = np.argsort(cube_assess.data.ravel())
-    sorted_cube_data = cube_assess.data.ravel()[sorted_indices]
-    area_data_np = np.array(area_cube.data)
-    sorted_area_data = area_data_np.ravel()[sorted_indices]
-
-    cumulative_area = np.cumsum(sorted_area_data * sorted_cube_data)
-
-    # Determine the total area of the grid cells
-    total_area = np.nansum(sorted_area_data * sorted_cube_data)
-
-    # Find the index where the cumulative sum exceeds the percentile threshold of the total area
-    threshold_index = np.argmax(cumulative_area > (percentile/100.0) * total_area)
-
-    # Use this index to obtain the fractional burnt value 
-    # corresponding to the area-weighted percentile threshold
-    threshold_value = sorted_cube_data[threshold_index]#
-
-    mask = (cube_assess.data >= threshold_value) & (~cube_assess.data.mask)
-    return np.sum(cube.data[mask] * area_data_np[mask]) / np.sum(area_data_np[mask])
-
   
 def make_time_series(cube, name, output_path, percentile = None, cube_assess = None, 
                      grab_old = False, *args, **kw):
@@ -207,7 +183,8 @@ def make_time_series(cube, name, output_path, percentile = None, cube_assess = N
     
     climatology, anomaly, ratio = climtatology_difference(area_weighted_mean)
     makeDir(out_dir)
-    def output_cube_to_csv(data, realizations, extra_dim,  filename): 
+    
+    def output_cube_to_csv(data, realizations, extra_dim, filename): 
         times = cube.coord('time').units.num2date(cube.coord('time').points)[0:data.shape[1]]
         try:
             df = pd.DataFrame(data, index=realizations, columns=[t.isoformat() for t in times])
@@ -238,6 +215,8 @@ def make_time_series(cube, name, output_path, percentile = None, cube_assess = N
     make_output_TS(anomaly, 'anomaly')
     make_output_TS(ratio, 'ratio')
     
+    os.makedirs(os.path.dirname(lock_file), exist_ok=True)
+    Path(lock_file).touch()
     return out_dir
 
 def make_both_time_series(percentiles, *args, **kw):
@@ -265,6 +244,7 @@ def run_experiment(training_namelist, namelist, control_direction,
 
     figName = fig_dir + '/' + name + 'control_TS'
     makeDir(figName + '/')
+    
     Evaluate, Y, X, lmask, scalers  = call_eval(training_namelist, namelist,
                         name + '/Evaluate', run_only = run_only, return_inputs = True,
                         filename_out_ext = 'stochastic', fig_dir = fig_dir, 
@@ -439,7 +419,7 @@ def run_ConFire(namelist):
             
         except:
             pass   
-         
+        
         args_list = [dict(training_namelist=training_namelist,
                           namelist=namelist,
                           control_direction=control_direction,
@@ -465,7 +445,7 @@ def run_ConFire(namelist):
                     for name, dir, expt, yfile, common_noise \
                         in zip(names_all, dirs_all, exp_type, y_filen, common_noises)
                 ]
-        args_list.reverse()
+        #args_list.reverse()
         
         if len(args_list) > 1 and select_from_info('parallelize', True): 
             try:
