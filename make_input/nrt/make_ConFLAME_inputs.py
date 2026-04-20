@@ -33,7 +33,7 @@ def regrid_to_eg_cube(cube, eg_cube):
             return cube
         lat_name = cube.coords()[1].name()
         lon_name = cube.coords()[2].name()
-    elif cube_ndim == 2:
+    elif cube.ndim == 2:
         if cube.shape == eg_cube.shape: 
             return cube
         lat_name = cube.coords()[0].name()
@@ -45,10 +45,10 @@ def regrid_to_eg_cube(cube, eg_cube):
     
     cube.coord('latitude').units = eg_cube.coord('latitude').units
     cube.coord('longitude').units = eg_cube.coord('longitude').units
-    try:
-        out =  cube.regrid(eg_cube, iris.analysis.Linear())
-    except:
-        set_trace()
+    cube.coord('latitude').coord_system = eg_cube.coord('latitude').coord_system
+    cube.coord('longitude').coord_system = eg_cube.coord('longitude').coord_system
+    
+    out =  cube.regrid(eg_cube, iris.analysis.Linear())
     return out
 
 
@@ -211,7 +211,7 @@ def combine_3d_cubes(cubes, region, files):
             cube = iris.util.new_axis(cube, time_coord)
     return final_cube
 
-def make_input(variable, region, dir, eg_file, start_year = 2002):
+def make_input(variable, region, dir, eg_file, start_year = 2002, shapefile_path = None):
     
     out_name, in_file, f_dir, cf_dir, varname, FUN = variable
 
@@ -257,15 +257,16 @@ def make_input(variable, region, dir, eg_file, start_year = 2002):
                 cube = FUN[0](cube)
             
             year_today = date.today().year
-            cube = sub_year_range(cube, [start_year, year_today])
-            
-            cube = cube.aggregated_by(['year', 'month'], FUN[1])
-            icc.add_month_number(cube, 'time')
-            index = np.any(np.array([cube.coord('month_number').points < 3,
-                                     cube.coord('year').points < year_today]), 
-                           axis = 0)
-            cube = cube[index]
+            if len(cube.shape) > 2:
+                cube = sub_year_range(cube, [start_year, year_today])
+                cube = cube.aggregated_by(['year', 'month'], FUN[1])
+                icc.add_month_number(cube, 'time')
+                index = np.any(np.array([cube.coord('month_number').points < 3,
+                                         cube.coord('year').points < year_today]), 
+                               axis = 0)
+                cube = cube[index]
             cube = regrid_to_eg_cube(cube, eg_cube)
+            
             if ens is not None:
                 ens_txt = '/ens-' + str(ens)
             else:
@@ -274,15 +275,24 @@ def make_input(variable, region, dir, eg_file, start_year = 2002):
                         out_name + ens_txt + '.nc'
             os.makedirs(os.path.dirname(out_file), exist_ok=True)  
             
+            cube.data = np.nan_to_num(cube.data.filled(np.nan), nan=0)
+            if shapefile_path is not None:
+                cube = contrain_to_sow_shapefile(cube, shapefile_path, 
+                                                 region.replace('_', ' '))
+            
             iris.save(cube, out_file)
 
         sl = '/' if counter else ''
         if i_dir[0] == '.' or i_dir[0] == '~' or i_dir[0] == '/':
             filename = i_dir + '/' + in_file + sl + '*'
         else:
-            filename = dir + region +'/' + i_dir + '/' + in_file + sl + '*'
-        
-        files = sorted(glob.glob(filename, recursive = True))   
+            
+            if in_file == 'tas' and not counter:
+                filename = dir + region +'/' + i_dir + '/' + in_file + '.nc'
+            else:
+                filename = dir + region +'/' + i_dir + '/' + in_file + sl + '*'
+        #set_trace()
+        files = sorted(glob.glob(filename, recursive = True))#[0:6]   
         
         if counter:
             [make_file(file, i) for i, file in enumerate(files)]
@@ -293,6 +303,7 @@ def make_input(variable, region, dir, eg_file, start_year = 2002):
 
     if cf_dir is not None:
         make_subout(cf_dir, 'countfactual', True)
+    #set_trace()
     
     
     
@@ -319,7 +330,8 @@ def cummulative_dry_day(cube):
 if __name__=="__main__":
     dir = "data/data/driving_data2526/nrt_raw/"
     
-    regions = ["Midwestern Canadian Shield forests", 
+    shapefile_path = "data/data/driving_data2526/Focal_regions/SoW2526_Focal_MASTER_20260218.shp" 
+    regions = [#"Midwestern Canadian Shield forests", 
                #"Chilean Temperate Forests and Matorral", 
                #"Southeast South Korea", 
                #"Northwest Iberia", 
@@ -332,8 +344,19 @@ if __name__=="__main__":
 
     Joeys_data = "/data/users/douglas.kelley/Bayesian_fire_models/Joeys/SOW_FORCINGS/"
     BA_dir = "/home/users/douglas.kelley/Bayesian_fire_models/data/data"
+    hadgem_veg_frac = "/home/users/douglas.kelley/" + \
+                      "Bayesian_fire_models/data/data/HadGEM_land_frac/"
                 #outname, inname, factual dir, count dir
     variables = [
+                 ["tree_HYDE31", "tree", hadgem_veg_frac + "/factual", 
+                  hadgem_veg_frac + "/counterfactual", None,
+                  iris.analysis.MEAN],
+                 ["wood_HYDE31", "wood", hadgem_veg_frac + "/factual", 
+                  hadgem_veg_frac + "/counterfactual", None,
+                  iris.analysis.MEAN],
+                 ["veg_HYDE31", "veg", hadgem_veg_frac + "/factual", 
+                  hadgem_veg_frac + "/counterfactual", None,
+                  iris.analysis.MEAN],
                  ["LI", "LI/LI_*C*", Joeys_data, None, "litoti",    
                   iris.analysis.MEAN],
                  ["burned_area", "burned_area_global.nc", BA_dir, "None", None,
@@ -346,8 +369,8 @@ if __name__=="__main__":
                   [cummulative_dry_day, iris.analysis.MAX]],
                  ["tasmax", "tasmax", "ERA5_Factual", "HadGEM_Counter", None,
                   iris.analysis.MAX],
-                 ["tas", "tas", "ERA5_Factual", "HadGEM_Counter", None,
-                  iris.analysis.MEAN],
+                 #["tas", "tas", "ERA5_Factual", "HadGEM_Counter", None,
+                 # iris.analysis.MEAN],
                  ["pr", "pr", "ERA5_Factual", "HadGEM_Counter", None,
                   iris.analysis.MEAN],
                  ["wind_mean", "wind", "ERA5_Factual", "HadGEM_Counter", None,
@@ -363,7 +386,7 @@ if __name__=="__main__":
                  ["gust2_max", "WindGust2", "ERA5_Factual", "HadGEM_Counter", None,
                   iris.analysis.MAX],
                  ["hursmin", "hursmin", "ERA5_Factual", "HadGEM_Counter", None,
-                  iris.analysis.MIN],
+                  iris.analysis.MIN], 
                  ["DFMC_Wood", "FUEL/DFMC_timemean_", Joeys_data, None, "DFMC_Wood",    
                   iris.analysis.MEAN],
                  ["DFMC_Foliage", "FUEL/DFMC_timemean_", Joeys_data, None, "DFMC_Foliage",  
@@ -384,4 +407,4 @@ if __name__=="__main__":
                   iris.analysis.MEAN]
                  ]
     for variable in variables:
-        make_input(variable, region, dir, eg_file, start_year)
+        make_input(variable, region, dir, eg_file, start_year, shapefile_path)
