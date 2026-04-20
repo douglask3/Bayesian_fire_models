@@ -142,22 +142,24 @@ def regrid_hyde_cube(hyde_file, target_file, hyde_dir = "", target_dir = ""):
     
     # Optional: Save output
     iris.save(hyde_regridded, target_dir + hyde_file[:-3] + "_regridded_to_era5.nc")
-hyde_dir = "data/data/HYDE/"
-hyde_files = ["cropland.nc", "grazing_land.nc", "pasture.nc", "population_density.nc", 
-                  "rangeland.nc", "rural_population.nc", "total_irrigated.nc", "urban_area.nc",
-                  "urban_population.nc"]
-target_file = 'precip.nc'
 
-def regrid_hyde_for_regions(regions, hyde_files, target_file, hyde_dir, target_dir):
+
+def regrid_hyde_for_regions(regions, target_dir, 
+                            hyde_files = ["cropland.nc", "grazing_land.nc", "pasture.nc", 
+                                          "population_density.nc", "rangeland.nc", 
+                                          "rural_population.nc", "total_irrigated.nc", 
+                                          "urban_area.nc", "urban_population.nc"], 
+                            target_file = 'pr.nc', hyde_dir = "data/data/HYDE/"):
     for region in regions:
-        target_dir_r = target_dir + region + "/nrt/era5_monthly/"
+        region = region.replace(' ', '_')
+        target_dir_r = target_dir + region + "/nrt/factual/"
         for hyde_file in hyde_files:
             regrid_hyde_cube(hyde_file, target_file, hyde_dir, target_dir_r)
 
 if __name__=="__main__":
     regions = ["Amazon", "Congo", "LA", "Pantanal", "Alberta", "NEIndia"]
     target_dir = "data/data/driving_data2425/"
-    regrid_hyde_for_regions(regions, hyde_files, target_file, hyde_dir, target_dir)
+    regrid_hyde_for_regions(regions, target_dir, hyde_files, target_file, hyde_dir)
     
 
     
