@@ -179,18 +179,11 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
             
             cf = cf_blank.copy()
             cf.data += correct.data 
-            #if i == 1: 
-            #    set_trace()
+            
             if inverse is not None:
                 era5_f.data = inverse(era5_f.data)
                 cf.data = inverse(cf.data)
             
-            #out_dir = datadir.replace('nrt_raw', region.replace(' ', '_')) \
-            #            + 'nrt/EXPERIMENT/' + variable_out
-            #factual_file = out_dir.replace('EXPERIMENT', 'factual') + '.nc'
-            #
-            #counter_file = out_dir.replace('EXPERIMENT', 'counter') \
-            #                + '/ens-' + str(i)  + '.nc'   
             out_file = exp_file[0].replace(variable_mod, variable_out)
             print(out_file)
             factual_file = out_file.replace(experiments[0], 'Factual')
@@ -212,12 +205,6 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
 model_dir = "/hadgem_nrt/"
 obs_dataset = "/Era5_derived-era5-single-levels-daily-statistics/"
 
-
-variables_obs = ['hursmin', 'tasmax', 'tas', 'pr', 'wind', 'WindGust1', 'WindGust2']
-variables_mod = ['hursmin', 'tasmax', 'tas', 'pr', 'sfcWind', 'sfcWind', 'sfcWind']
-variables_out = ['hursmin', 'tasmax', 'tax', 'pr', 'wind', 'WindGust1', 'WindGust2']
-scales_mod = [1/100, 1, 1, 1, 1, 1, 1]
-
 def log1(x):
     return np.log(np.exp(x) - 0.9999999999)
 
@@ -238,6 +225,11 @@ def sexp(y):
 
 transformations = [logit, None, None, log1, slog, slog, slog]
 inverses = [logistic, None, None, exp1, sexp, sexp, sexp]
+variables_obs = ['hursmin', 'tasmax', 'tas', 'pr', 'wind', 'WindGust1', 'WindGust2']
+variables_mod = ['hursmin', 'tasmax', 'tas', 'pr', 'sfcWind', 'sfcWind', 'sfcWind']
+variables_out = ['hursmin', 'tasmax', 'tax', 'pr', 'wind', 'WindGust1', 'WindGust2']
+scales_mod = [1/100, 1, 1, 1, 1, 1, 1]
+
 
 def make_all_variable_inputs(variables_obs, variables_mod, variables_out, scales_mod,
                              transformations, inverses, *args, **kw):
