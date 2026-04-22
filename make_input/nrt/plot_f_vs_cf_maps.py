@@ -9,7 +9,6 @@ sys.path.append('SoW_info/')
 from state_of_wildfires_colours  import SoW_cmap
 from state_of_wildfires_region_info  import get_region_info
 
-
 sys.path.append('libs/')
 from plot_maps import *
 from  constrain_cubes_standard import *
