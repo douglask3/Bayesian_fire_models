@@ -23,12 +23,16 @@ def load_and_average_months(file, months, years):
         
     cube0 = cube.copy()
     season = sub_year_months(cube, months)
+    
     try:
         season_year = sub_year_range(season, years)
     except:
         set_trace()
     if len(months) > 1:
-        season_year = season_year.collapsed('time', iris.analysis.MEAN)
+        try:
+            season_year = season_year.collapsed('time', iris.analysis.MEAN)
+        except:
+            set_trace()
     season_year.data[season_year.data > 9E9] = np.nan
     return season_year    
 
@@ -105,17 +109,17 @@ def plot_factual_and_cf(variable, factual_path, cf_dir, months, years, label=Non
 
     return eg_cube
 
-variable_info = {'tas_mean':{"file": 'tas_mean', 'label': 'Mean Monthly Temp', 'Units': "°C", 
+variable_info = {'tas':{"file": 'tas', 'label': 'Mean Monthly Temp', 'Units': "°C", 
                             'shift': -273.15, 'scale': 1.0,
                             'range': None, 
                             'cmap': SoW_cmap['gradient_red'], 
                             'dcmap': SoW_cmap['diverging_BlueRed']},
-                 'tas_max':{"file": 'tas_max', 'label': 'Max Monthly Temp', 'Units': "°C", 
+                 'tasmax':{"file": 'tasmax', 'label': 'Max Monthly Temp', 'Units': "°C", 
                             'shift': -273.15, 'scale': 1.0, 
                             'range': None,
                             'cmap': SoW_cmap['gradient_red'], 
                             'dcmap': SoW_cmap['diverging_BlueRed']},
-                 'precip': {"file": 'precip', 'label': 'Precipitation', 'Units': "mm/day",
+                 'pr': {"file": 'pr', 'label': 'Precipitation', 'Units': "mm/day",
                             "shift": 0.0, 'scale': 1.0, 
                             'range': [0.0, None],
                             'cmap': SoW_cmap['gradient_teal'], 
@@ -126,19 +130,19 @@ variable_info = {'tas_mean':{"file": 'tas_mean', 'label': 'Mean Monthly Temp', '
                             'range': [0.0, None],
                               'cmap': SoW_cmap['gradient_teal'].reversed(), 
                               'dcmap': SoW_cmap['diverging_TealOrange']},
-                 'max_consec_dry': {"file": 'dry_days', 'label': 'Max. no consecutive dry days',
+                 'cumm_dry_days_max': {"file": 'cumm_dry_days_max', 'label': 'Max. no consecutive dry days',
                               'Units': "no. days",
                               "shift": 0.0, 'scale': 1.0, 
                             'range': [0.0, None],
                               'cmap': SoW_cmap['gradient_teal'].reversed(), 
                               'dcmap': SoW_cmap['diverging_TealOrange']},
-                 'hurs_mean': {"file": 'hurs_mean', 'label': 'Humidity', 
-                               'Units': "%",
-                               "shift": 0.0, 'scale': 1.0, 
-                            'range': [0.0, 100.0],
-                               'cmap': SoW_cmap['gradient_hotpink'], 
-                               'dcmap': SoW_cmap['diverging_TealPurple'].reversed()},
-                 'hurs_min': {"file": 'hurs_min', 'label': 'Min. Humidity', 
+                 #'hurs_mean': {"file": 'hurs_mean', 'label': 'Humidity', 
+                 #              'Units': "%",
+                 #              "shift": 0.0, 'scale': 1.0, 
+                 #           'range': [0.0, 100.0],
+                 #              'cmap': SoW_cmap['gradient_hotpink'], 
+                 #s              'dcmap': SoW_cmap['diverging_TealPurple'].reversed()},
+                 'hursmin': {"file": 'hursmin', 'label': 'Min. Humidity', 
                                'Units': "%",
                                "shift": 0.0, 'scale': 1.0, 
                             'range': [0.0, 100.0],
@@ -151,16 +155,16 @@ variable_info = {'tas_mean':{"file": 'tas_mean', 'label': 'Mean Monthly Temp', '
                                'cmap': SoW_cmap['gradient_purple'], 
                                'dcmap': SoW_cmap['diverging_GreenPink'].reversed()}}
 
-variables = ['tas_max', 'precip', 'dry_days', 'max_consec_dry', 'hurs_mean', 'hurs_min',
-             'wind_max']
+variables = ['tas', 'pr', 'dry_days', 'cumm_dry_days_max', 'hursmin', 'wind_max']
 
     
-regions = ['LA', 'Congo', 'Amazon', 'Pantanal']
+regions = ['Chilean_Temperate_Forests_and_Matorral', 'Midwestern_Canadian_Shield_forests', 'Northwest_Iberia', 'Scottish_Highlands', 'Southeast_South_Korea']
 
 for region in regions:
-    region_info = get_region_info(region)[region]
-    eg_cube = iris.load_cube('data/data/driving_data2425/' + region_info['dir'] + \
-                           '/nrt/era5_monthly/' + variable_info[variables[0]]['file'] + '.nc')
+    #region_info = get_region_info(region)[region]
+    
+    eg_cube = iris.load_cube('data/data/driving_data2526/' + region + \
+                           '/nrt/factual/' + variable_info[variables[0]]['file'] + '.nc')
     fig, axes = set_up_sow_plot_windows(len(variables), 5, 
                                         eg_cube = eg_cube, figsize = (30, 30))
     
@@ -168,12 +172,12 @@ for region in regions:
         info = variable_info[variable]
         plot_factual_and_cf(
             variable = info['file'],
-            factual_path = 'data/data/driving_data2425/' + region_info['dir'] + \
-                           '/nrt/era5_monthly/' + variable + '.nc',
-            cf_dir = 'data/data/driving_data2425/' + region_info['dir'] + \
-                     '/nrt/era5_monthly/CF/',
-            months = region_info['mnths'],
-            years = region_info['years'],
+            factual_path = 'data/data/driving_data2526/' + region + \
+                           '/nrt/factual/' + variable + '.nc',
+            cf_dir = 'data/data/driving_data2526/' + region + \
+                     '/nrt//countfactual//',
+            months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'],
+            years = [2024],
             label = info['label'],
             units = info['Units'],
             shift = info['shift'],
@@ -185,5 +189,5 @@ for region in regions:
             ax0   = i*5, eg_cube = eg_cube[0],
         )
     plt.tight_layout()
-    plt.savefig('figs/f_cf_era5' + region_info['dir'] + '.png', dpi = 300)
+    plt.savefig('figs/f_cf_era5' + region + '.png', dpi = 300)
 
