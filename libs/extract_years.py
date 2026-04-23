@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import fnmatch
 
-def extract_years(df, years, mnths, ext = "-01T00:00:00", transpose = False, flatten = True):
+def extract_years(df, years, mnths, ext = "-01T00:00:00", flatten = True):
     """
     Extracts and averages values from a DataFrame across specified months and years.
 
@@ -44,7 +44,7 @@ def extract_years(df, years, mnths, ext = "-01T00:00:00", transpose = False, fla
             for month in mnths
             if fnmatch.fnmatch(col, f"{year}-{month}*")
         ]
-        cols_this_year = np.unique(cols_this_year)#set_trace()
+        cols_this_year = np.unique(cols_this_year)
         colnames.append(cols_this_year)
         if flatten:
             avg_per_year.append(df[cols_this_year].mean(axis=1))
