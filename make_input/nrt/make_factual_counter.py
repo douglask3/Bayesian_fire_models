@@ -98,7 +98,7 @@ def crop_hadgem_era5_spatial_grids(era5, hadgem):
     return era5_cropped, hadgem_interp_spatial
 
 #[exp_file[2]]
-def grad_year_info_hadgem(ALL, NAT, year):
+def grab_year_info_hadgem(ALL, NAT, year):
     
     def syr(cube, yr):
         return sub_year_range(cube.copy(), [yr])
@@ -118,9 +118,9 @@ def grad_year_info_hadgem(ALL, NAT, year):
     return sALL, sNAT        
 
 def make_variable_inputs(variable_obs, variable_mod, variable_out, 
-                         scale_mod, transformation, inverse, 
+                         scale_obs, scale_mod, transformation, inverse, 
                          datadir, regions, model_dir, 
-                         experiments, obs_dataset, hadgem_start_year = 2019, npairs = 10):
+                         experiments, obs_dataset, hadgem_start_year = 2023, npairs = 10):
     
     def make_region_input(region):
         
@@ -130,6 +130,7 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
             
             files = [dir + file for file in  os.listdir(dir)]
             files = [file for file in files if str(hadgem_start_year) in file.split('/')[-1]]
+            
             return files
         file_lists = [exp_files(experiment) for experiment in experiments]
         
@@ -139,9 +140,11 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
         exp_files = []
         random.seed(42)
         while len(exp_files) < npairs:
-            exp_files.append(random.choice(all_pairs) + \
+            try:
+                exp_files.append(random.choice(all_pairs) + \
                             (random.choice([2020, 2021, 2022, 2023,2024]),))
-        
+            except:
+                set_trace()
         dir = datadir + region.replace(' ', '_')  + '/'  + obs_dataset + '/' + \
                 variable_obs + '/'
         files = os.listdir(dir)
@@ -161,13 +164,13 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
                 cube.data = transformation(cube.data)
             return cube
     
-        era5 = open_data(obs_file)
+        era5 = open_data(obs_file, scale_obs)
         era5.coord('valid_time').rename('time')
         for i, exp_file in enumerate(exp_files):
             ALL = open_data(exp_file[0], scale_mod)
             correct = open_data(exp_file[1], scale_mod)
             [ALL, correct] = constrain_to_common_time([ALL, correct])
-            ALL, correct = grad_year_info_hadgem(ALL, correct, 2024)#exp_file[2])    
+            ALL, correct = grab_year_info_hadgem(ALL, correct, 2024)#exp_file[2])    
             NAT = correct.copy()
             correct.data = correct.data - ALL.data
             
@@ -193,6 +196,7 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
             counter_file = '/'.join(counter_file.split('/')[:-1]) + '/ens-' + str(i)  + '.nc'
             if not os.path.isfile(factual_file):
                 os.makedirs(os.path.dirname(factual_file), exist_ok=True)
+                #set_trace()
                 iris.save(era5_f, factual_file)
 
             os.makedirs(os.path.dirname(counter_file), exist_ok=True)
@@ -205,11 +209,13 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
 model_dir = "/hadgem_nrt/"
 obs_dataset = "/Era5_derived-era5-single-levels-daily-statistics/"
 
-def log1(x):
+def log1(x, sc = 100):
+    x = x * sc
     return np.log(np.exp(x) - 0.9999999999)
 
-def exp1(y):
-    return np.log(np.exp(y) + 0.9999999999)
+
+def exp1(y, sc = 100):
+    return (np.log(np.exp(y) + 0.9999999999))/sc
 
 def logit(x):
     return np.log(x/(1-x))
@@ -227,25 +233,26 @@ transformations = [logit, None, None, log1, slog, slog, slog]
 inverses = [logistic, None, None, exp1, sexp, sexp, sexp]
 variables_obs = ['hursmin', 'tasmax', 'tas', 'pr', 'wind', 'WindGust1', 'WindGust2']
 variables_mod = ['hursmin', 'tasmax', 'tas', 'pr', 'sfcWind', 'sfcWind', 'sfcWind']
-variables_out = ['hursmin', 'tasmax', 'tax', 'pr', 'wind', 'WindGust1', 'WindGust2']
-scales_mod = [1/100, 1, 1, 1, 1, 1, 1]
+variables_out = ['hursmin', 'tasmax', 'tax_mean', 'pr', 'wind', 'WindGust1', 'WindGust2']
+scales_mod = [1/100, 1, 1, 1000**60*60*24/1000, 1, 1, 1]
+scales_obs = [1/100, 1, 1, 1000, 1, 1, 1]
 
 
 def make_all_variable_inputs(variables_obs, variables_mod, variables_out, scales_mod,
                              transformations, inverses, *args, **kw):
 
-    for vobs, vmod, vout, sc, tran, invr in zip(variables_obs, variables_mod, variables_out, 
-                                            scales_mod, transformations, inverses): 
-        make_variable_inputs(vobs, vmod, vout, sc, tran, invr, *args, **kw)
+    for vobs, vmod, vout, sco, scm, tran, invr in zip(variables_obs, variables_mod, variables_out, 
+                                                scales_obs, scales_mod, transformations, inverses): 
+        make_variable_inputs(vobs, vmod, vout, sco, scm, tran, invr, *args, **kw)
 
 if __name__=="__main__":
     dir = "data/data/driving_data2526/nrt_raw/"
 
     experiments = ["ALL", "NAT"]
     regions = [
-               "Midwestern Canadian Shield forests", 
-               "Chilean Temperate Forests and Matorral", 
-               "Southeast South Korea", 
+               #"Midwestern Canadian Shield forests", 
+               #"Chilean Temperate Forests and Matorral", 
+               #"Southeast South Korea", 
                "Northwest Iberia", 
                "Scottish Highlands"
                ]
