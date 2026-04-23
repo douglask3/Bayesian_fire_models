@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import fnmatch
 
-def extract_years(df, years, mnths, ext = "-01T00:00:00", flatten = True):
+def extract_years(df, years, mnths, ext = "-01T00:00:00", transpose = False, flatten = True):
     """
     Extracts and averages values from a DataFrame across specified months and years.
 
@@ -32,6 +32,7 @@ def extract_years(df, years, mnths, ext = "-01T00:00:00", flatten = True):
     - Designed for use in ensemble climate/fire datasets where time is encoded in column headers.
     - Useful for computing seasonal means (e.g., JFM) per year, per ensemble member.
     """
+    
     if years is None:
         years = np.unique([col[0:4] for col in df.columns[1:]])
     # Reshape: group columns by year
@@ -49,8 +50,8 @@ def extract_years(df, years, mnths, ext = "-01T00:00:00", flatten = True):
             avg_per_year.append(df[cols_this_year].mean(axis=1))
         else:
             avg_per_year.append(df[cols_this_year])
-    out = np.array(avg_per_year)
     
+    out = np.array(avg_per_year)
     if flatten:
         out = out.flatten()   
     else:
@@ -59,5 +60,6 @@ def extract_years(df, years, mnths, ext = "-01T00:00:00", flatten = True):
         A, B, C = avg_per_year.shape
         out = avg_per_year.transpose(0, 2, 1).reshape(A * C, B)
         out = pd.DataFrame(data=out.T, columns=cols)
-    return out
+    
+    return out, years
 
