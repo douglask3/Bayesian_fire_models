@@ -33,7 +33,7 @@ def read_variable_from_netcdf_from_dir(dir, filename, find_no_files = False, ens
     
     if filename[0] == '~' or filename[0] == '/' or filename[0] == '.': 
         dir = ''
-    
+     
     if find_no_files or ens_no is not None:
         files = glob.glob(dir + '**', recursive = True)
         files = [file for file in files if filename in file]
@@ -49,7 +49,7 @@ def read_variable_from_netcdf_from_dir(dir, filename, find_no_files = False, ens
                 dataset = iris.load_cube(files[ens_no], callback=sort_time)
             except:
                 dataset = iris.load_cube(files[ens_no])
-        elif isinstance(filename, str):        
+        elif isinstance(filename, str):       
             dataset = iris.load_cube(dir + filename, callback=sort_time)
         else:
             dataset = iris.load_cube(dir + filename[0], filename[1], callback=sort_time)
@@ -117,6 +117,7 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
                               find_no_files = False,
                               ens_no = None,
                               *args, **kw):
+    
     """Read data from a netCDF file 
         Assumes that the variables in the netcdf file all have the name "variable"
         Assunes that values < -9E9, you dont want. This could be different in some circumstances
@@ -161,10 +162,14 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
         else:   
             def addTime(time_point):
                 try:
-                    time = iris.coords.DimCoord(np.array([time_point.points]), standard_name='time', units = time_points.units)
+                    time = iris.coords.DimCoord(np.array([time_point.points]), 
+                                                standard_name='time',
+                                                units = time_points.units)
                 except:
-                    time = iris.coords.DimCoord(np.array([time_point]), standard_name='time', units = time_points.units)
-                    #set_trace()    
+                    time = iris.coords.DimCoord(np.array([time_point]), 
+                                                standard_name='time', 
+                                                units = time_points.units)
+                   
                 dataset_cp = dataset.copy()
                 dataset_cp.add_aux_coord(time)
                 return dataset_cp
