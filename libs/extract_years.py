@@ -17,7 +17,8 @@ def extract_years(df, years, mnths, ext = "-01T00:00:00", flatten = True):
     mnths : list of str
         The months to average over (e.g., ['01', '02', '03'] for January–March).
     ext : str, optional
-        A string pattern representing the suffix to match in column names (default is '-01T00:00:00'), 
+        A string pattern representing the suffix to match in column names 
+        (default is '-01T00:00:00'), 
         though it's overridden in favor of a wildcard match.
 
     Returns:
