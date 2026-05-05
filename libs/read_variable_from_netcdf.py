@@ -146,7 +146,7 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
         dataset = read_variable_from_netcdf_from_dir(dir[i], filename, find_no_files,
                                                      ens_no = ens_no)
         i += 1
-
+    
     if dataset is None:
         print("==============\nERROR!")
         print("can't open data.")
@@ -258,7 +258,7 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None,
     
     Y, time_points, extent = read_variable_from_netcdf(y_filename, make_flat = True, *args, 
                                     return_time_points = True, return_extent = True, **kw)
-    
+     
     if CA_filename is not None:
         CA = read_variable_from_netcdf(CA_filename, make_flat = True, 
                                        time_points = time_points, extent = extent, *args, **kw)
