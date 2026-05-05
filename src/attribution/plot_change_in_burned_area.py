@@ -20,7 +20,7 @@ def ratio_levels(ratios, n_levels = 9, *args, **kw):
 
     log_r = np.log10(ratios)
     max_log = np.percentile(np.abs(log_r), 100 * (1-1/(2*n_levels)))
-
+    
     # target max ratio
     max_ratio = 10**max_log
 
@@ -112,8 +112,11 @@ def find_levels(summery, ii, n_levels = 7, FUN = auto_pretty_levels, fullYrOnly 
                                  summery[i][1].data.flatten()) for i in ii])
     except:
         all_fact[np.abs(all_fact)<0.0001] = 0.0
-    return FUN(all_fact, n_levels=n_levels, ignore_v = 0.0, *args, **kw)
-    
+    try:
+        out = FUN(all_fact, n_levels=n_levels, ignore_v = 0.0, *args, **kw)
+    except:
+        set_trace()
+    return out
 
 def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_file = None,
                                out_dir = "figs/", percentiles = [5, 95], 
@@ -122,7 +125,7 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_fi
     #if obs_file is not None:
     #    #filename = "data/data/driving_data_base/" + region +"/burnt_area.nc"
     #    anomaly, climatology = open_netcdf_and_find_clim(obs_file)
-
+    set_trace()
     dir = dir1 + region + dir2 + '/'
     
     # Returns a list of Path objects for directories only
@@ -196,8 +199,12 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_fi
         nrows = eg_cube.shape[1] + 1
         ncols = (out_merge.shape[0])*len(percentiles)
     
-    dlevels2 = find_levels(summery, range(1, len(summery)), n_levels = 11, FUN = ratio_levels, fullYrOnly = True)
-    dlevels1 = find_levels(summery, range(1, len(summery)), n_levels = 11, FUN = ratio_levels, fullYrOnly = fullYrOnly)
+    dlevels2 = find_levels(summery, range(0, len(summery)), 
+                           n_levels = 11, FUN = ratio_levels, fullYrOnly = True)
+    dlevels1 = find_levels(summery, range(0, len(summery)), 
+                           n_levels = 11, FUN = ratio_levels, fullYrOnly = fullYrOnly)
+
+    
     #dlevels = np.unique(np.sort(np.append(dlevels1, dlevels2)))
     #dlevels = np.array([0.25, 0.3, 0.33, 0.4, 0.5, 0.67, 1, 1.5, 2, 2.5, 3, 3.5, 4])
     levels = find_levels(summery, [0], fullYrOnly = fullYrOnly)
@@ -290,9 +297,11 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_fi
         else:
             add_cbar(axi, len(axes)-2, fig, img1, axes, 0.05, ratio = True)
             add_cbar(axi+2, axi+2, fig, img2, axes, 0.05, ratio = True)
+    elif len(summery) == 1:
+        add_cbar(axi-npc*2, axi-1, fig, img, axes, ratio = True)
     else:
         add_cbar(axi-npc*2, axi-1, fig, img2, axes, ratio = True)
-    
+   
     if not (len(summery) == 2 and plot_att_only):
         titles = [factual.name[:-1]] + [cf.name[:-1] for cf in counterfactual]
         for i in range(summery.shape[0]):
