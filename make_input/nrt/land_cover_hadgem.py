@@ -49,12 +49,16 @@ def make_veg_cover(file, out_dir, experiment):
     veg = wood.copy()
     veg.data += grass.data
     veg.rename('Veg_cover')
+
+    veg_log = veg.copy()
+    veg_log.data = np.log(1E-100 + veg_log.data)
     out_dir =  out_dir + experiment + '/'
     Path(out_dir).mkdir(parents=True, exist_ok=True)
     
     iris.save(tree, out_dir + 'tree.nc')
     iris.save(wood, out_dir + 'wood.nc')
-    iris.save(veg, out_dir + 'veg.nc')
+    iris.save(veg, out_dir + 'veg_abs.nc')
+    iris.save(veg_log, out_dir + 'veg_log.nc')
     return tree, wood, veg
 
 
@@ -62,5 +66,5 @@ if __name__=="__main__":
     dir_out = 'data/data/HadGEM_land_frac/'
     ftree, fwood, fveg = make_veg_cover(factual_file, dir_out, 'factual')
     ctree, cwood, cveg = make_veg_cover(counter_file, dir_out, 'counterfactual')
-    set_trace()
+    
     
