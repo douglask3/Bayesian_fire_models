@@ -73,7 +73,8 @@ def plot_kde(x, y, xlab, ylab, cmap_name = "gradient_hues_extended", ax = None, 
                 cmap=SoW_cmap[cmap_name], ax = ax, *args, **kw)
     scale2upper1_axis(ax)
 
-def plot_fact_vs_counter(factual_flat, counterfactual_flat, obs, ax = False): 
+def plot_fact_vs_counter(factual_flat, counterfactual_flat, obs, plot_name = '', ax = False,
+                         *args, **kw): 
 
     """
     Plots a 2D KDE of Factual vs. Counterfactual burned area values, along with a 1:1 reference line 
@@ -98,17 +99,33 @@ def plot_fact_vs_counter(factual_flat, counterfactual_flat, obs, ax = False):
     - Adds a 1:1 line to visualize agreement between factual and counterfactual conditions.
     - Draws vertical and horizontal red dashed lines at the observed value.
     """
-
+    
+    nens = int(len(factual_flat)/len(obs))
+    def reweight_year(i):
+        mu = factual_flat[(i*nens):(i*nens+nens)]
+        cmu = counterfactual_flat[(i*nens):(i*nens+nens)]
+        weights = compute_weights(obs[i], mu, 50)
+        mu_rs, idx = resample_ensemble(mu, weights, max(nens, int(1000/len(obs))))    
+        
+        return mu[idx], cmu[idx]
+    
+    factual_rs = np.empty(0)
+    counterfactual_rs = np.empty(0)
+    for i in range(len(obs)):
+        frs, crs = reweight_year(i)
+        factual_rs = np.append(factual_rs, frs)
+        counterfactual_rs = np.append(counterfactual_rs, crs)
+        
+ 
     x = np.linspace(0, 1, 20)
     log_levels = x**(8)  # try 3, 5, 7 for increasingly strong bias
-    plot_kde(factual_flat, counterfactual_flat, "factual", "counterfactual",
-             levels=log_levels, log_scale = True, thresh=1e-4, ax = ax)
-
+    plot_kde(factual_rs, counterfactual_rs, "factual", "counterfactual",levels=log_levels, log_scale = True, thresh=1e-4, ax = ax)
+    
     plt.plot([0.0000000001, 100], [0.0000000001, 100], 'k--', label='1:1 Line')
     plt.ylabel("Counterfactual Burned Area")
     plt.xlabel("Factual Burned Area")
     plt.title("Factual vs Counterfactual Burned Area")
-    
+    set_trace()
     plt.axvline(obs, color='red', linestyle='--', label='Observed Burned Area')
     
     plt.grid(True)
@@ -243,7 +260,6 @@ def plot_attribution_time_series(factual, counterfactual, obs, plot_name,
     plt.show()
 
 
-    
 
 def plot_fact_vs_ratio(factual_flat, counterfactual_flat, obs, plot_name, 
                        set_Ylab = True, ax = None):
@@ -440,47 +456,32 @@ def plot_for_region(region, metric, plot_FUN,
                     years = None, mnths = range(12), flatten = True,
                     *args, **kw):
     
-    if region != "":
-        region_info = get_region_info(region)[region]
-        if years is None:
-            years = region_info['years']
-        if mnths is None:
-            mnths = region_info['mnths']
-        # Load the data
     dir = dir1 + region + dir2 + '/'
-    #set_trace()
-    try:    
-        factual = pd.read_csv(dir + factual_name + "-/" + metric + \
-                                     "/members/absolute/Evaluate.csv")
-        counterfactual = pd.read_csv(dir + counterfactual_name + \
-                              "/" + metric + "/members/absolute/Evaluate.csv")
-    except:
-        factual = pd.read_csv(dir + factual_name + "-/" + metric + \
-                                     "/points-Evaluate.csv")
-        counterfactual = pd.read_csv(dir + counterfactual_name +  "/" + metric + "/points-Evaluate.csv")
-     
+    
+    
+    factual = pd.read_csv(dir + factual_name + "-/" + metric +  \
+                          "/members/absolute/Evaluate.csv")
+    counterfactual = pd.read_csv(dir + counterfactual_name + "/" + metric + \
+                                 "/members/absolute/Evaluate.csv")
+    
     obs = open_burned_area_observation_time_series(obs_dir + '/' + region + '/' + obs_file)
+    obs = obs[['time', metric + '_burned_area']]
     # Extra years and flatten the arrays to 1D
     if all_mod_years:
         mod_years = None
     else:
         mod_years = years
-    factual_flat = extract_years(factual, mod_years, mnths, flatten = flatten)/len(mnths) + 0.000000001
-    counterfactual_flat = extract_years(counterfactual, mod_years, mnths, flatten = flatten)/len(mnths)\
-                                 + 0.000000001
+
+    factual_flat, mod_years = extract_years(factual, mod_years, mnths, flatten = flatten)
+    set_trace()
+    counterfactual_flat = extract_years(counterfactual, mod_years, mnths, flatten = flatten)[0]
+    obs0 = obs.copy()
+    obs = extract_years(obs.set_index('time').T, mod_years, mnths, '-15', transpose = True)[0]
     
-    obs = extract_years(obs.set_index('time').T, years, mnths, '-15')
-    
-    factual_flat0 = factual_flat.copy()
     if metric == 'mean':
-        obs = obs[0]#*20#*33.0
-        plot_name = region#region_info['shortname']
+        plot_name = region
     else:
         plot_name = ""
-        obs = obs[1]
-    
-    factual_flat = factual_flat * 100
-    counterfactual_flat = counterfactual_flat * 100
     
     out = plot_FUN(factual_flat, counterfactual_flat, obs, plot_name = plot_name, *args, **kw)
     
