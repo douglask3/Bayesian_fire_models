@@ -68,7 +68,7 @@ def cut_era5_hadgem_to_time(era5, hadgem, era5_time = 'time', hadgem_time = 'tim
     # Boolean masks
     era5_mask = np.array([in_range(tuple(d), start, end) for d in era5_ymd])
     hadgem_mask = np.array([in_range(tuple(d), start, end) for d in hadgem_ymd])
-
+    
     # Apply slicing
     era5_cut = era5[era5_mask]
     hadgem_cut = hadgem[hadgem_mask]
@@ -98,7 +98,7 @@ def crop_hadgem_era5_spatial_grids(era5, hadgem):
     return era5_cropped, hadgem_interp_spatial
 
 #[exp_file[2]]
-def grab_year_info_hadgem(ALL, NAT, year):
+def grab_year_info_hadgem(ALL, NAT, year, match_year = 2025):
     
     def syr(cube, yr):
         return sub_year_range(cube.copy(), [yr])
@@ -114,7 +114,25 @@ def grab_year_info_hadgem(ALL, NAT, year):
         except:
             sALL = syr(ALL, year - 1)
             sNAT = syr(NAT, year - 1)
-        
+    
+    def set_to_match_year(cube):
+        time_coord = cube.coord('time')
+        units = time_coord.units
+
+        # Convert to datetime objects (cftime.Datetime360Day)
+        dates = units.num2date(time_coord.points)
+
+        # Replace year
+        new_dates = [cftime.Datetime360Day(match_year, d.month, d.day, d.hour, d.minute, d.second) for d in dates]
+
+        # Convert back to numeric time
+        new_points = units.date2num(new_dates)
+
+        # Assign back
+        time_coord.points = new_points
+        return cube
+    sALL = set_to_match_year(sALL)
+    sNAT = set_to_match_year(sNAT)
     return sALL, sNAT        
 
 def make_variable_inputs(variable_obs, variable_mod, variable_out, 
@@ -175,8 +193,8 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
             correct.data = correct.data - ALL.data
             
             cf_blank, correct = cut_era5_hadgem_to_time(era5, correct)
-            
             correct = interplate_hadgem_to_era5_time(cf_blank, correct)
+            
             cf_blank, correct = crop_hadgem_era5_spatial_grids(cf_blank, correct)
             era5_f, nn = crop_hadgem_era5_spatial_grids(era5, correct)
             
@@ -196,7 +214,6 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
             counter_file = '/'.join(counter_file.split('/')[:-1]) + '/ens-' + str(i)  + '.nc'
             if not os.path.isfile(factual_file):
                 os.makedirs(os.path.dirname(factual_file), exist_ok=True)
-                #set_trace()
                 iris.save(era5_f, factual_file)
 
             os.makedirs(os.path.dirname(counter_file), exist_ok=True)
@@ -233,7 +250,7 @@ transformations = [logit, None, None, log1, slog, slog, slog]
 inverses = [logistic, None, None, exp1, sexp, sexp, sexp]
 variables_obs = ['hursmin', 'tasmax', 'tas', 'pr', 'wind', 'WindGust1', 'WindGust2']
 variables_mod = ['hursmin', 'tasmax', 'tas', 'pr', 'sfcWind', 'sfcWind', 'sfcWind']
-variables_out = ['hursmin', 'tasmax', 'tax_mean', 'pr', 'wind', 'WindGust1', 'WindGust2']
+variables_out = ['hursmin', 'tas_max', 'tax_mean', 'pr', 'wind', 'WindGust1', 'WindGust2']
 scales_mod = [1/100, 1, 1, 1000**60*60*24/1000, 1, 1, 1]
 scales_obs = [1/100, 1, 1, 1000, 1, 1, 1]
 
