@@ -13,6 +13,7 @@ import shapely.geometry as sgeom
 import shapely.ops as ops
 from shapely.geometry import Point
 from shapely.vectorized import contains
+from shapely import intersects_xy
 import numpy as np
 import cartopy.crs as ccrs
 import geopandas as gp
@@ -305,7 +306,7 @@ def contrain_to_shape(cube, geom, constrain = True, mask = True):
         lons, lats = np.meshgrid(cube.coord('longitude').points, cube.coord('latitude').points)
         
         # Create a mask: True for points outside the continent
-        mask = ~contains(geom, lons, lats)
+        mask = ~intersects_xy(geom, lons, lats)
         
         # Handle multi-dimensional cubes
         expanded_mask = np.broadcast_to(mask, cube.shape)
@@ -402,7 +403,7 @@ def mask_data_with_geometry(cube, geometry):
     for i in range(lon_grid.shape[0]):
         for j in range(lon_grid.shape[1]):
             point = sgeom.Point(lon_grid[i, j], lat_grid[i, j])
-            mask[i, j] = not geometry.contains(point)  # Mark as True if outside the geometry
+            mask[i, j] = not geometry.intersects_xy(point)  # Mark as True if outside the geometry
 
     # Expand the mask to match the shape of the cube's data (broadcasting)
     # Assuming the first two dimensions are latitude and longitude
