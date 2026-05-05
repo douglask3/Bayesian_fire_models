@@ -633,7 +633,8 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
              cbar_label = '', cbar_orientation = 'vertical',
              overlay_value = None, overlay_cube = None,
              overlay_col = "#cfe9ff", overlay_size = 1,
-             cube_pvs = None, add_cbar = True, figure_filename = None, *args, **kw):
+             cube_pvs = None, add_cbar = True, figure_filename = None, use_pcolmesh = True, 
+             *args, **kw):
     """
     Plot a SoW-style map of fire (or climate) data with optional overlays and confidence markers.
 
@@ -710,8 +711,13 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
     else:
         norm = None
     
-    img = iplt.contourf(cube, levels=levels, cmap=cmap, axes=ax, extend = extend, 
-                        norm = norm)
+    if use_pcolmesh:
+        img = iplt.pcolormesh(cube,cmap=cmap, axes=ax, 
+                            norm = norm)
+    else:
+        img = iplt.contourf(cube, levels=levels, cmap=cmap, axes=ax, extend = extend, 
+                            norm = norm)
+
 
     ## Create mask: 1 where NaN, 0 where valid
     #nan_mask = cube.data.copy()
