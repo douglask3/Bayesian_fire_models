@@ -17,7 +17,7 @@ def plot_all_attribution_scatter(dir1, dir2, regions, obs_dir, obs_file, *args, 
         regions = [regions]
     def plot_attribution_scatter_generic(counterfactual_name, 
                                          plot_name = "attribution_scatter",
-                                         plot_FUN = plot_fact_vs_ratio, flatten = True):
+                                         plot_FUN = plot_fact_vs_counter, flatten = True):
         
         plot_attribution_scatter(regions, plot_name + counterfactual_name,
                                  dir1 = dir1, dir2 = dir2,
@@ -27,6 +27,7 @@ def plot_all_attribution_scatter(dir1, dir2, regions, obs_dir, obs_file, *args, 
     path = Path(dir1 + regions[0] + dir2)
     directories = [d for d in path.iterdir() if d.is_dir()] 
     directories = [d.name for d in directories if "counterfactual" in d.name]
+    
     for dir in directories:
         #set_trace()
         plot_attribution_scatter_generic(dir)
