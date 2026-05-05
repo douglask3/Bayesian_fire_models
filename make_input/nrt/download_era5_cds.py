@@ -211,7 +211,7 @@ def download_era5(variables, years = [1940], months = range(13),
         process_var(var[0], var[1], var[2])
 
 yr_now = DT.now().year
-yearss = [range(2002, yr_now + 1)] #range(2020, yr_now + 1), range(yr_now-2, yr_now + 1),  range(2010, yr_now + 1),
+yearss = [range(2002, yr_now + 1)] #range(2020, yr_now + 1), range(yr_now-2, yr_now + 1),  range(2010, yr_now + 1),range(2024, yr_now + 1),  
 mnth_now = DT.now().month - 2
 
 area = [90, -180, -60, 180]
@@ -233,7 +233,8 @@ variables = [["total_precipitation", "daily_mean", "pr"],
             ]
 temp_dir_default = "/data/users/douglas.kelley/Bayesian_fire_models/data-cds/era5_nrt/"
 
-def run_for_report(shapefile_path, region_names,  out_dir, temp_dir = temp_dir_default):
+def run_era5_download_for_report(shapefile_path, region_names,  out_dir, 
+                                 temp_dir = temp_dir_default):
 
     for region_name in region_names:
         for years in yearss:
@@ -264,7 +265,7 @@ if __name__=="__main__":
                     "Congo basin",
                     "Amazon and Rio Negro rivers",
                     "Pantanal basin"]
-    run_for_report(shapefile_path, region_names,  out_dir)
+    run_era5_download_for_report(shapefile_path, region_names,  out_dir)
 
 
     area = [90, -180, -90, 180]
@@ -274,7 +275,7 @@ if __name__=="__main__":
     variables = [
                     ["10m_u_component_of_wind", "daily_mean", "u-wind"],
                     ["10m_v_component_of_wind", "daily_mean", "v-wind"],
-                    #["total_precipitation", "", "pr"], 
+                    ["total_precipitation", "", "pr"], 
                     ["2m_temperature", "daily_maximum", "tasmax"],
                     ["2m_temperature", "daily_mean", "tas_mean"],
                     ["2m_dewpoint_temperature", "daily_mean", "tasdew_mean"],
