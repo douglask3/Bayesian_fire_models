@@ -332,7 +332,7 @@ if __name__=="__main__":
     
     shapefile_path = "data/data/driving_data2526/Focal_regions/SoW2526_Focal_MASTER_20260218.shp" 
     regions = [#"Midwestern Canadian Shield forests", 
-               #"Chilean Temperate Forests and Matorral", 
+               "Chilean Temperate Forests and Matorral", 
                #"Southeast South Korea", 
                #"Northwest Iberia", 
                "Scottish Highlands"
@@ -354,7 +354,10 @@ if __name__=="__main__":
                  ["wood_HYDE31", "wood", hadgem_veg_frac + "/factual", 
                   hadgem_veg_frac + "/counterfactual", None,
                   iris.analysis.MEAN],
-                 ["veg_HYDE31", "veg", hadgem_veg_frac + "/factual", 
+                 ["veg_HYDE31", "veg_abs", hadgem_veg_frac + "/factual", 
+                  hadgem_veg_frac + "/counterfactual", None,
+                  iris.analysis.MEAN],
+                 ["veg_HYDE31_log", "veg_log", hadgem_veg_frac + "/factual", 
                   hadgem_veg_frac + "/counterfactual", None,
                   iris.analysis.MEAN],
                  ["LI", "LI/LI_*C*", Joeys_data, None, "litoti",    
