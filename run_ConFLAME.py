@@ -459,10 +459,12 @@ def run_ConFire(namelist):
                 run_experiment_wrapper(args)
 
         if len(args_list)>1:
-            attribution_analysis(output_dir, '/' + output_file + '/', 
-                                 [x["dir"] for x in args_list if x["name"] == "factual"][0],
-                                 obs_file_nc = args_list[0]['y_filen'], out_dir = fig_dir)
-            
+            try:    
+                attribution_analysis(output_dir, '/' + output_file + '/', 
+                                     [x["dir"] for x in args_list if x["name"] == "factual"][0],
+                                     obs_file_nc = args_list[0]['y_filen'], out_dir = fig_dir)
+            except:
+                pass
     if regions is None:
         run_for_regions(None)
     else:
