@@ -747,7 +747,7 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
         else:
             cbar = plt.colorbar(img, ax=ax, ticks=levels, orientation=cbar_orientation,
                                 fraction=0.05,  # width of colorbar relative to figure
-                                pad=-0.05, shrink=1.0, aspect=40)
+                                pad=0.05, shrink=1.0, aspect=40)
         cbar.set_label(cbar_label, labelpad=10, loc='center')
         cbar.ax.xaxis.set_label_position('top')
          
