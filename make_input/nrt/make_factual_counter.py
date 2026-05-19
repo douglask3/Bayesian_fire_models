@@ -215,7 +215,7 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
             if not os.path.isfile(factual_file):
                 os.makedirs(os.path.dirname(factual_file), exist_ok=True)
                 iris.save(era5_f, factual_file)
-
+            
             os.makedirs(os.path.dirname(counter_file), exist_ok=True)
             iris.save(cf, counter_file)
             
@@ -250,8 +250,8 @@ transformations = [logit, None, None, log1, slog, slog, slog]
 inverses = [logistic, None, None, exp1, sexp, sexp, sexp]
 variables_obs = ['hursmin', 'tasmax', 'tas', 'pr', 'wind', 'WindGust1', 'WindGust2']
 variables_mod = ['hursmin', 'tasmax', 'tas', 'pr', 'sfcWind', 'sfcWind', 'sfcWind']
-variables_out = ['hursmin', 'tas_max', 'tax_mean', 'pr', 'wind', 'WindGust1', 'WindGust2']
-scales_mod = [1/100, 1, 1, 1000**60*60*24/1000, 1, 1, 1]
+variables_out = ['hursmin', 'tas_max', 'tas_mean', 'pr', 'wind', 'WindGust1', 'WindGust2']
+scales_mod = [1/100, 1, 1, 1000*60*60*24/1000, 1, 1, 1]
 scales_obs = [1/100, 1, 1, 1000, 1, 1, 1]
 
 
@@ -271,7 +271,7 @@ if __name__=="__main__":
                #"Chilean Temperate Forests and Matorral", 
                #"Southeast South Korea", 
                "Northwest Iberia", 
-               "Scottish Highlands"
+               #"Scottish Highlands"
                ]
 
     make_all_variable_inputs(variables_obs, variables_mod, variables_out, 
