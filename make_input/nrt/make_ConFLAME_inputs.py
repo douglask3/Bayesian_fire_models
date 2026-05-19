@@ -281,9 +281,12 @@ def make_input(variable, region, dir, eg_file, start_year = 2002, shapefile_path
                                                  region.replace('_', ' '))
             
             iris.save(cube, out_file)
-
+            return cube
+        
         sl = '/' if counter else ''
         if i_dir[0] == '.' or i_dir[0] == '~' or i_dir[0] == '/':
+            if "HadGEM_land_frac" in i_dir:
+                sl = ''    
             filename = i_dir + '/' + in_file + sl + '*'
         else:
             
@@ -291,7 +294,7 @@ def make_input(variable, region, dir, eg_file, start_year = 2002, shapefile_path
                 filename = dir + region +'/' + i_dir + '/' + in_file + '.nc'
             else:
                 filename = dir + region +'/' + i_dir + '/' + in_file + sl + '*'
-        #set_trace()
+        
         files = sorted(glob.glob(filename, recursive = True))#[0:6]   
         
         if counter:
@@ -299,12 +302,13 @@ def make_input(variable, region, dir, eg_file, start_year = 2002, shapefile_path
         else:
             make_file(files)
     
+    print(in_file)
+    print(f_dir)
     make_subout(f_dir, 'factual')
 
+    print(cf_dir)
     if cf_dir is not None:
         make_subout(cf_dir, 'countfactual', True)
-    #set_trace()
-    
     
     
 def dry_day(cube):
@@ -332,9 +336,9 @@ if __name__=="__main__":
     
     shapefile_path = "data/data/driving_data2526/Focal_regions/SoW2526_Focal_MASTER_20260218.shp" 
     regions = [#"Midwestern Canadian Shield forests", 
-               "Chilean Temperate Forests and Matorral", 
+               #"Chilean Temperate Forests and Matorral", 
                #"Southeast South Korea", 
-               #"Northwest Iberia", 
+               "Northwest Iberia", 
                "Scottish Highlands"
                ]
     
@@ -364,17 +368,19 @@ if __name__=="__main__":
                   iris.analysis.MEAN],
                  ["burned_area", "burned_area_global.nc", BA_dir, "None", None,
                   iris.analysis.MEAN],
+                 ["pr", "pr", "ERA5_Factual", "HadGEM_Counter", None,
+                  iris.analysis.MEAN],
+                 ["tas_max", "tas_max", "ERA5_Factual", "HadGEM_Counter", None,
+                  iris.analysis.MEAN],
+                 ["hursmin_mean", "hursmin", "ERA5_Factual", "HadGEM_Counter", None,
+                  iris.analysis.MEAN], 
                  ["dry_days", "pr", "ERA5_Factual", "HadGEM_Counter", None,
                   [dry_day, iris.analysis.MEAN]],
                  ["cumm_dry_days_mean", "pr", "ERA5_Factual", "HadGEM_Counter", None,
                   [cummulative_dry_day, iris.analysis.MEAN]],
                  ["cumm_dry_days_max", "pr", "ERA5_Factual", "HadGEM_Counter", None,
                   [cummulative_dry_day, iris.analysis.MAX]],
-                 ["tasmax", "tasmax", "ERA5_Factual", "HadGEM_Counter", None,
-                  iris.analysis.MAX],
-                 #["tas", "tas", "ERA5_Factual", "HadGEM_Counter", None,
-                 # iris.analysis.MEAN],
-                 ["pr", "pr", "ERA5_Factual", "HadGEM_Counter", None,
+                 ["tas_mean", "tas_mean", "ERA5_Factual", "HadGEM_Counter", None,
                   iris.analysis.MEAN],
                  ["wind_mean", "wind", "ERA5_Factual", "HadGEM_Counter", None,
                   iris.analysis.MEAN],
@@ -388,8 +394,8 @@ if __name__=="__main__":
                   iris.analysis.MEAN],
                  ["gust2_max", "WindGust2", "ERA5_Factual", "HadGEM_Counter", None,
                   iris.analysis.MAX],
-                 ["hursmin", "hursmin", "ERA5_Factual", "HadGEM_Counter", None,
-                  iris.analysis.MIN], 
+                 ["hursmin_min", "hursmin", "ERA5_Factual", "HadGEM_Counter", None,
+                  iris.analysis.MIN],
                  ["DFMC_Wood", "FUEL/DFMC_timemean_", Joeys_data, None, "DFMC_Wood",    
                   iris.analysis.MEAN],
                  ["DFMC_Foliage", "FUEL/DFMC_timemean_", Joeys_data, None, "DFMC_Foliage",  
