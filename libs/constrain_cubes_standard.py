@@ -32,12 +32,17 @@ def constrain_to_data(cube):
         cube of same or smaller extent restircited to range of lats and lons where data.
         cube has useable data.
     """
+    
     lats = cube.coord('latitude').points
     lons = cube.coord('longitude').points
 
-    lat_valid = lats[~np.isnan(cube.data).all(axis=(0,2))]
-    lon_valid = lons[~np.isnan(cube.data).all(axis=(0,1))]
-
+    if len(cube.data.shape) == 3:
+        lat_valid = lats[~np.isnan(cube.data).all(axis=(0,2))]
+        lon_valid = lons[~np.isnan(cube.data).all(axis=(0,1))]
+    else:
+        lat_valid = lats[~np.isnan(cube.data).all(axis=(1))]
+        lon_valid = lons[~np.isnan(cube.data).all(axis=(0))]
+        
     lat_min, lat_max = np.min(lat_valid), np.max(lat_valid)
     lon_min, lon_max = np.min(lon_valid), np.max(lon_valid)
 
@@ -149,6 +154,7 @@ def sub_year_range(cube, year_range):
     Returns:
         cube of just years between to years provided.
     """
+    if len(year_range) == 1: year_range = [year_range[0], year_range[0]]
     
     try:
         icc.add_year(cube, 'time')
@@ -173,11 +179,19 @@ def sub_year_months(cube, months_of_year):
         icc.add_month_number(cube, 'time')
     except:
         pass  
-           
-    months_of_year = np.array(months_of_year)+1
+    if not isinstance(months_of_year, list): months_of_year = [months_of_year]
+    if isinstance(months_of_year[0], str):
+        months_of_year = np.array([int(month) for month in months_of_year])
+    else:
+        months_of_year = np.array(months_of_year)+1
     season = iris.Constraint(month_number = lambda cell, mnths = months_of_year: \
                              np.any(np.abs(mnths - cell[0])<0.5))
     return cube.extract(season)
+
+def constrain_to_time(cube, years, months_of_year):
+    cube = sub_year_range(cube, years)
+    cube = sub_year_months(cube, months_of_year)
+    return(cube)
 
 def constrain_cube_by_cube_and_numericIDs(cube, regions, region):
     """constrains a cube to region identifies in 'mask'
@@ -207,11 +221,13 @@ def constrain_cube_by_cube_and_numericIDs(cube, regions, region):
 
     if not cube.data.mask.shape == cube.data.shape:
          cube.data.mask = np.isnan(cube.data)
-    for layer in cube.data:
-        
-        layer.mask[mask] = False
-        layer[mask] = np.nan
-    
+ 
+    if len(cube.shape) == 3:
+        for layer in cube.data:
+            layer.mask[mask] = False
+            layer[mask] = np.nan
+    else:
+        cube.data[mask] = np.nan
     cube_out = constrain_to_data(cube)
     return cube_out
 
@@ -275,8 +291,40 @@ def constrain_olson(cube, ecoregions):
     biomes = iris.load_cube('data/wwf_terr_ecos_0p5.nc')
     return constrain_cube_by_cube_and_numericIDs(cube, biomes, ecoregions)
 
+def contrain_to_shape(cube, geom, constrain = True):
+    if constrain: 
+        minx, miny, maxx, maxy = geom.bounds
+        cube = contrain_coords(cube, (minx, maxx, miny, maxy))
+    
+    # Get cube latitude and longitude coordinates
+    lons, lats = np.meshgrid(cube.coord('longitude').points, cube.coord('latitude').points)
+    
+    # Create a mask: True for points outside the continent
+    mask = ~contains(geom, lons, lats)
+    
+    # Handle multi-dimensional cubes
+    expanded_mask = np.broadcast_to(mask, cube.shape)
+
+    # Apply the mask to the cube data
+    masked_data = np.ma.masked_array(cube.data, mask=expanded_mask)
+    masked_cube = cube.copy(data=masked_data)
+    
+    return masked_cube
+
+
+def contrain_to_sow_shapefile(cube, shp_filename, name, *args, **kw):
+    shp = gp.read_file(shp_filename)
+    try:
+        geom = shp[shp['name'].str.contains(name, case=False, na=False)].geometry.unary_union
+    except:
+        shp["geometry"] = shp["geometry"].buffer(0)
+        geom = shp[shp['name'].str.contains(name, case=False, na=False)].geometry.unary_union
+    
+    return contrain_to_shape(cube, geom, *args, **kw)
+    
+
 def constrain_natural_earth(cube, Country = None, Continent = None, shpfilename = None, 
-                            constrain = True, *args, **kw):
+                            shape_cat = 'admin_0_countries', constrain = True, *args, **kw):
     """
     Constrains an Iris cube to a given continent using Natural Earth shapefiles.
 
@@ -299,37 +347,21 @@ def constrain_natural_earth(cube, Country = None, Continent = None, shpfilename 
         iris.cube.Cube: A new cube with data masked outside the specified continent or country.
     """
     if shpfilename is None:
-        shpfilename = shpreader.natural_earth(resolution='110m', category='cultural', name='admin_0_countries')
+        shpfilename = shpreader.natural_earth(resolution='110m', category='cultural', 
+                                              name = shape_cat)
     # Load the shapefile
     countries = gp.read_file(shpfilename)
     
     # Filter the shapefile to get the geometry for the specified continent
     if Country is None:
         if not isinstance(Continent, list): Continent = [Continent]
-        continent_geom = countries[countries['CONTINENT'].isin(Continent)].geometry.unary_union  
+        geom = countries[countries['CONTINENT'].isin(Continent)].geometry.unary_union  
     else:
         if not isinstance(Country, list): Country = [Country]
-        continent_geom = countries[countries['NAME'].isin(Country)].geometry.unary_union
+        geom = countries[countries['NAME'].isin(Country)].geometry.unary_union
 
-    if constrain: 
-        minx, miny, maxx, maxy = continent_geom.bounds
-        cube = contrain_coords(cube, (minx, maxx, miny, maxy))
+    return contrain_to_shape(cube, geom, constrain)
     
-    # Get cube latitude and longitude coordinates
-    lons, lats = np.meshgrid(cube.coord('longitude').points, cube.coord('latitude').points)
-    
-    # Create a mask: True for points outside the continent
-    mask = ~contains(continent_geom, lons, lats)
-
-    # Handle multi-dimensional cubes
-    expanded_mask = np.broadcast_to(mask, cube.shape)
-
-    # Apply the mask to the cube data
-    masked_data = np.ma.masked_array(cube.data, mask=expanded_mask)
-    masked_cube = cube.copy(data=masked_data)
-    
-    return masked_cube
-
 def mask_data_with_geometry(cube, geometry):
     """Masks the cube data based on whether points fall within the given geometry."""
     # Extract latitude and longitude data from the cube
@@ -381,14 +413,14 @@ def constrain_region(cube, ecoregions = None, Country = None, Continent = None, 
 
 
 def contrain_coords(cube, extent):
-    
     longitude_constraint = iris.Constraint(longitude=lambda cell: extent[0] <= cell.point <= extent[1])
     latitude_constraint = iris.Constraint(latitude=lambda cell: extent[2] <= cell.point <= extent[3])
-    
+     
     return cube.extract(longitude_constraint & latitude_constraint)
 
     
 def constrain_BR_biomes(cube, biome_ID):
+    
     if len(biome_ID) == 1 and biome_ID[0] == 0: return cube
     mask = iris.load_cube('data/BR_Biomes.nc') 
     #mask = iris.load_cube('data/Pantanal_basin.nc') 

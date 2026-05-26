@@ -96,11 +96,15 @@ def Bayes_benchmark(filename_out, fig_dir, Y, X, lmask, logXmin = None, logYmin 
         run_NME_over_subset(X, Y, percentiles[i:(i+2)])
     
     plt.savefig(fig_dir + filename_out + '-NME_scores.png') 
+    plt.clf()
+    plt.close()
 
-    pos = pos[X > 0]
-    X = X[X>0]
+    #pos = pos[X > 0]
+    #X = X[X>0]
     scatter_metric_overall_and_percentiles(X, pos)
     plt.savefig(fig_dir + filename_out + '-posterior-position.png')
+    plt.clf()
+    plt.close()
 
 def scatter_metric_overall_and_percentiles(X, pos, xlabel = 'Burnt Area', 
                                            ylabel = 'Posterior Position', 
@@ -148,7 +152,8 @@ def scatter_metric_overall_and_percentiles(X, pos, xlabel = 'Burnt Area',
     plt.gcf().text(0.04, 0.25, 'Frequency', ha='center', fontsize=12, rotation=90)
     
 
-def BayesScatter(X, Y, lmask = None, logXmin = None, logYmin = None, ax = None):
+def BayesScatter(X, Y, lmask = None, logXmin = None, logYmin = None, ax = None,
+                 figure_filename = None):
     pc_size = 10
     percentiles = np.arange(pc_size, 100, pc_size) 
     percentiles = np.array([1, 2, 5, 10, 25, 75, 90, 95, 99])
@@ -166,6 +171,12 @@ def BayesScatter(X, Y, lmask = None, logXmin = None, logYmin = None, ax = None):
         select = np.random.choice(len(X), 1000)
         X = X[select]
         Y = Y[select, :]
+
+    csv_out = np.column_stack((X, Y))
+    
+    header=','.join(['X'] + ['Y' + str(i) for i in percentiles])
+    np.savetxt(figure_filename + '.csv', csv_out, 
+               delimiter = ',', header = header, comments = '')
     
     X = sqidge_01s(X, logXmin)
     Y = sqidge_01s(Y, logYmin)
