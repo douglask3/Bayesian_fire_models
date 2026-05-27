@@ -44,7 +44,7 @@ def print_diffs(cube1, cube2):
 
 
 def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, temp_dir, 
-                     region_names = None, shapefile_path = None):
+                     region_names = None, shapefile_path = None, region_in_shapefile = True):
     
     var_dir = dir  + '/' + experiment[0] + '/' + variable + '/' + sub_dir + '/'
     
@@ -64,8 +64,8 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
         print(member)
         completed_file = temp_dir + experiment[1] + variable + member + str(start_year) + shapefile_path.replace('/', '-') + '.txt'
         
-        #if os.path.isfile(completed_file) and False:
-        #    return
+        if os.path.isfile(completed_file) and False:
+            return
         mfiles = [file for file in files if member in file]
         mfiles = [file for file in mfiles if int(file[-9:-5]) >= start_year]
         mfiles.sort()
@@ -75,11 +75,14 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
             set_trace()
         
         cube = iris.load(mfiles)
+        
+        #except:
+        #    set_trace()
         for cb in cube:
             cb.coord('time').bounds = None
         for i in range(len(cube)):
             cube[i].coord('time').bounds = None
-            cube[i] = cube[i][0:90]
+            #cube[i] = cube[i][0:90]
         iris.util.equalise_attributes(cube)
         iris.util.unify_time_units(cube)
         all_slices = []
@@ -116,43 +119,79 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
         else:
             cube = cube[0]
         print("yay")
-        def process_region(region_name, cube):
+        
+
+        icc.add_year(cube, 'time')
+        icc.add_day_of_year(cube, 'time')
+        cyrs = cube.coord('year').points
+        cdys = cube.coord('day_of_year').points
+        def test_year(year):
+            days = cdys[cyrs == year]
+            missing = np.setdiff1d(np.arange(1, 361), days)
+            if len(missing) > 0 and year < 2025:
+                txt = experiment[1] + ', ' +  variable + ', ' + member  + ', ' + str(year) + ', '
+                for dy in missing: txt = txt + ' ' + dy
+                print(txt)
+
+        [test_year(year) for year in np.unique(cyrs)]
+
+        def process_region(cube, region_name):
             out_file = out_dir + '/' + region_name.replace(' ', '_') + \
                        '/HadGEM_' + experiment[1] + \
                        '/' + variable + '/' + member + '-' + str(start_year) + '-2.nc'
             #if os.path.isfile(out_file):
             #    return
+            print(region_name) 
+            print(out_file) 
+
             os.makedirs(os.path.dirname(out_file), exist_ok=True)
             
             cube.coord("longitude").circular = True
             cube = cube.intersection(longitude=(-180, 180))
-            cube = contrain_to_sow_shapefile(cube, shapefile_path, region_name)
+            
+            if region_in_shapefile:
+                cube = contrain_to_sow_shapefile(cube, shapefile_path, 
+                                                 region_name, mask = False)
+            else:
+                cube = contrain_to_shapefile(cube, shapefile_path, mask = False)
             
             iris.save(cube, out_file, local_keys=['calendar'])
-        [process_region(region_name, cube) for region_name in region_names]
-
+        
+        [process_region(cube, region_name) for region_name in region_names]
+            
         os.makedirs(os.path.dirname(completed_file), exist_ok=True)
         Path(completed_file).touch()
-    [process_memember(member) for member in ensembles]
-    
 
+    def process_memember_try(*args, **kw):
+        try:
+            process_memember(*args, **kw)
+        except:
+            pass 
+    [process_memember_try(member) for member in ensembles]
 
 def process_variables(experiments, variables, *args, **kw):
     for experiment in experiments:
         print(experiment)
         for variable in variables:
             process_variable(experiment, variable, *args, **kw)
-    
-if __name__=="__main__":
-    dir = "/data/users/opatt/HadGEM3-A-N216/"
-    sub_dir = '/day/'
 
+
+
+dir = "/data/users/opatt/HadGEM3-A-N216/"
+sub_dir = '/day/'  
+start_years = [2019, 2023]
+
+variables = ['pr', 'tasmax','hursmin', 'tas','sfcWind', 'uas', 'vas',  'mrros']
+#variables = ['tas','sfcWind', 'uas', 'vas',  'mrros']
+#variables = ['sfcWind', 'uas', 'vas',  'mrros']
+experiments = [['historicalNatExt', 'NAT'], ['historicalExt', 'ALL']]
+    
+
+if __name__=="__main__":
     temp_dir = "/data/scratch/douglas.kelley/Bayesian_fire_models/temp/hadgem_nrt2/"
     out_dir = "data/data/driving_data2425/nrt_attribution/"
-
-    start_years = [2013, 2023]
-
-    shapefile_path = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
+    
+    shapefile_path = "data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
     region_names = ["northeast India",
                    "Alberta",
                    "Los Angeles",
@@ -160,9 +199,7 @@ if __name__=="__main__":
                    "Amazon and Rio Negro rivers",
                    "Pantanal basin"]
 
-    variables = ['pr', 'tasmax','hursmin', 'tas','sfcWind', 'uas', 'vas',  'mrros']
-    experiments = [['historicalNatExt', 'NAT'], ['historicalExt', 'ALL']]
-    
+
     for start_year in start_years:
         process_variables(experiments, variables, start_year, dir, sub_dir,
                           out_dir, 

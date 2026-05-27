@@ -32,6 +32,8 @@ SoW_cmap = {
 
     "gradient_hotpink": ["#f3e7f2", "#edc9ef", "#e9a6e9", "#e081dd", "#d554c8", "#c32bab", "#b3198f", "#940d66", "#730943"],
 
+    "gradient_greys": ['#ffffff','#f0f0f0','#d9d9d9','#bdbdbd','#969696','#737373','#525252','#252525','#000000'],
+
     "diverging_TealOrange": [  # Diverging color scale from teal to orange
         "#004c4b", "#008786", "#6bbbaf", "#b6e0db",
         "#ffffff",  # neutral midpoint

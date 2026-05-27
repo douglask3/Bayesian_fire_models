@@ -1,9 +1,11 @@
 import multiprocessing as mp
 #mp.set_start_method('forkserver')
+mp.set_start_method("spawn", force=True)
 
 import sys
 sys.path.append('fire_model/')
 sys.path.append('libs/')
+sys.path.append('plotting/')
 sys.path.append('link_distribution/')
 
 from FLAME import FLAME
@@ -16,6 +18,7 @@ from namelist_functions import *
 from pymc_extras import *
 from plot_scatters import *
 from prior_posterior_predictive import *
+from plot_multimaps import *
 
 import os
 from   io     import StringIO
@@ -73,7 +76,7 @@ def set_priors(priors, X):
 def fit_MaxEnt_probs_to_data(Y, X, CA = None, 
                              model_class = FLAME, link_func_class = MaxEnt,
                              niterations = 100, priors = None, inference_step_type = None, 
-                             x_filen_list = None, dir_outputs = '',
+                             x_filen_list = None, dir_outputs = '', plot_drivers = False,
                              *arg, **kw):
     """ Bayesian inerence routine that fits independant variables, X, to dependant, Y.
         Based on the MaxEnt solution of probabilities. 
@@ -104,9 +107,10 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None,
     except:
         pass
 
-    scatter_each_x_vs_y(x_filen_list, X, Y*100.0)
-    os.makedirs(dir_outputs + 'figs/', exist_ok=True)
-    plt.savefig(dir_outputs + 'figs/X_vs_Ys.png')
+    if plot_drivers:
+        scatter_each_x_vs_y(x_filen_list, X, Y*100.0)
+        os.makedirs(dir_outputs + 'figs/', exist_ok=True)
+        plt.savefig(dir_outputs + 'figs/X_vs_Ys.png')
     
     with pm.Model() as max_ent_model:
         priors, link_priors = set_priors(priors, X)
@@ -128,14 +132,6 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None,
         if CA is not None: CA = CA.data
         
         error = link_func_class().obs_given_(prediction, Y, CA, [*link_priors.values()])
-        #    error = pm.DensityDist("error", prediction, *link_priors.values(), 
-        #                           logp = link_func_class.obs_given_, 
-        #                           observed = Y)
-        #else:
-        #    CA = CA.data
-        #    error = pm.DensityDist("error", prediction, *link_priors.values(), CA, 
-        #                           logp = link_func_class.obs_given_, 
-        #                           observed = Y)
               
         ## sample model
         if inference_step_type is None:
@@ -143,14 +139,19 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None,
         else:
             step_method = get_step_method(inference_step_type) 
         
-        graph = pm.model_to_graphviz(max_ent_model) 
-        graph.render(dir_outputs + "/model_graph", format="png")  # Saves and opens
+        try:
+            graph = pm.model_to_graphviz(max_ent_model) 
+            graph.render(dir_outputs + "/model_graph", format="png")  # Saves and opens
+        except:
+            print("Error generating model graph")
         trace = pm.sample(niterations, step = step_method(), return_inferencedata = True, 
                           callback = trace_callback,#  init="jitter+adapt_diag",
                           *arg, **kw)
-        ppc = pm.sample_posterior_predictive(trace, var_names=["fx_pred"])
-
-    posterior_predictive_plot(ppc, Y, dir_outputs)
+        try:
+            ppc = pm.sample_posterior_predictive(trace, var_names=["fx_pred"])
+            posterior_predictive_plot(ppc, Y, dir_outputs)
+        except:
+            print("Error generating posterior predictive check")
     
     def filter_dict_elements_by_type(my_dict, included_types):
         def is_numeric(value):
@@ -205,8 +206,7 @@ def train_MaxEnt_model_from_namelist(namelist = None, **kwargs):
     
     if 'dir' not in variables and 'dir_training' in variables:
         variables['dir'] = variables['dir_training']
-
-    
+        
     return train_MaxEnt_model(**variables)
 
 
@@ -219,7 +219,8 @@ def train_MaxEnt_model(y_filen, x_filen_list, CA_filen = None, model_class = FLA
                        subset_function = None, subset_function_args = None,
                        niterations = 100, cores = 4, model_title = 'no_name',
                        subfolder = '', 
-                       grab_old_trace = False, inference_step_type = None, **kws):
+                       grab_old_trace = False, inference_step_type = None, 
+                       plot_drivers = False, **kws):
                        
     ''' Opens up training data and trains and saves Bayesian Inference optimization of model. 
         see 'fit_MaxEnt_probs_to_data' for details how.
@@ -247,16 +248,27 @@ def train_MaxEnt_model(y_filen, x_filen_list, CA_filen = None, model_class = FLA
                 containing some of the same setting (saved in filename) exists,  it will open 
                 and return this rather than run a new one. Not all settings are saved for 
                 identifiation, so if in doubt, set to 'False'.
+    plot_drivers -- Boolean. If True, plots maps of drivers.
     Returns:
         pymc traces, returned and saved to [out_dir]/[filneame]-[metadata].nc and the scalers
         used on independant data to normalise it, useful for predicting model
     '''
+    dir_outputs = combine_path_and_make_dir(dir_outputs, model_title)
+    dir_outputs = combine_path_and_make_dir(dir_outputs, subfolder)
+    dir_outputs_figs = combine_path_and_make_dir(dir_outputs, 'figs')
+
+    if plot_drivers:
+        plot_netcdf_files([y_filen] + x_filen_list, dir, 
+                          dir_outputs_figs + '/drivers_mask.png', False, True)
+        plot_netcdf_files([y_filen] + x_filen_list, dir, 
+                          dir_outputs_figs + '/drivers_annual_average.png')
+        plot_netcdf_files([y_filen] + x_filen_list, dir, 
+                          dir_outputs_figs + '/drivers_when_max_fire.png', True)
     
     print("====================")
     print("Optimization started")
     print("====================")
-    dir_outputs = combine_path_and_make_dir(dir_outputs, model_title)
-    dir_outputs = combine_path_and_make_dir(dir_outputs, subfolder)
+    
     out_file =   filename_out + '-nvariables_' + \
                  '-frac_random_sample' + str(fraction_data_for_sample) + \
                  '-nvars_' +  str(len(x_filen_list)) + \
@@ -326,7 +338,8 @@ def train_MaxEnt_model(y_filen, x_filen_list, CA_filen = None, model_class = FLA
                                          niterations = niterations, 
                                          cores = cores, priors = priors, 
                                          inference_step_type = inference_step_type,
-                                         x_filen_list = x_filen_list, dir_outputs = dir_outputs)
+                                         x_filen_list = x_filen_list, dir_outputs = dir_outputs,
+                                         plot_drivers = plot_drivers)
         
         ## save trace file
         write_variables_to_namelist(none_trace_params, other_params_file)

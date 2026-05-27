@@ -90,7 +90,7 @@ def plot_anaomly_vs_obs(ensemble_matched, obs_ratio_matched, common_times, scale
     return ensemble_matched
 
 
-def for_region(dir1, dir2, obs_dir, obs_var, region, region_date, region_size,
+def for_region(dir1, dir2, obs_dir, obs_var, region, regions, region_date, region_size,
                controls, contol_names, unit, axes):
     mod_dir = dir1 + region + dir2
     obs_file = obs_dir + region + "/burnt_area_data.csv"
@@ -177,9 +177,12 @@ def for_region(dir1, dir2, obs_dir, obs_var, region, region_date, region_size,
             df.iloc[:] /= total.iloc[:] 
         axi = i + 1
         add_xticks = axi == (len(axes)-1)
-        dfp = plot_anaomly_vs_obs(df , None, common_times, scale, unit, 
-                            axes[axi], colors[i], add_xticks = add_xticks,
-                            start_date = region_date[0], end_date = region_date[1])
+        try:
+            dfp = plot_anaomly_vs_obs(df , None, common_times, scale, unit, 
+                                      axes[axi], colors[i], add_xticks = add_xticks,
+                                      start_date = region_date[0], end_date = region_date[1])
+        except:
+            set_trace()
         file_out = mod_dir + "/" + unit + "/" + controls[i][:-4] + '-rescaled4plot.csv'
         
         dfp.to_csv(file_out)
@@ -200,28 +203,7 @@ def for_region(dir1, dir2, obs_dir, obs_var, region, region_date, region_size,
             axes[i+1].set_ylabel(contol_names[i])
             
 
-
-dir1 = "outputs/outputs_scratch/ConFLAME_nrt-drivers8/" 
-dir2 = ["-2425/time_series/_21-frac_points_0.5/baseline-/mean/members/",
-        "-2425/time_series/_21-frac_points_0.5/baseline-/pc-95.0/members/"]
-obs_dir = "data/data/driving_data2425/"
-regions = ['Amazon', 'Pantanal', 'LA',  'Congo']
-region_names = ['Northeast Amazonia', 'Pantanal and Chiquitano', 
-                    'Southern California','Congo Basin']
-region_dates = [[pd.Timestamp(datetime(2002, 1, 15)), pd.Timestamp(datetime(2025, 3, 15))],
-              [pd.Timestamp(datetime(2002, 1, 15)), pd.Timestamp(datetime(2025, 3, 15))],
-              [pd.Timestamp(datetime(2002, 1, 15)), pd.Timestamp(datetime(2025, 3, 15))],
-              [pd.Timestamp(datetime(2002, 1, 15)), pd.Timestamp(datetime(2025, 3, 15))]]
-regions = ['Amazon', 'Pantanal', 'LA',  'Congo']
-region_sizes = [3592.46844, 1063.64005, 95.11927, 2678.12835]
-controls = ['standard-Fuel.csv', 'standard-Moisture.csv', 'standard-Weather.csv', 'standard-Wind.csv', 'standard-Ignition.csv', 'standard-Suppression.csv']
-controls = ['potential_climateology-Fuel.csv', 'potential_climateology-Moisture.csv', 
-            'potential_climateology-Weather.csv', 'potential_climateology-Wind.csv', 
-            'potential_climateology-Ignition.csv', 'potential_climateology-Suppression.csv']
-contol_names = ['Fuel', 'Moisture', 'Weather', 'Wind', 'Ignition', 'Suppression']
-colors = ['#e98400', '#e98400', '#ee007f', '#ee007f', '#0096a1', '#0096a1']
-
-def run_regions_controls(regions, controls, contol_names, unit = 'ratio'):
+def run_regions_controls(regions, region_sizes, controls, contol_names, dir1, dir2,  obs_dir, unit = 'ratio'):
     fig, axes = plt.subplots(len(controls) + 1, len(regions), figsize=(6*len(regions), 1.53*(len(controls) + 1)))
     
     for i, region in enumerate(regions):
@@ -230,7 +212,8 @@ def run_regions_controls(regions, controls, contol_names, unit = 'ratio'):
             axesi = axes
         else:
             axesi = axes[:, i] 
-        for_region(dir1, dir2[1], obs_dir, 'mean_burnt_area_' + unit, region, region_dates[i],
+        for_region(dir1, dir2[1], obs_dir, 'mean_burnt_area_' + unit, region, regions,
+                   region_dates[i],
                    region_sizes[i], controls, contol_names, unit, axesi)
         
         if len(regions) == 1:
@@ -253,19 +236,44 @@ def run_regions_controls(regions, controls, contol_names, unit = 'ratio'):
                 dpi = 300)
     plt.savefig('figs/BA_anaomoly-' + str(len(regions)) + '-' + str(len(controls)) + \
                 '-' + unit + '.pdf')
-#plt.show()
-#set_trace()
-run_regions_controls(regions, controls, contol_names, 'ratio')
-run_regions_controls(regions, controls, contol_names, 'anomaly')
-run_regions_controls(regions, controls, contol_names, 'absolute')
-controls = ['potential_climateology-Fuel-Moisture.csv', 'potential_climateology-Weather-Wind.csv', 'potential_climateology-Suppression-Ignition.csv']
-contol_names = ['Fuel', 'Weather', 'Ignitions/Humans']
-colors = ['#e98400', '#0096a1','#ee007f']
-run_regions_controls(regions, controls, contol_names, 'anomaly')
 
-dir1 = "outputs/outputs_scratch/ConFLAME_nrt-drivers6/" 
-controls = ['standard-Fuel-Moisture.csv', 'standard-Weather-Wind.csv', 'standard-Suppression-Ignition.csv']
-run_regions_controls(regions, controls, contol_names, 'absolute')
+region_dates = [[pd.Timestamp(datetime(2002, 1, 15)), pd.Timestamp(datetime(2025, 3, 15))],
+               [pd.Timestamp(datetime(2002, 1, 15)), pd.Timestamp(datetime(2025, 3, 15))],
+               [pd.Timestamp(datetime(2002, 1, 15)), pd.Timestamp(datetime(2025, 3, 15))],
+               [pd.Timestamp(datetime(2002, 1, 15)), pd.Timestamp(datetime(2025, 3, 15))]]
+region_dates = [[pd.Timestamp(datetime(2022, 12, 15)), pd.Timestamp(datetime(2025, 3, 15))],
+                [pd.Timestamp(datetime(2022, 12, 15)), pd.Timestamp(datetime(2025, 3, 15))],
+                [pd.Timestamp(datetime(2022, 12, 15)), pd.Timestamp(datetime(2025, 3, 15))],
+                [pd.Timestamp(datetime(2022, 12, 15)), pd.Timestamp(datetime(2025, 3, 15))]]
+controls_standard = ['standard-Fuel.csv', 'standard-Moisture.csv', 'standard-Weather.csv', 'standard-Wind.csv', 'standard-Ignition.csv', 'standard-Suppression.csv']
+controls_potential = ['potential_climateology-Fuel.csv', 'potential_climateology-Moisture.csv', 
+            'potential_climateology-Weather.csv', 'potential_climateology-Wind.csv', 
+            'potential_climateology-Ignition.csv', 'potential_climateology-Suppression.csv']
+contol_names = ['Fuel', 'Moisture', 'Weather', 'Wind', 'Ignition', 'Suppression']
+colors = ['#e98400', '#e98400', '#ee007f', '#ee007f', '#0096a1', '#0096a1']
+
+controls_potential_combined = ['potential_climateology-Fuel-Moisture.csv', 'potential_climateology-Weather-Wind.csv', 'potential_climateology-Suppression-Ignition.csv']
+contol_names_combined = ['Fuel', 'Weather', 'Ignitions/Humans']
+colors_combined = ['#e98400', '#0096a1','#ee007f']
+
+if __name__=="__main__":
+    dir1 = "outputs/outputs_scratch/ConFLAME_nrt-drivers8/" 
+    dir2 = ["-2425/time_series/_21-frac_points_0.5/baseline-/mean/members/",
+            "-2425/time_series/_21-frac_points_0.5/baseline-/pc-95.0/members/"]
+    obs_dir = "data/data/driving_data2425/"
+
+    regions = ['Amazon', 'Pantanal', 'LA',  'Congo']
+    region_sizes = [3592.46844, 1063.64005, 95.11927, 2678.12835]
+    regions = ['Amazon', 'Pantanal', 'LA',  'Congo']
+    region_names = ['Northeast Amazonia', 'Pantanal and Chiquitano', 
+                    'Southern California','Congo Basin']
+
+    run_regions_controls(regions, controls_potential, contol_names, 'ratio')
+    run_regions_controls(regions, controls_potential, contol_names, 'anomaly')
+    run_regions_controls(regions, controls_potential, contol_names, 'absolute')
+
+    run_regions_controls(regions, controls_potential_combined,
+                         contol_names_combined, 'absolute')
 
 
 

@@ -7,6 +7,11 @@ from typing import Optional, Tuple
 import numpy as np
 from pdb import set_trace
 import matplotlib.pyplot as plt
+import os
+
+
+import numpy as np
+import hashlib
 
 def any_in(list_str, string):
     return any(np.array([string in item for item in list_str]))
@@ -26,7 +31,26 @@ def overlap_inverse(Y, qSpread):
 
 
 class MaxEnt(object):
-    def __init__(self):
+    def __init__(self, data_store = None, ensemble_member = None, common_noise = False, 
+                 eg_cube = None, lmask = None):
+        self.data_store = data_store
+        self.ensemble_member = ensemble_member
+        self.common_noise = common_noise
+
+        if eg_cube is not None and lmask is not None:
+            flat_idx = np.where(lmask)[0]
+            ntime, nlat, nlon = eg_cube.shape
+            t_idx, lat_idx, lon_idx = np.unravel_index(flat_idx, (ntime, nlat, nlon))
+            
+            time_coord = eg_cube.coord('time').points
+            lat_coord = eg_cube.coord('latitude').points
+            lon_coord = eg_cube.coord('longitude').points
+            
+            self.times = time_coord[t_idx]
+            lats = lat_coord[lat_idx]
+            lons = lon_coord[lon_idx]
+            self.lats = np.round(lats, 5)
+            self.lons = np.round(lons, 5)
         pass
 
     #def fire_spread(self,value: TensorVariable, mu: TensorVariable, sigma: TensorVariable,
@@ -104,10 +128,23 @@ class MaxEnt(object):
                        - (gammaln(alpha) + gammaln(beta) - gammaln(alpha + beta)))
         #logp_global = mean_y * tt.log(mean_fx) + (1 - mean_y) * tt.log(1 - mean_fx)
         return prob + logp_global/Ncells #tt.sum(prob)
+
+
+    def deterministic_lognormal_array(self, i, mu, sigma):
+        
+        out = np.empty(len(self.times))
+
+        for k in range(len(out)):
+            key = f"{self.times[k]}_{self.lats[k]}_{self.lons[k]}_{i}".encode("utf-8")
+            seed = int(hashlib.sha256(key).hexdigest()[:8], 16)
+            rng = np.random.default_rng(seed)
+            out[k] = rng.lognormal(mu, sigma)
+    
+        return out
     
     def define_qSpread_param(self, params, param_names, inference = True, sigma = None,
                              size = 1):
-        #set_trace()
+        
         if any_in(param_names, 'qSpread_mu'):
             mu = element_ref(params, param_names, 'qSpread_mu')[0]
             if sigma is None:
@@ -118,7 +155,11 @@ class MaxEnt(object):
                 if inference:
                     qSpread = pm.LogNormal("qSpread", mu = mu, sigma = sigma)
                 else:
-                    qSpread = np.random.lognormal(mu, sigma, size)
+                    if self.common_noise:
+                        qSpread = self.deterministic_lognormal_array(self.ensemble_member, 
+                                                                    mu, sigma)
+                    else:
+                        qSpread = np.random.lognormal(mu, sigma, size)
         elif any_in(param_names, 'qSpread'):
             qSpread =  element_ref(params, param_names, 'qSpread')[0]
         else:

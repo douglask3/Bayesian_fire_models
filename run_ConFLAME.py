@@ -11,7 +11,12 @@ import datetime
 
 import sys
 sys.path.append('libs/')
+sys.path.append('src/attribution/')
 from climtatology_difference import *
+from above_percentile_mean import *
+from plot_maps import *
+from plot_multimaps import *
+from attribution import *
 
 try:
     from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -21,6 +26,7 @@ except:
 
 def call_eval(training_namelist, namelist,
               control_run_name, extra_params = None, run_only = True, *args, **kw):
+    
     return evaluate_MaxEnt_model_from_namelist(training_namelist, namelist,
                                                run_only = run_only, 
                                                control_run_name = control_run_name,
@@ -138,32 +144,6 @@ def Potential_climateology_limitation(training_namelist, namelist,
     
     return [outs]
 
-
-def above_percentile_mean(cube, cube_assess = None, percentile = 0.95):
-    if cube_assess is None: cube_assess = cube
-    area_cube = iris.analysis.cartography.area_weights(cube_assess)
-    
-    # Sort the cube by fractional burnt values in descending order
-    sorted_indices = np.argsort(cube_assess.data.ravel())
-    sorted_cube_data = cube_assess.data.ravel()[sorted_indices]
-    area_data_np = np.array(area_cube.data)
-    sorted_area_data = area_data_np.ravel()[sorted_indices]
-
-    cumulative_area = np.cumsum(sorted_area_data * sorted_cube_data)
-
-    # Determine the total area of the grid cells
-    total_area = np.nansum(sorted_area_data * sorted_cube_data)
-
-    # Find the index where the cumulative sum exceeds the percentile threshold of the total area
-    threshold_index = np.argmax(cumulative_area > (percentile/100.0) * total_area)
-
-    # Use this index to obtain the fractional burnt value 
-    # corresponding to the area-weighted percentile threshold
-    threshold_value = sorted_cube_data[threshold_index]#
-
-    mask = (cube_assess.data >= threshold_value) & (~cube_assess.data.mask)
-    return np.sum(cube.data[mask] * area_data_np[mask]) / np.sum(area_data_np[mask])
-
   
 def make_time_series(cube, name, output_path, percentile = None, cube_assess = None, 
                      grab_old = False, *args, **kw):
@@ -203,9 +183,15 @@ def make_time_series(cube, name, output_path, percentile = None, cube_assess = N
     
     climatology, anomaly, ratio = climtatology_difference(area_weighted_mean)
     makeDir(out_dir)
-    def output_cube_to_csv(data, realizations, extra_dim,  filename): 
+    
+    def output_cube_to_csv(data, realizations, extra_dim, filename): 
         times = cube.coord('time').units.num2date(cube.coord('time').points)[0:data.shape[1]]
-        df = pd.DataFrame(data, index=realizations, columns=[t.isoformat() for t in times])
+        try:
+            df = pd.DataFrame(data, index=realizations, columns=[t.isoformat() for t in times])
+        except:
+            df = pd.DataFrame(data[:,0:len(times)], 
+                              index=realizations, columns=[t.isoformat() for t in times])
+            
         df.index.name = extra_dim
         df.to_csv(filename)
         #np.savetxt(out_file_points, area_weighted_mean.data, delimiter=',')
@@ -229,6 +215,8 @@ def make_time_series(cube, name, output_path, percentile = None, cube_assess = N
     make_output_TS(anomaly, 'anomaly')
     make_output_TS(ratio, 'ratio')
     
+    os.makedirs(os.path.dirname(lock_file), exist_ok=True)
+    Path(lock_file).touch()
     return out_dir
 
 def make_both_time_series(percentiles, *args, **kw):
@@ -237,8 +225,9 @@ def make_both_time_series(percentiles, *args, **kw):
         make_time_series(*args, **kw, percentile = percentile) 
 
 
-def run_experiment(training_namelist, namelist, control_direction, control_names, 
-                   output_dir, output_file, 
+def run_experiment(training_namelist, namelist, control_direction,
+                   control_names, control_colours, plot_control_maps,
+                   output_dir, output_file, fig_dir, 
                    name = '', time_series_percentiles = None, 
                    limitation_types = None, controls_to_plot = None,*args, **kws):
     
@@ -253,17 +242,19 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
             output_file + name).replace('/', '_') + '.txt'
     #if os.path.isfile(temp_file): return None
 
-    figName = output_dir + 'figs/' + output_file + '-' + name + 'control_TS'
+    figName = fig_dir + '/' + name + 'control_TS'
     makeDir(figName + '/')
+    
     Evaluate, Y, X, lmask, scalers  = call_eval(training_namelist, namelist,
                         name + '/Evaluate', run_only = run_only, return_inputs = True,
-                        filename_out_ext = 'stochastic',
+                        filename_out_ext = 'stochastic', fig_dir = fig_dir, 
                         *args, **kws)
 
     Control, Y, X, lmask, scalers  = call_eval(training_namelist, namelist,
                         name + '/control', run_only = run_only, return_inputs = True, 
                         Y = Y, X = X, lmask = lmask, scalers = scalers,
                         sample_error = False, filename_out_ext = 'none_stochastic',
+                        fig_dir = fig_dir,
                         *args, **kws)
     
     grab_old = read_variables_from_namelist(namelist)['grab_old_trace']
@@ -295,6 +286,13 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
                           Y = Y, X = X, lmask = lmask, scalers = scalers, 
                               cube_assess = Control[0], **kws) \
                         for i in controls_to_plot]
+            
+            if plot_control_maps:
+                plot_ensemble_maps(limitation, titles = control_names,
+                                   control_colours = control_colours,
+                                   output_path = fig_dir + \
+                                            ltype + 'controls_maps.png')
+
             limitation_TS = np.array([make_both_time_series(time_series_percentiles, \
                                                         cube[0], \
                                                         ltype + '-' + name, out_dir_ts, \
@@ -303,7 +301,10 @@ def run_experiment(training_namelist, namelist, control_direction, control_names
         
     open(temp_file, 'a').close() 
 
+    
+
 def run_experiment_wrapper(kwargs):
+    run_experiment(**kwargs)
     try:
         run_experiment(**kwargs)
         return (kwargs, "success")
@@ -331,6 +332,8 @@ def run_ConFire(namelist):
                              if param['pname'] == 'control_Direction'][-1]
     
     control_names = select_from_info('control_names')
+    control_colours = select_from_info('control_colours')
+    plot_control_maps = select_from_info('plot_control_maps', False)
     subset_function_args = select_from_info('subset_function_args')
     subset_function_eval = select_from_info('subset_function_eval')
     subset_function_args_eval = select_from_info('subset_function_args_eval')
@@ -358,8 +361,10 @@ def run_ConFire(namelist):
                 set_region_months(subset_function_args_eval)
         model_title = run_info['model_title'].replace('<<region>>', region)
         dir_training = run_info['dir_training'].replace('<<region>>', region)
-        dir_projecting = run_info['dir_projecting'].replace('<<region>>', region)
-        
+        if 'dir_projecting' in run_info.keys():
+            dir_projecting = run_info['dir_projecting'].replace('<<region>>', region)
+        else:
+            dir_projecting = dir_training
         trace, scalers, training_namelist = \
                         train_MaxEnt_model_from_namelist(namelist, model_title = model_title,
                                                          dir_training = dir_training,
@@ -367,7 +372,8 @@ def run_ConFire(namelist):
         params = read_variables_from_namelist(training_namelist)
         output_dir = params['dir_outputs']
         output_file = params['filename_out']
-
+        fig_dir = output_dir + '/figs/' + output_file + '/'
+        os.makedirs(fig_dir, exist_ok=True)
         def find_replace_period_model(exp_list):
             exp_list_all = [item.replace('<<region>>', region) for item in exp_list \
                             if "<<experiment>>" not in item and "<<model>>" not in item]
@@ -389,7 +395,9 @@ def run_ConFire(namelist):
         names_all = ['baseline']
         exp_type = ['single']        
         dirs_all = [params['dir']]
-        
+        common_noises = [False]
+        limitation_types = select_from_info('limitation_types')
+        max_no_ensembles =  select_from_info('max_no_ensembles')
         try:
             y_filen1 = [select_from_info('y_filen_eval', run_info['x_filen_list'][0])]
             experiment_dirs  = select_from_info('experiment_dir')
@@ -397,7 +405,6 @@ def run_ConFire(namelist):
             experiments = select_from_info('experiment_experiment')
             periods = select_from_info('experiment_period')
             models = select_from_info('experiment_model')
-            limitation_types = select_from_info('limitation_types')
             controls_to_plot = select_from_info('controls_to_plot', 
                                                  range(len(control_direction)))
             experiment_dirs = find_replace_period_model(experiment_dirs)
@@ -407,15 +414,21 @@ def run_ConFire(namelist):
             names_all = names_all + experiment_names
             dirs_all = dirs_all + experiment_dirs
             y_filen = y_filen + y_filen1 * len(experiment_dirs)
+            common_noises = common_noises + \
+                select_from_info('experiment_common_noise',[False] * len(experiment_names))
+            
         except:
             pass   
-         
+        
         args_list = [dict(training_namelist=training_namelist,
                           namelist=namelist,
                           control_direction=control_direction,
                           control_names=control_names,
+                          control_colours=control_colours,
+                          plot_control_maps = plot_control_maps,
                           output_dir=output_dir,
                           output_file=output_file,
+                          fig_dir = fig_dir,
                           name=name,
                           time_series_percentiles=time_series_percentiles,
                           limitation_types = limitation_types, 
@@ -425,11 +438,15 @@ def run_ConFire(namelist):
                           y_filen=yfile,
                           model_title=model_title,
                           subset_function = subset_function_eval,
-                          subset_function_args = subset_function_args_eval
+                          subset_function_args = subset_function_args_eval,
+                          max_no_ensembles = max_no_ensembles,
+                          common_noise = common_noise
                          )
-                    for name, dir, expt, yfile in zip(names_all, dirs_all, exp_type, y_filen)
+                    for name, dir, expt, yfile, common_noise \
+                        in zip(names_all, dirs_all, exp_type, y_filen, common_noises)
                 ]
         #args_list.reverse()
+        
         if len(args_list) > 1 and select_from_info('parallelize', True): 
             try:
                 with get_context("spawn").Pool(processes=4) as pool:
@@ -441,13 +458,17 @@ def run_ConFire(namelist):
             for args in args_list:
                 run_experiment_wrapper(args)
 
+        if len(args_list)>1:
+            attribution_analysis(output_dir, '/' + output_file + '/', 
+                                 [x["dir"] for x in args_list if x["name"] == "factual"][0],
+                                 obs_file_nc = args_list[0]['y_filen'], out_dir = fig_dir)
+            
     if regions is None:
         run_for_regions(None)
     else:
         for region in regions: run_for_regions(region)
 
 if __name__=="__main__":
-    import sys
 
     if len(sys.argv) < 2:
         print("Usage: python run_ConFire.py <namelist_path>")

@@ -28,8 +28,24 @@ def common_time_coord(cubes, time_coord = 'valid_time'):
     
     # Standardize time coordinates across all cubes
     for cube in cubes:
-        time_coord = cube.coord('valid_time')
+        try: 
+            time_coord = cube.coord('valid_time')
+        except:
+            cube.coord('time').rename('valid_time')
+            time_coord = cube.coord('valid_time')
+        cube.coord('valid_time').attributes = {}
+        
+        coord = cube.coord('valid_time')
+        coord.points = coord.points.astype(np.float64)
 
+        
+        coord.standard_name = None
+        coord.long_name = None
+        coord.var_name = None
+        coord.long_name = 'valid_time'
+        
+        if coord.has_bounds():
+            coord.bounds = coord.bounds.astype(np.float64)
         # Convert numeric time to datetime
         datetimes = [time_coord.units.num2date(t) for t in time_coord.points]
         
@@ -51,17 +67,22 @@ def download_era5(variables, years = [1940], months = range(13),
                   dataset = "derived-era5-single-levels-daily-statistics", 
                   out_dir = 'data/',
                   temp_dir = 'temp/',
-                  shapefile_path = None):
-   
+                  shapefile_path = None, region_in_shapefile = True):
+    
     if shapefile_path is not None: 
         shapes = gpd.read_file(shapefile_path)
-
-        ## Extract the shape containing region_name in the name
-        region_shape = shapes[shapes['name'].str.contains(region_name, case=False, na=False)]
-        region_shape["geometry"] = region_shape["geometry"].buffer(0)
-        # Convert to a single geometry (union of multiple polygons if needed)
-        region_geom = unary_union(region_shape.geometry)
-    
+        shapes["geometry"] = shapes["geometry"].buffer(0)
+        if region_in_shapefile:
+            ## Extract the shape containing region_name in the name
+            
+            region_shape = shapes[shapes['name'].str.contains(region_name, 
+                                                              case=False, na=False)]
+        
+            # Convert to a single geometry (union of multiple polygons if needed)
+            region_geom = unary_union(region_shape.geometry)
+        else:
+            region_geom = shapes.geometry.unary_union
+     
     def download_var(variable, statistics, year, mnths): 
         mnths = ['0' + str(i) if i < 10 else str(i) for i in mnths]
         temp_file =  temp_dir + '/download_era5_' + variable + statistics + \
@@ -106,7 +127,7 @@ def download_era5(variables, years = [1940], months = range(13),
         if statistics != "":
             request["daily_statistic"] = statistics
             request["frequency"] = "1_hourly"
-        #set_trace()
+        
         client = cdsapi.Client()
         client.retrieve(dataset, request, temp_file)
         return(temp_file)
@@ -116,9 +137,10 @@ def download_era5(variables, years = [1940], months = range(13),
         lons, lats = np.meshgrid(cube.coord('longitude').points, cube.coord('latitude').points)
     
         # Create a mask where True means outside and False means inside the shape
-        mask = ~shapely.vectorized.contains(region_geom, lons, lats)
+        mask = ~shapely.intersects_xy(region_geom, lons, lats)
+        
         cube.data = np.where(mask, np.nan, cube.data)
-
+        
         # Get bounding box (minx, miny, maxx, maxy)
         min_lon, min_lat, max_lon, max_lat = region_geom.bounds
 
@@ -132,7 +154,7 @@ def download_era5(variables, years = [1940], months = range(13),
         # Apply constraints to crop the cube
         cropped_cube = cube.extract(iris.Constraint(latitude=lat_constraint, 
                                                     longitude=lon_constraint))
-
+        
         return cropped_cube   
          
     def process_var(variable, statistics, variable_out):
@@ -147,7 +169,8 @@ def download_era5(variables, years = [1940], months = range(13),
         #           '_years' +  str(years[0]) + '-' + str(years[-1]) 
         out_file = out_dir + '/' + region_name.replace(' ', '_') + \
                        '/Era5_' + dataset + \
-                       '/' + variable_out + '/_years' +  str(years[0]) + '-' + str(years[-1]) 
+                       '/' + variable_out + '/_years' +  str(years[0]) + '-' + str(years[-1])
+        print(out_file) 
         os.makedirs(os.path.dirname(out_file), exist_ok=True)
         if (yr_now is not None and years[-1] == yr_now):
             out_file = out_file + str(mnth_now)
@@ -164,6 +187,7 @@ def download_era5(variables, years = [1940], months = range(13),
                 out = crop_cube(file)
             else:
                 out = iris.load_cube(file)
+            
             return out     
             
         
@@ -176,60 +200,41 @@ def download_era5(variables, years = [1940], months = range(13),
         
         cubes = common_time_coord(cubes)
         iris.util.equalise_attributes(cubes)
-        cubes = iris.cube.CubeList(cubes).concatenate_cube()
+        try:
+            cubes = iris.cube.CubeList(cubes).concatenate_cube()
+        except:
+            set_trace()
         iris.save(cubes, out_file)
-        
         return out_file
         
     for var in variables:
         process_var(var[0], var[1], var[2])
 
+yr_now = DT.now().year
+yearss = [range(2002, yr_now + 1)] #range(2020, yr_now + 1), range(yr_now-2, yr_now + 1),  range(2010, yr_now + 1),range(2024, yr_now + 1),  
+mnth_now = DT.now().month - 2
 
-if __name__=="__main__":
-    yr_now = DT.now().year
-    yearss = [range(yr_now-2, yr_now + 1), range(2020, 2026), range(2010, 2026), range(2002, 2026)]
-    mnth_now = DT.now().month - 2
-    #day_now = DT.now().day-5
-    #if day_now < 1:
-    #    mnth_now = mnth_now - 1
-    #    day_now = day_now + 28
-    
-    #years = range(1985, now + 1)
-    #years = range(2000, 2026)
-    dataset = "derived-era5-single-levels-daily-statistics"
-    
-    area = [90, -180, -60, 180]
-    temp_dir = "/data/users/douglas.kelley/Bayesian_fire_models/data-cds/era5_nrt/"
-    out_dir = "data/data/driving_data2425/nrt_attribution//"
-    shapefile_path = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
-    region_names = ["northeast India",
-                    "Alberta",
-                    "Los Angeles",
-                    "Congo basin",
-                    "Amazon and Rio Negro rivers",
-                    "Pantanal basin"]
-    variables = [#["volumetric_soil_water_layer_1", "daily_minimum", "mrsos"],
-                 ["10m_u_component_of_wind", "daily_mean", "u-wind"],
-                 ["10m_v_component_of_wind", "daily_mean", "v-wind"],
-                 ["total_precipitation", "daily_mean", "pr"], 
-                 ["2m_temperature", "daily_maximum", "tasmax"],
-                 ["2m_temperature", "daily_mean", "tas"],
-                 ["2m_dewpoint_temperature", "daily_minimum", "tasdew"],
-                 ["2m_temperature", "daily_minimum", "tasmin"],
-                 ["10m_wind_gust_since_previous_post_processing", "daily_maximum", "WindGust1"],
-                 ["instantaneous_10m_wind_gust", "daily_maximum", "WindGust2"],
-                 ["evaporation", "daily_mean", "evap"],
-                 ["potential_evaporation", "daily_mean", "pevap"],
-                 ["runoff", "daily_mean", "mrros"]
-                 ]
-    
-    for years in yearss:
-        download_era5(variables, years, months = range(12), 
-                          yr_now = yr_now, mnth_now = mnth_now,
-                          area = area, region_name = " ",
-                          dataset = dataset, 
-                          out_dir = out_dir, 
-                          temp_dir = temp_dir)    
+area = [90, -180, -60, 180]
+dataset = "derived-era5-single-levels-daily-statistics"
+
+variables = [["total_precipitation", "daily_mean", "pr"], 
+             ["2m_temperature", "daily_maximum", "tasmax"],
+             ["2m_temperature", "daily_mean", "tas"],
+             ["2m_dewpoint_temperature", "daily_minimum", "tasdew"],
+             ["2m_temperature", "daily_minimum", "tasmin"],
+             ["volumetric_soil_water_layer_1", "daily_minimum", "mrsos"],
+             ["10m_u_component_of_wind", "daily_mean", "u-wind"],
+             ["10m_v_component_of_wind", "daily_mean", "v-wind"],
+             ["10m_wind_gust_since_previous_post_processing", "daily_maximum", "WindGust1"],
+             ["instantaneous_10m_wind_gust", "daily_maximum", "WindGust2"],
+             ["evaporation", "daily_mean", "evap"],
+             ["potential_evaporation", "daily_mean", "pevap"],
+             ["runoff", "daily_mean", "mrros"]
+            ]
+temp_dir_default = "/data/users/douglas.kelley/Bayesian_fire_models/data-cds/era5_nrt/"
+
+def run_era5_download_for_report(shapefile_path, region_names,  out_dir, 
+                                 temp_dir = temp_dir_default):
 
     for region_name in region_names:
         for years in yearss:
@@ -240,7 +245,29 @@ if __name__=="__main__":
                           out_dir = out_dir, 
                           temp_dir = temp_dir,
                           shapefile_path = shapefile_path)
-    
+    '''    
+    for years in yearss:
+        download_era5(variables, years, months = range(12), 
+                          yr_now = yr_now, mnth_now = mnth_now,
+                          area = area, region_name = " ",
+                          dataset = dataset, 
+                          out_dir = out_dir, 
+                          temp_dir = temp_dir)    
+    '''
+
+if __name__=="__main__":    
+    data_dir = "data/data/driving_data2425"
+    out_dir = data_dir + "nrt_raw/"
+    shapefile_path = data_dir +"/SoW2425_shapes/SoW2526_Focal_MASTER_20260218.shp"
+    region_names = ["northeast India",
+                    "Alberta",
+                    "Los Angeles",
+                    "Congo basin",
+                    "Amazon and Rio Negro rivers",
+                    "Pantanal basin"]
+    run_era5_download_for_report(shapefile_path, region_names,  out_dir)
+
+
     area = [90, -180, -90, 180]
     dataset = "derived-era5-land-daily-statistics"
     temp_dir = "/data/users/douglas.kelley/Bayesian_fire_models/data-cds/era5_land_/"
@@ -248,14 +275,13 @@ if __name__=="__main__":
     variables = [
                     ["10m_u_component_of_wind", "daily_mean", "u-wind"],
                     ["10m_v_component_of_wind", "daily_mean", "v-wind"],
-                    #["total_precipitation", "", "pr"], 
+                    ["total_precipitation", "", "pr"], 
                     ["2m_temperature", "daily_maximum", "tasmax"],
                     ["2m_temperature", "daily_mean", "tas_mean"],
                     ["2m_dewpoint_temperature", "daily_mean", "tasdew_mean"],
                     ["2m_dewpoint_temperature", "daily_minimum", "tasdew_min"],
                     ["2m_temperature", "daily_minimum", "tasmin"]
                 ]
-
     for years in yearss:
         download_era5(variables, years, months = range(12), 
                           yr_now = yr_now, mnth_now = mnth_now,

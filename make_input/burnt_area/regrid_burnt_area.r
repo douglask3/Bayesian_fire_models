@@ -11,14 +11,13 @@ temp_out = 'temp2/burnt_area_no_meta.nc'
 
 # for global set to NULL
 shape_file = "data/data/SoW2425_shapes/SoW2425_Focal_MASTER_20250221.shp"
-shape_names = list("northeast India",
-                   "Alberta",
-                   "Los Angeles",
-                   "Congo basin",
-                   "Amazon and Rio Negro rivers",
-                   "Pantanal basin")
+shape_names = list("Northwest Iberia",
+                    "Midwestern Canadian Shield forests",
+                    "Chilean Temperate Forests and Matorral",
+                    "Scottish Highlands",
+                    "Southeast South Korea")
 
-region_names = c('NEIndia', 'Alberta', 'LA', 'Congo', 'Amazon', 'Pantanal')
+#region_names = c('NEIndia', 'Alberta', 'LA', 'Congo', 'Amazon', 'Pantanal')
 eg_raster_dir  = "data/data/driving_data2425/<<REGION>>/isimp3a/obsclim/GSWP3-W5E5/period_2002_2019/tree_cover_jules-es.nc"
 eg_raster_nrt_dir = 'data/data/driving_data2425/<<REGION>>/nrt/era5_monthly/precip.nc'
 out_file_hires  = "data/data/driving_data2425/<<REGION>>/burnt_area.nc"
@@ -36,8 +35,8 @@ if (any(fact) != 1) {
     dat = dat * fact[1] * fact[2] * 100000/cellSize(dat[[1]])
 }
 
-for_region <- function(rname, sname) {
-    
+for_region <- function(sname) {
+    browser()
     eg_raster       = rast(gsub('<<REGION>>', rname, eg_raster_dir))
     eg_raster_nrt   = rast(gsub('<<REGION>>', rname, eg_raster_nrt_dir))
     out_file_hires  = gsub('<<REGION>>', rname, out_file_hires )
@@ -89,4 +88,4 @@ for_region <- function(rname, sname) {
     write_out(dat, out_file_isimip, test_years)
 }
 
-mapply(for_region, region_names, shape_names)
+lapply(shape_names, for_region)# shape_names)
