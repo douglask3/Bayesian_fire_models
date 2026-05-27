@@ -1,0 +1,73 @@
+## model info
+model_title::  'model_test_baseline__MO_test'
+dir_training:: "data/data/driving_data_40year_gs/"
+dir_projecting:: "data/data/driving_data_40year_gs/" 
+y_filen::"fapar_mask.nc"
+CA_filen:: None
+
+x_filen_list::  "logpre_mask.nc" #0  precip - Wetness +
+x_filen_list::  "logvpd_mask.nc" #1  vapour pressure deficit - Wetness -
+x_filen_list::  "chi_mask.nc"    #2  (CO2) - Atmopheric CO2 + 
+x_filen_list::  "logppfd_mask.nc"#3  Light - Energy avaibality 
+x_filen_list::  "tmp_mask.nc"    #4  Tempauture (thrmal enegery) - Energy
+x_filen_list::  "AI_mask.nc"     #5 - moisture index  - Wetness +
+x_filen_list::  "loggpp_mask.nc" #6 - max potential gross primary productivity - carbon potential
+x_filen_list::  "PH_mask.nc"     #7 - acidity - soil condition 
+x_filen_list::  "logsoc_mask.nc" #8 - soil oraganic carbon - soil condtion
+
+## Model info
+model_class:: ConFire
+
+priors:: {'pname': "link-sigma",'np': 1, 'dist': 'HalfNormal', 'sigma': 0.5}
+priors:: {'pname': "link-p0",'np': 1, 'dist': 'Uniform', 'lower': 0.0, 'upper': 1.0}
+priors:: {'pname': "link-p1",'np': 1, 'dist': 'LogNormal', 'mu': -1.0, 'sigma': 1.0}
+
+control_names:: ['Moisture','CO2','Energy', 'Carbon', 'Soil condition']
+
+priors:: {'pname': "controlID", 'value': [[0,1, 5], [2], [3, 4], [6], [7,8]]}
+priors:: {'pname': "control_Direction", 'value': [1,1, 1, 1, 1]}
+priors:: {'pname': "driver_Direction", 'value': [[1, -1, 1], [1], [1, 1], [1], [-1, 1]]}
+
+#priors:: {'pname': "Fmax",'np': 1, 'dist': 'Normal', 'mu': 1.0, 'sigma': 0.5}
+priors:: {'pname': "x0",'np': 5, 'dist': 'Normal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "betas",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "betas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "betas",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "betas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "betas",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "powers",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "powers",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "powers",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+
+### optimization info
+inference_step_type:: "metropolis"
+link_func_class:: MaxEnt
+niterations:: 1000
+cores:: 5
+fraction_data_for_sample:: 0.00001
+#subset_function:: sub_year_range
+subset_function:: [sub_year_range, constrain_natural_earth]
+#subset_function_args:: {'year_range': [2000, 2001]}
+#subset_function_args_eval:: [{'year_range': [2000, 2001]}, {'Continent':['South America','Oceania','Europe','Afria','North America','Asia']}]
+subset_function_args:: [{'year_range': [2000, 2001]}, {'Continent':['South America']}]
+
+
+grab_old_trace:: True
+### output info
+dir_outputs:: 'outputs/outputs/'
+
+## evaluation info
+sample_for_plot:: 3
+levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
+dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
+cmap:: 'OrRd'
+dcmap:: 'RdBu_r'
+make_time_series:: False
+
+
+
+
+
+
