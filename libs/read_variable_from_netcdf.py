@@ -37,7 +37,8 @@ def read_variable_from_netcdf_from_dir(dir, filename, find_no_files = False, ens
     if find_no_files or ens_no is not None:
         files = glob.glob(dir + '**', recursive = True)
         files = [file for file in files if filename in file]
-        if find_no_files:
+        files = [file for file in files if file[-3:] == '.nc']
+        if find_no_files: 
             return(len(files))
 
     if filename[-3:] != '.nc': 
@@ -359,7 +360,7 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None,
     if x_find_mode == 'ensemble-single':
         nfs = [read_variable_from_netcdf(filename, find_no_files = True, *args, **kw)    
                for  filename in x_filename_list]
-          
+        
         nfs = np.array(nfs)
         nfs = np.unique(nfs[nfs >1])
         if len(nfs) == 0:
