@@ -190,7 +190,11 @@ def sub_year_months(cube, months_of_year):
         months_of_year = np.array(months_of_year)+1
     season = iris.Constraint(month_number = lambda cell, mnths = months_of_year: \
                              np.any(np.abs(mnths - cell[0])<0.5))
-    return cube.extract(season)
+    if len(np.unique(cube.coord('month_number').points)) == 1:
+        return cube
+    else:
+        return cube.extract(season)
+    return out
 
 def constrain_to_time(cube, years, months_of_year):
     cube = sub_year_range(cube, years)
