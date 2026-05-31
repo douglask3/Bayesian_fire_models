@@ -33,11 +33,12 @@ def read_variable_from_netcdf_from_dir(dir, filename, find_no_files = False, ens
     
     if filename[0] == '~' or filename[0] == '/' or filename[0] == '.': 
         dir = ''
-     
+    
     if find_no_files or ens_no is not None:
         files = glob.glob(dir + '**', recursive = True)
         files = [file for file in files if filename in file]
         files = [file for file in files if file[-3:] == '.nc']
+        
         if find_no_files: 
             return(len(files))
 
@@ -45,7 +46,7 @@ def read_variable_from_netcdf_from_dir(dir, filename, find_no_files = False, ens
         filename = filename + '.nc'
     
     try:
-        if ens_no is not None and len(files) > 1:
+        if ens_no is not None and len(files) > 0:
             try:    
                 dataset = iris.load_cube(files[ens_no], callback=sort_time)
             except:
@@ -103,10 +104,10 @@ def interpolate_time(dataset, time_points):
     
     # Now you can safely interpolate 
     try:
-        dataset_interp = dataset.interpolate([('time', target_time.points)], 
-                                         iris.analysis.Linear())
+        dataset_interp = dataset.interpolate([('time', target_time.points)], iris.analysis.Linear())
     except:
-        set_trace()
+        dataset.remove_coord('month')
+        dataset_interp = dataset.interpolate([('time', target_time.points)], iris.analysis.Linear())
 
     return dataset_interp
 
@@ -145,9 +146,9 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
     
     while i < len(dir) and dataset is None:
         dataset = read_variable_from_netcdf_from_dir(dir[i], filename, find_no_files,
-                                                     ens_no = ens_no)
+                                                     ens_no = ens_no) 
         i += 1
-    
+        
     if dataset is None:
         print("==============\nERROR!")
         print("can't open data.")
@@ -156,6 +157,7 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
         print("==============")
         set_trace()
     if find_no_files: return dataset
+     
     coord_names = [coord.name() for coord in dataset.coords()]
     if time_points is not None:     
         if 'time' in coord_names:
@@ -360,7 +362,7 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None,
     if x_find_mode == 'ensemble-single':
         nfs = [read_variable_from_netcdf(filename, find_no_files = True, *args, **kw)    
                for  filename in x_filename_list]
-        
+         
         nfs = np.array(nfs)
         nfs = np.unique(nfs[nfs >1])
         if len(nfs) == 0:
