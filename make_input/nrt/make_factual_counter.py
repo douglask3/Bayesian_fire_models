@@ -130,15 +130,43 @@ def grab_year_info_hadgem(ALL, NAT, year, match_year = 2025):
 
         # Assign back
         time_coord.points = new_points
-        return cube
+        first_60 = cube[:60].copy()
+
+        time_coord = cube.coord('time')
+        units = time_coord.units
+
+        dt = time_coord.points[1] - time_coord.points[0]
+        offset = time_coord.points[-1] + dt - time_coord.points[0]
+
+        new_time_points = first_60.coord('time').points + offset
+        first_60.coord('time').points = new_time_points
+        extended_cube = iris.cube.CubeList([cube, first_60]).concatenate_cube()
+        extended_cube.remove_coord('year')
+        icc.add_year(extended_cube, 'time', name='year')
+        return extended_cube
+    
     sALL = set_to_match_year(sALL)
     sNAT = set_to_match_year(sNAT)
-    return sALL, sNAT        
+    
+    return sALL, sNAT    
+
+def pc_map(ALL, era5):
+    era5_order = np.argsort(era5.data, axis=0)
+    ALL_sorted = np.sort(ALL.data, axis=0)
+    ALL_reordered = np.empty_like(ALL.data)
+    
+    np.put_along_axis(ALL_reordered, era5_order, ALL_sorted, axis=0)
+    out = ALL.copy()
+    
+    out.data = ALL_reordered
+    
+    return out.data
 
 def make_variable_inputs(variable_obs, variable_mod, variable_out, 
                          scale_obs, scale_mod, transformation, inverse, 
                          datadir, regions, model_dir, 
-                         experiments, obs_dataset, hadgem_start_year = 2023, npairs = 10):
+                         experiments, obs_dataset, hadgem_start_year = 2023, npairs = 10,
+                         randomise = False):
     
     def make_region_input(region):
         
@@ -152,7 +180,10 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
             return files
         file_lists = [exp_files(experiment) for experiment in experiments]
         
-        all_pairs = list(itertools.product(file_lists[0], file_lists[1]))
+        if randomise:
+            all_pairs = list(itertools.product(file_lists[0], file_lists[1]))
+        else: 
+            all_pairs = random.sample(list(zip(file_lists[0], file_lists[1])), npairs)
         # Sample N unique pairs with replacement
         
         exp_files = []
@@ -174,11 +205,11 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
             files = files[0]
         obs_file = dir + files
         
-        def open_data(file, scale = 1):
+        def open_data(file, scale = 1, transform = True):
             cube = iris.load_cube(file)
             if not scale == 1:
                 cube.data *= scale
-            if transformation is not None: 
+            if transformation is not None and transform: 
                 cube.data = transformation(cube.data)
             return cube
     
@@ -186,25 +217,88 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
         era5.coord('valid_time').rename('time')
         for i, exp_file in enumerate(exp_files):
             ALL = open_data(exp_file[0], scale_mod)
-            correct = open_data(exp_file[1], scale_mod)
-            [ALL, correct] = constrain_to_common_time([ALL, correct])
-            ALL, correct = grab_year_info_hadgem(ALL, correct, 2024)#exp_file[2])    
-            NAT = correct.copy()
-            correct.data = correct.data - ALL.data
+            NAT = open_data(exp_file[1], scale_mod)
+            [ALL, NAT] = constrain_to_common_time([ALL, NAT])
+            ALL, NAT = grab_year_info_hadgem(ALL, NAT, 2024)#exp_file[2])
             
-            cf_blank, correct = cut_era5_hadgem_to_time(era5, correct)
-            correct = interplate_hadgem_to_era5_time(cf_blank, correct)
             
-            cf_blank, correct = crop_hadgem_era5_spatial_grids(cf_blank, correct)
-            era5_f, nn = crop_hadgem_era5_spatial_grids(era5, correct)
+            def map_exp(cube):
+                era5_cut, cube = cut_era5_hadgem_to_time(era5, cube)
+                cube = interplate_hadgem_to_era5_time(era5_cut, cube)
+                era5_cut, cube = crop_hadgem_era5_spatial_grids(era5_cut, cube)
+                yay = cube.copy()
+                #if variable_out == "dry_days": 
+                #    cube.data = pc_map(cube, era5_cut)
+                    
+                return cube, era5_cut
+            ALL, era5_cut = map_exp(ALL)
+            NAT, era5_cut = map_exp(NAT)
             
-            cf = cf_blank.copy()
-            cf.data += correct.data 
+            
+            if variable_out == "dry_days": 
+                '''
+                icc.add_month_number(ALL, 'time')
+                icc.add_month_number(NAT, 'time')
+                icc.add_month_number(era5_cut, 'time')
+                
+                ALL = ALL.aggregated_by('month_number', iris.analysis.MEAN)
+                NAT = NAT.aggregated_by('month_number', iris.analysis.MEAN)
+                set_trace()
+                era5M = era5_cut.aggregated_by('month_number', iris.analysis.MEAN)
+                for mn in era5M.coord('month_number').points:     
+                    test = NAT[mn].data < ALL[mn].data
+                    correct = NAT[mn].data[test]/ALL[mn].data[test]
+                    set_trace()        
+
+                test = ~test
+                correct.data[test] = ALL.data[test]/NAT.data[test]
+                '''
+                ALL = ALL.collapsed('time', iris.analysis.MEAN)
+                NAT = NAT.collapsed('time', iris.analysis.MEAN)
+                cf = era5_cut.copy()
+                correct = ALL.data.copy()
+                test = NAT.data < ALL.data
+                correct[~test] =1.0
+                correct[test] = NAT.data[test]/ALL.data[test]
+
+                rand = np.random.rand(*cf.data.shape)
+                keep_mask = rand < correct
+                cf.data = cf.data & keep_mask
+                
+                test = ~test
+                correct[~test] = 1.0
+                correct[test] =     ALL.data[test]/NAT.data[test]
+                keep_mask = rand < correct
+                cf.data = ~(~cf.data & keep_mask)
+                
+                
+            else:
+                #correct = NAT.copy()
+                #correct.data = correct.data - ALL.data
+            
+                cf = era5_cut.copy()
+                cf.data += NAT.data - ALL.data
+            
+            #cf_blank, correct = cut_era5_hadgem_to_time(era5, correct)
+            #correct = interplate_hadgem_to_era5_time(cf_blank, correct)
+            
+            #cf_blank, correct = crop_hadgem_era5_spatial_grids(cf_blank, correct)
+            era5_f, nn = crop_hadgem_era5_spatial_grids(era5, cf)
             
             if inverse is not None:
                 era5_f.data = inverse(era5_f.data)
                 cf.data = inverse(cf.data)
             
+            if variable_out == "pr":
+                ALL_pr = open_data(exp_file[0], scale_mod, False)
+                NAT_pr = open_data(exp_file[1], scale_mod, False)
+                corr = np.nansum(inverse(era5_cut.data))/np.nansum(cf.data)
+                cons = np.nansum(ALL_pr.data)/np.nansum(NAT_pr.data)
+                print(cons/corr)
+                cf.data = cf.data * cons/corr
+                #set_trace()
+            #if variable_out == "dry_days":
+            #    set_trace()          
             out_file = exp_file[0].replace(variable_mod, variable_out)
             print(out_file)
             factual_file = out_file.replace(experiments[0], 'Factual')
@@ -212,7 +306,7 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
             factual_file = '/'.join(factual_file.split('/')[:-1]) + '.nc'
             counter_file = out_file.replace(experiments[0], 'Counter')
             counter_file = '/'.join(counter_file.split('/')[:-1]) + '/ens-' + str(i)  + '.nc'
-            if not os.path.isfile(factual_file):
+            if not os.path.isfile(factual_file) or True:
                 os.makedirs(os.path.dirname(factual_file), exist_ok=True)
                 iris.save(era5_f, factual_file)
             
@@ -226,12 +320,18 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
 model_dir = "/hadgem_nrt/"
 obs_dataset = "/Era5_derived-era5-single-levels-daily-statistics/"
 
-def log1(x, sc = 100):
+def dry_dayx(x, thresh = 0.1):
+    x = x < thresh
+    return x
+
+def conv2float(x):
+    return x.astype('float')
+
+def log1(x, sc = 1):
     x = x * sc
     return np.log(np.exp(x) - 0.9999999999)
 
-
-def exp1(y, sc = 100):
+def exp1(y, sc = 1):
     return (np.log(np.exp(y) + 0.9999999999))/sc
 
 def logit(x):
@@ -246,13 +346,13 @@ def slog(x):
 def sexp(y):
     return np.exp(y) - 0.0000000001
 
-transformations = [logit, None, None, log1, slog, slog, slog]
-inverses = [logistic, None, None, exp1, sexp, sexp, sexp]
-variables_obs = ['hursmin', 'tasmax', 'tas', 'pr', 'wind', 'WindGust1', 'WindGust2']
-variables_mod = ['hursmin', 'tasmax', 'tas', 'pr', 'sfcWind', 'sfcWind', 'sfcWind']
-variables_out = ['hursmin', 'tas_max', 'tas_mean', 'pr', 'wind', 'WindGust1', 'WindGust2']
-scales_mod = [1/100, 1, 1, 1000*60*60*24/1000, 1, 1, 1]
-scales_obs = [1/100, 1, 1, 1000, 1, 1, 1]
+transformations = [log1, dry_dayx, logit, None, None, log1, slog, slog, slog]
+inverses = [exp1, conv2float, logistic, None, None, exp1, sexp, sexp, sexp]
+variables_obs = ["vpd", "pr", 'hursmin', 'tasmax', 'tas', 'pr', 'wind', 'WindGust1', 'WindGust2']
+variables_mod = ["vpd", "pr", 'hursmin', 'tasmax', 'tas', 'pr', 'sfcWind', 'sfcWind', 'sfcWind']
+variables_out = ["vpd", "dry_days", 'hursmin', 'tas_max', 'tas_mean', 'pr', 'wind', 'WindGust1', 'WindGust2']
+scales_mod = [1/1000, 60*60*24, 1/100, 1, 1, 60*60*24, 1, 1, 1]
+scales_obs = [1/1000, 24*1000, 1, 1, 1, 24*1000, 1, 1, 1]
 
 
 def make_all_variable_inputs(variables_obs, variables_mod, variables_out, scales_mod,
@@ -260,7 +360,8 @@ def make_all_variable_inputs(variables_obs, variables_mod, variables_out, scales
 
     for vobs, vmod, vout, sco, scm, tran, invr in zip(variables_obs, variables_mod, variables_out, 
                                                 scales_obs, scales_mod, transformations, inverses): 
-        make_variable_inputs(vobs, vmod, vout, sco, scm, tran, invr, *args, **kw)
+        if vobs != "vpd":
+            make_variable_inputs(vobs, vmod, vout, sco, scm, tran, invr, *args, **kw)
 
 if __name__=="__main__":
     dir = "data/data/driving_data2526/nrt_raw/"
@@ -268,10 +369,10 @@ if __name__=="__main__":
     experiments = ["ALL", "NAT"]
     regions = [
                #"Midwestern Canadian Shield forests", 
-               #"Chilean Temperate Forests and Matorral", 
-               #"Southeast South Korea", 
-               "Northwest Iberia", 
-               #"Scottish Highlands"
+               "Chilean Temperate Forests and Matorral", 
+               "Southeast South Korea", 
+            #"Northwest Iberia", 
+               "Scottish Highlands"
                ]
 
     make_all_variable_inputs(variables_obs, variables_mod, variables_out, 
