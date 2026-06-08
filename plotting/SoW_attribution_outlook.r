@@ -64,7 +64,7 @@ regions = c("Midwestern Canadian Shield forests",
 HadGEM_dir = "outputs/outputs_scratch/SoW2526/attribution-HadGEM-test29-fuelcf4/<<region>>/time_series/_16-frac_points_0.5/"
 ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-4-notree/<<region>>/time_series/_15-frac_points_0.5/"
 
-gcms = c("GFDL-ESM4-", "IPSL-CM6A-LR-", "MPI-ESM1-2-HR-", "MRI-ESM2-0-", "UKESM1-0-LL-")
+gcms = c("GFDL-ESM4-", "IPSL-CM6A-LR-", "MPI-ESM1-2-HR-", "MRI-ESM2-0-")#, "UKESM1-0-LL-")
 
 region = tail(regions, 1)
 mnths = c('01','02', '03', '04', '05', '06', '07','08', '09', '10', '11', '12')
@@ -140,6 +140,8 @@ plot_af <- function(fact, cfact, xpos = 1, col = 'red', name = '', bar = TRUE, l
     #text(x = xpos - 0.1, y = pcs[3], paste0(likelihood, '%'), adj = 1.1) 
     text(x = xpos, y = pcs[1], paste0(likelihood, '%'), adj = c(0.5, 2)) 
     #text(x = xpos, y = min(pcs), adj = 1.1, srt = 45, name)
+    for (i in c(1, 3, 5)) 
+        text(x = xpos, y = pcs[i], round(pc[i], 2), adj = c(-1, 0.5))
 }
 
 
@@ -197,12 +199,30 @@ att_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, ye
     }
     lines(xs, rep(log10_plus(rr), 2), lwd = 3, col = col)
     
+    text(x = xs[1], y = log10_plus(rr), round(rr, 2), adj = c(-1, 0.5))
     return(samples)
 }
 
+perm_test_paired <- function(d, transform = log, inverse = exp) {
+    
+    d = transform(d)
+    
+    obs = mean(d)
+    signs <- expand.grid(rep(list(c(-1, 1)), length(d)))
+    perm_means <- apply(signs, 1, function(s) mean(d * s))
+    p_value <- mean(abs(perm_means) >= abs(obs))
+    list(
+        mean_difference = inverse(obs),
+        median = inverse(quantile(obs, 0.5)),
+        p_value = p_value,
+        null_distribution = perm_means
+    )
+}
+
+
 futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, years,
                          BA, xp, xoffset, samples = NULL, name = name, col = col, width = 0.05, 
-                        ylim0 = 0, ...) {
+                        ylim0 = 0, yearss = NULL, ...) {
     
     if (exp == "Evaluate") {
         if (factual_name[2] == "ssp370") {
@@ -234,12 +254,17 @@ futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
     afs = sapply(gcms, for_gcm)
     polygon(xs[c(1, 1, 2, 2)], af_tscale(range(afs)[c(1,2,2,1)]), 
             border = NA, col = paste0(col, "66")) 
-    
+
+    out = perm_test_paired(afs)
+    text(x = xs[1], y = af_tscale(out$mean), adj = c(-0.67, 0.5), round(out$mean, 2))
+    text(x = xs[1], y = af_tscale(max(afs)), adj = c(-0.67, 0.5), round(max(afs), 2))
+    text(x = xs[1], y = af_tscale(min(afs)), adj = c(-0.67, 0.5), round(min(afs), 2))
+    text(x = mean(xs), y = af_tscale(min(afs)), adj = c(0.5, 1), round(out$p_value, 2))
 }
 
 futr_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, years,
                          BA, xp, xoffset, samples = NULL, name = name, col = col, width = 0.05, 
-                         ylim0 = 0, ...) {
+                         ylim0 = 0, yearss = NULL, ...) {
     
     if (exp == "Evaluate") {
         if (factual_name[2] == "ssp370") {
@@ -293,24 +318,32 @@ futr_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
     samples = outs[2,]   
     polygon(xs[c(1, 1, 2, 2)], log10_plus(range(rrs)[c(1,2,2,1)]), 
             border = NA, col = paste0(col, "66"))
+
+
+    
+    out = perm_test_paired(rrs)
+    text(x = xs[1], y = log10_plus(out$mean), adj = c(-0.1, 0.5), round(out$mean, 2))
+    text(x = xs[1], y = log10_plus(max(rrs)), adj = c(-0.1, 0.5), round(max(rrs), 2))
+    text(x = xs[1], y = log10_plus(min(rrs)), adj = c(-0.1, 0.5), round(min(rrs), 2))
+    text(x = mean(xs), y = log10_plus(min(rrs)), adj = c(0.5, 1), round(out$p_value, 2))
     return(samples)
 }
 
-plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years, yearss,
-                        empty_plot = new_empty_plot_logit,
+plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
+                        empty_plot = new_empty_plot_logit, 
                         att_FUN = att_af_calc, futr_FUN = futr_af_calc,
-                        ylim = NULL) {
+                        ylim = NULL, reduced = TRUE) {
     
     add_run <- function(dir, factual_name = "factual-", cfactual_name = "counterfactual-",
                         xoffset = 0.0, years = 2025, mnths = NULL, 
-                        plot_FUN = att_FUN, BA = 0.0, ylim0 = 0.0) {
+                        plot_FUN = att_FUN, BA = 0.0, ylim0 = 0.0, ...) {
             
         add_experiemtnt <- function(exp = "Evaluate", col = 'red', xp = 0.25, 
                                     name = 'Burned Areas',
                                     samples = NULL) {
             
             samples = plot_FUN(dir, region, factual_name, cfactual_name, exp, mnths, years,
-                        BA, xp, xoffset, samples, name = name, col = col, ylim0 = ylim0)
+                        BA, xp, xoffset, samples, name = name, col = col, ylim0 = ylim0, ...)
             return(samples)
         } 
         samples = add_experiemtnt(col = "#E98400")
@@ -322,44 +355,53 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years, yearss,
         return(samples[[2]])
     }
     
-    ylim0 = empty_plot(xlim = c(0, 3), ylim = ylim)
+    ylim0 = empty_plot(xlim = c(0, 3 - 2*reduced), ylim = ylim)
     BA = add_run(HadGEM_dir, mnths = mnths, BA = NULL, ylim0 = ylim0)
-    add_run(HadGEM_dir, mnths = mnths, cfactual_name = "counterfactual_mean-", 
-            xoffset = 1, BA = BA, ylim0 = ylim0)
-    add_run(ISIMIP_dir, xoffset = 2, years =  2002:2019, BA = BA, ylim0 = ylim0)
     text(x = 0.5, y = ylim0, adj = c(0.5, -0.3), font = 2, 'HadGEM3-A\nfull ensemble')
-    text(x = 1.5, y = ylim0, adj = c(0.5, -0.3), font = 2, 'HadGEM3-A\nensemble mean')
-    text(x = 2.5, y = ylim0, adj = c(0.5, -0.3), font = 2, 'ISIMIP3a')
+
+    if (!reduced) {
+        add_run(HadGEM_dir, mnths = mnths, cfactual_name = "counterfactual_mean-", 
+                xoffset = 1, BA = BA, ylim0 = ylim0)
+        add_run(ISIMIP_dir, xoffset = 2, years =  2002:2019, BA = BA, ylim0 = ylim0)        
+        text(x = 1.5, y = ylim0, adj = c(0.5, -0.3), font = 2, 'HadGEM3-A\nensemble mean')
+        text(x = 2.5, y = ylim0, adj = c(0.5, -0.3), font = 2, 'ISIMIP3a')
+    }
     plot.new()
+
+    if (reduced) {
+        yearss = list(2030:2039, 2040:2049, 2090:2099)
+    } else {
+        yearss = list(2020:2029, 2030:2039, 2040:2049, 2050:2059, 2060:2069, 
+                      2070:2079, 2080:2089, 2090:2099)
+    }
     ylim0 = empty_plot(xlim = c(0, length(yearss)-0.075), ylab = '', xaxs = 'i', ylim = ylim)
-    for_ssp <- function(ssp, xmini_off) {
+    for_ssp <- function(ssp, xmini_off, yearss) {
         subdir = c("historical", ssp)
         
         for_yrss <- function(yrss, xoffset) {
+            
             add_run(ISIMIP_dir, xoffset = xoffset-1 + xmini_off, years =  list(2010:2019,yrss), 
-                    mnths = mnths,
+                    mnths = mnths,yearss = yearss,
                     plot_FUN = futr_FUN, factual_name = subdir, cfactual_name = subdir, 
                     BA = BA, ylim0 = ylim0)
         }
         mapply(for_yrss, yearss, 1:length(yearss))
     }
-    mapply(for_ssp, c("ssp126", "ssp370", "ssp585"), c(0, 0.3, 0.6))
+    mapply(for_ssp, c("ssp126", "ssp370", "ssp585"), c(0, 0.3, 0.6), MoreArgs = list(yearss))
     
 }
 
-yearss = list(2020:2029, 2030:2039, 2040:2049, 2050:2059, 2060:2069, 
-                      2070:2079, 2080:2089, 2090:2099)
-yearss = list(2030:2039, 2040:2049, 2090:2099)
 
-plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NULL) {
-    png(paste0("figs/att_outlook", region, ".png"), width = 14, height = 9, units = 'in', res = 300)
+
+plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NULL, reduced = TRUE) {
+    png(paste0("figs/att_outlook", region, ".png"), width = 14 - 7*reduced, height = 9, units = 'in', res = 300)
     layout(rbind(1:3, 4:6), widths = c(0.2, 0.02, 0.4))
     par(oma = c(2, 5, 2, 5), mar = c(1, 0, 1, 0))
         plot_region(region,  HadGEM_dir, ISIMIP_dir, mnths, years, 
-                    yearss = yearss, ylim = ylim1)
-        plot_region(region,  HadGEM_dir, ISIMIP_dir, mnths, years, yearss = yearss,
+                     ylim = ylim1)
+        plot_region(region,  HadGEM_dir, ISIMIP_dir, mnths, years, 
                     empty_plot = new_empty_plot_rr,
-                    att_FUN = att_rr_calc, futr_FUN = futr_rr_calc, ylim = ylim2)
+                    att_FUN = att_rr_calc, futr_FUN = futr_rr_calc, ylim = ylim2, reduced = reduced)
     dev.off()
 }
 regions = c("Northwest Iberia", "Midwestern Canadian Shield forests", "Chilean Temperate Forests and Matorral", "Scottish_Highlands", "Southeast_South_Korea")
