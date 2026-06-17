@@ -64,7 +64,7 @@ regions = c("Midwestern Canadian Shield forests",
 HadGEM_dir = "outputs/outputs_scratch/SoW2526/attribution-HadGEM-test29-fuelcf4/<<region>>/time_series/_16-frac_points_0.5/"
 ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-4-notree/<<region>>/time_series/_15-frac_points_0.5/"
 
-gcms = c("GFDL-ESM4-", "IPSL-CM6A-LR-", "MPI-ESM1-2-HR-", "MRI-ESM2-0-")#, "UKESM1-0-LL-")
+gcms = c("GFDL-ESM4-", "IPSL-CM6A-LR-", "MPI-ESM1-2-HR-", "MRI-ESM2-0-", "UKESM1-0-LL-")
 
 region = tail(regions, 1)
 mnths = c('01','02', '03', '04', '05', '06', '07','08', '09', '10', '11', '12')
@@ -120,7 +120,8 @@ new_empty_plot_logit <- function(xlim = c(0, 2), ylab =  'Amplifcation factor',
 }
 
 
-plot_af <- function(fact, cfact, xpos = 1, col = 'red', name = '', bar = TRUE, label = '', ...) {
+plot_af <- function(fact, cfact, xpos = 1, col = 'red', name = '', bar = TRUE, label = '', 
+                     csv_out = NULL, ...) {
     af = fact/cfact
     if (bar) {
         pc = quantile(af, c(0.05, 0.25, 0.5, 0.75, 0.95))
@@ -140,8 +141,15 @@ plot_af <- function(fact, cfact, xpos = 1, col = 'red', name = '', bar = TRUE, l
     #text(x = xpos - 0.1, y = pcs[3], paste0(likelihood, '%'), adj = 1.1) 
     text(x = xpos, y = pcs[1], paste0(likelihood, '%'), adj = c(0.5, 2)) 
     #text(x = xpos, y = min(pcs), adj = 1.1, srt = 45, name)
-    for (i in c(1, 3, 5)) 
-        text(x = xpos, y = pcs[i], round(pc[i], 2), adj = c(-1, 0.5))
+    out = cbind(name, 'AF', names(pc), round(pc, 2))
+    out = rbind(out, c(name, 'likelihood', '%', likelihood))
+    if (!is.null(csv_out)) 
+            write.table(out, file = csv_out, sep = ",", 
+                        append = TRUE, col.names = FALSE, row.names = FALSE)
+    #for (i in c(1, 3, 5)) 
+    #    text(x = xpos, y = pcs[i], round(pc[i], 2), adj = c(-1, 0.5))
+
+    
 }
 
 
@@ -151,12 +159,12 @@ att_af_calc <- function(dir, region,factual_name, cfactual_name, exp, mnths, yea
                         BA = NULL, xp, xoffset, samples = NULL, plot_fun = plot_af, ...) {
     
     
-    fact = openDat(dir, region, factual_name, exp, "mean", mnths, years)
-    cfact = openDat(dir, region, cfactual_name, exp, "mean", mnths, years)
+    fact = openDat(dir, region, factual_name, exp, cell_sample, mnths, years)
+    cfact = openDat(dir, region, cfactual_name, exp, cell_sample, mnths, years)
     
 
     if (is.null(samples)) {
-        if (is.null(BA)) BA = openDat(dir, region, factual_name, "observation", "mean", mnths, years)
+        if (is.null(BA)) BA = openDat(dir, region, factual_name, "observation", cell_sample, mnths, years)
         prob = exp(BA*log(fact) + (1.0-BA)*log((1-fact)))
         samples = sample(1:length(prob), 1000, TRUE, prob)
     } else {
@@ -181,13 +189,13 @@ cumm_pdf <- function(x0, BA) {
 
 att_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, years,
                         BA = NULL, xp, xoffset, samples = NULL, 
-                        name = name, col = col, width = 0.2, ...) {
+                        name = name, col = col, width = 0.2, csv_out = NULL, ...) {
     
     xs = xoffset + xp + width*0.5*c(-1, 1)
-    fact = openDat(dir, region, factual_name, exp, "mean", mnths, years)
-    cfact = openDat(dir, region, cfactual_name, exp, "mean", mnths, years)
+    fact = openDat(dir, region, factual_name, exp, cell_sample, mnths, years)
+    cfact = openDat(dir, region, cfactual_name, exp, cell_sample, mnths, years)
     if (is.null(samples)) {
-        if (is.null(BA)) BA = openDat(dir, region, factual_name, "observation", "mean", mnths, years)
+        if (is.null(BA)) BA = openDat(dir, region, factual_name, "observation", cell_sample, mnths, years)
         prob1 = cumm_pdf(fact, BA)
         prob2 = cumm_pdf(cfact, BA)
         rr = sum(prob1)/sum(prob2)
@@ -198,8 +206,13 @@ att_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, ye
         rr = sum(fact* samples[[1]])/sum(cfact * samples[[2]])
     }
     lines(xs, rep(log10_plus(rr), 2), lwd = 3, col = col)
+
+    out = t(c(name, 'RR', '', round(rr, 2)))
+    if (!is.null(csv_out)) 
+            write.table(out, file = csv_out, sep = ",", 
+                        append = TRUE, col.names = FALSE, row.names = FALSE)
     
-    text(x = xs[1], y = log10_plus(rr), round(rr, 2), adj = c(-1, 0.5))
+    #text(x = xs[1], y = log10_plus(rr), round(rr, 2), adj = c(-1, 0.5))
     return(samples)
 }
 
@@ -211,10 +224,15 @@ perm_test_paired <- function(d, transform = log, inverse = exp) {
     signs <- expand.grid(rep(list(c(-1, 1)), length(d)))
     perm_means <- apply(signs, 1, function(s) mean(d * s))
     p_value <- mean(abs(perm_means) >= abs(obs))
+    if (obs < 0) {
+        p_value = 100*p_value/2
+    } else {
+        p_value = 100-100*p_value/2
+    }
     list(
         mean_difference = inverse(obs),
         median = inverse(quantile(obs, 0.5)),
-        p_value = p_value,
+        p_value = round(p_value),
         null_distribution = perm_means
     )
 }
@@ -222,7 +240,7 @@ perm_test_paired <- function(d, transform = log, inverse = exp) {
 
 futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, years,
                          BA, xp, xoffset, samples = NULL, name = name, col = col, width = 0.05, 
-                        ylim0 = 0, yearss = NULL, ...) {
+                        ylim0 = 0, yearss = NULL, csv_out = NULL, ...) {
     
     if (exp == "Evaluate") {
         if (factual_name[2] == "ssp370") {
@@ -243,8 +261,8 @@ futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
     
     xs = xoffset + xp/3 + width*0.5*c(-1, 1)
     for_gcm <- function(gcm) {
-        fact = openDat(dir, region, paste0(factual_name, '/', gcm), exp, "mean", mnths, years[[1]])
-        cfact = openDat(dir, region,  paste0(cfactual_name, '/', gcm), exp, "mean", mnths, years[[2]])
+        fact = openDat(dir, region, paste0(factual_name, '/', gcm), exp, cell_sample, mnths, years[[1]])
+        cfact = openDat(dir, region,  paste0(cfactual_name, '/', gcm), exp, cell_sample, mnths, years[[2]])
         qt =  mean(fact <= BA)
         
         af = quantile(cfact,qt)/quantile(fact,qt)
@@ -255,16 +273,25 @@ futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
     polygon(xs[c(1, 1, 2, 2)], af_tscale(range(afs)[c(1,2,2,1)]), 
             border = NA, col = paste0(col, "66")) 
 
-    out = perm_test_paired(afs)
-    text(x = xs[1], y = af_tscale(out$mean), adj = c(-0.67, 0.5), round(out$mean, 2))
-    text(x = xs[1], y = af_tscale(max(afs)), adj = c(-0.67, 0.5), round(max(afs), 2))
-    text(x = xs[1], y = af_tscale(min(afs)), adj = c(-0.67, 0.5), round(min(afs), 2))
-    text(x = mean(xs), y = af_tscale(min(afs)), adj = c(0.5, 1), round(out$p_value, 2))
+    ptest = perm_test_paired(afs)
+
+    nmns = paste(c(names(afs), 'min', 'mean', 'max'), cfactual_name[2], min(years[[2]]), sep = '-')
+
+    out = cbind(name, "af", nmns,
+                round(c(afs, min(afs), mean(afs), max(afs)),2))
+    out = rbind(out, c(name, "Likilhood", "%", ptest$p_value))
+    if (!is.null(csv_out)) 
+            write.table(out, file = csv_out, sep = ",", 
+                        append = TRUE, col.names = FALSE, row.names = FALSE)
+    #text(x = xs[1], y = af_tscale(out$mean), adj = c(-0.67, 0.5), round(out$mean, 2))
+    #text(x = xs[1], y = af_tscale(max(afs)), adj = c(-0.67, 0.5), round(max(afs), 2))
+    #text(x = xs[1], y = af_tscale(min(afs)), adj = c(-0.67, 0.5), round(min(afs), 2))
+    #text(x = mean(xs), y = af_tscale(min(afs)), adj = c(0.5, 1), round(out$p_value, 2))
 }
 
 futr_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, years,
                          BA, xp, xoffset, samples = NULL, name = name, col = col, width = 0.05, 
-                         ylim0 = 0, yearss = NULL, ...) {
+                         ylim0 = 0, yearss = NULL, csv_out = NULL, ...) {
     
     if (exp == "Evaluate") {
         if (factual_name[2] == "ssp370") {
@@ -286,8 +313,8 @@ futr_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
     xs = xoffset + xp/3 + width*0.5*c(-1, 1)
     for_gcm <- function(i) {
         gcm = gcms[[i]]
-        fact = openDat(dir, region, paste0(factual_name, '/', gcm), exp, "mean", mnths, years[[1]])
-        cfact = openDat(dir, region,  paste0(cfactual_name, '/', gcm), exp, "mean", mnths, years[[2]])
+        fact = openDat(dir, region, paste0(factual_name, '/', gcm), exp, cell_sample, mnths, years[[1]])
+        cfact = openDat(dir, region,  paste0(cfactual_name, '/', gcm), exp, cell_sample, mnths, years[[2]])
         
         if (is.null(samples) || exp == "Evaluate") {
 
@@ -320,19 +347,27 @@ futr_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
             border = NA, col = paste0(col, "66"))
 
 
+    ptest = perm_test_paired(rrs)
+
+    nmns = paste(c(gcms, 'min', 'mean', 'max'), cfactual_name[2], min(years[[2]]), sep = '-')
+    out = cbind(name, "rrs", nmns, 
+                round(c(rrs, min(rrs), mean(rrs), max(rrs)),2))
+    out = rbind(out, c(name, "Likilhood", "%", ptest$p_value))
+    if (!is.null(csv_out)) 
+            write.table(out, file = csv_out, sep = ",", 
+                        append = TRUE, col.names = FALSE, row.names = FALSE)
     
-    out = perm_test_paired(rrs)
-    text(x = xs[1], y = log10_plus(out$mean), adj = c(-0.1, 0.5), round(out$mean, 2))
-    text(x = xs[1], y = log10_plus(max(rrs)), adj = c(-0.1, 0.5), round(max(rrs), 2))
-    text(x = xs[1], y = log10_plus(min(rrs)), adj = c(-0.1, 0.5), round(min(rrs), 2))
-    text(x = mean(xs), y = log10_plus(min(rrs)), adj = c(0.5, 1), round(out$p_value, 2))
+    #text(x = xs[1], y = log10_plus(out$mean), adj = c(-0.1, 0.5), round(out$mean, 2))
+    #text(x = xs[1], y = log10_plus(max(rrs)), adj = c(-0.1, 0.5), round(max(rrs), 2))
+    #text(x = xs[1], y = log10_plus(min(rrs)), adj = c(-0.1, 0.5), round(min(rrs), 2))
+    #text(x = mean(xs), y = log10_plus(min(rrs)), adj = c(0.5, 1), round(out$p_value, 2))
     return(samples)
 }
 
 plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
                         empty_plot = new_empty_plot_logit, 
                         att_FUN = att_af_calc, futr_FUN = futr_af_calc,
-                        ylim = NULL, reduced = TRUE) {
+                        ylim = NULL, reduced = TRUE, csv_out = csv_out) {
     
     add_run <- function(dir, factual_name = "factual-", cfactual_name = "counterfactual-",
                         xoffset = 0.0, years = 2025, mnths = NULL, 
@@ -343,7 +378,8 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
                                     samples = NULL) {
             
             samples = plot_FUN(dir, region, factual_name, cfactual_name, exp, mnths, years,
-                        BA, xp, xoffset, samples, name = name, col = col, ylim0 = ylim0, ...)
+                        BA, xp, xoffset, samples, name = name, col = col, ylim0 = ylim0, 
+                        csv_out = csv_out, ...)
             return(samples)
         } 
         samples = add_experiemtnt(col = "#E98400")
@@ -390,18 +426,22 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
     mapply(for_ssp, c("ssp126", "ssp370", "ssp585"), c(0, 0.3, 0.6), MoreArgs = list(yearss))
     
 }
-
-
+cell_sample = "mean"
+cell_sample = "pc-95.0"
 
 plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NULL, reduced = TRUE) {
+
+    csv_out = paste0("outputs/SoW_att_outlook", region, '.csv')
+    file.create(csv_out)
     png(paste0("figs/att_outlook", region, ".png"), width = 14 - 7*reduced, height = 9, units = 'in', res = 300)
     layout(rbind(1:3, 4:6), widths = c(0.2, 0.02, 0.4))
     par(oma = c(2, 5, 2, 5), mar = c(1, 0, 1, 0))
         plot_region(region,  HadGEM_dir, ISIMIP_dir, mnths, years, 
-                     ylim = ylim1)
+                     ylim = ylim1, csv_out = csv_out)
         plot_region(region,  HadGEM_dir, ISIMIP_dir, mnths, years, 
                     empty_plot = new_empty_plot_rr,
-                    att_FUN = att_rr_calc, futr_FUN = futr_rr_calc, ylim = ylim2, reduced = reduced)
+                    att_FUN = att_rr_calc, futr_FUN = futr_rr_calc, ylim = ylim2, 
+                    reduced = reduced, csv_out = csv_out)
     dev.off()
 }
 regions = c("Northwest Iberia", "Midwestern Canadian Shield forests", "Chilean Temperate Forests and Matorral", "Scottish_Highlands", "Southeast_South_Korea")
