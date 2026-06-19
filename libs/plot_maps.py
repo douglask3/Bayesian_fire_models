@@ -120,7 +120,8 @@ def plot_annual_mean(cube, levels = None, cmap = 'gradient_hues', plot_name = No
     
     ax = plt.subplot(Nrows, Ncols, plot_n, projection = ccrs.Robinson())
     
-    plot_map_sow(aa, plot_name,  cmap = SoW_cmap[cmap], levels=levels, ax=ax,  cbar_label = "", add_cbar = colourbar, *args, **kw)
+    plot_map_sow(aa, plot_name,  cmap = SoW_cmap[cmap], levels=levels, ax=ax,  
+                 cbar_label = "", add_cbar = colourbar, *args, **kw)
     
     #plot_lonely_cube(aa, Nrows, Ncols, plot_n, levels = levels, cmap = cmap, 
     #                 colourbar = colourbar, grayMask = True, *args, **kw)
@@ -751,7 +752,7 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
         else:
             cbar = plt.colorbar(img, ax=ax, ticks=levels, orientation=cbar_orientation,
                                 fraction=0.05,  # width of colorbar relative to figure
-                                pad=-0.05, shrink=1.0, aspect=40)
+                                pad=-0.05, shrink=.76, aspect=40)
         cbar.set_label(cbar_label, labelpad=10, loc='center')
         cbar.ax.xaxis.set_label_position('top')
          
