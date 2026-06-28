@@ -206,7 +206,6 @@ att_af_calc <- function(dir, region,factual_name, cfactual_name, exp, mnths, yea
 att_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, years,
                         BA = NULL, xp, xoffset, samples = NULL, ...) {
     
-    #xs = xoffset + xp + width*0.5*c(-1, 1)
     fact = openDat(dir, region, factual_name, exp, cell_sample, mnths, years) 
     cfact = openDat(dir, region, cfactual_name, exp, cell_sample, mnths, years)
     if (is.null(samples)) {
@@ -225,23 +224,12 @@ att_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, ye
     
     plot_af(rr, xp + xoffset, csv_out_name = 'rr', ...)
     
-    #xs = xoffset + xp + width*0.5*c(-1, 1)
-    #lines(xs, rep(log10_plus(mean(rr)), 2), lwd = 3, col = col)
-
-    #pc =  quantile(rr[rr !=1], c(0.05, 0.25, 0.5, 0.75, 0.95), na.rm = TRUE)
-    #out = cbind(name, 'RR', names(pc), round(pc, 2))
-    #out = rbind(out, c(name, 'likelihood', '%', (mean(pc>1) + 0.5 * mean(pc==1))*100))
-    #if (!is.null(csv_out)) 
-    #        write.table(out, file = csv_out, sep = ",", 
-    #                    append = TRUE, col.names = FALSE, row.names = FALSE)
     
     return(samples)
 }
 
-futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, years,
-                         BA, xp, xoffset, samples = NULL, name = name, col = col, width = 0.05, 
-                        ylim0 = 0, yearss = NULL, csv_out = NULL, ...) {
-    
+
+futr_annotaion <- function(exp, factual_name, xp, xoffset, width, ylim0, years, yearss)  {
     if (exp == BA_varname) {
         if (factual_name[2] == "ssp370") {
             polygon(width/2 + c(xoffset, xoffset + 0.3)[c(1, 1, 2, 2)], c(0, 1, 1, 0),
@@ -255,9 +243,16 @@ futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
         }
        
     }
-    
+ 
     if (years[[2]][1]== yearss[[1]][1] && exp == BA_varname) 
         text(xoffset + xp/2, ylim0, adj = c(-1, 0.5), srt = 90, factual_name[2])
+}
+
+futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, years,
+                         BA, xp, xoffset, samples = NULL, name = name, col = col, width = 0.05, 
+                        ylim0 = 0, yearss = NULL, csv_out = NULL, ...) {
+    
+    futr_annotaion(exp, factual_name, xp, xoffset,width, ylim0, years, yearss)
     
     xs = xoffset + xp/3 + width*0.5*c(-1, 1)
     for_gcm <- function(gcm) {
@@ -279,16 +274,10 @@ futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
             cfact = -log(1-cfact[!mask]*0.999999999)
         }
         return(sort(cfact)/sort(fact))
-        
-        #qt =  mean(fact <= BA)
-        #
-        #af = quantile(cfact,qt)/quantile(fact,qt)
-        #lines(xs, rep(af_tscale(af), 2), lwd = 1, col = col)
-        #return(af)
+
     }
     afs = sapply(gcms, for_gcm)
     afs = as.vector(unlist(afs))
-    #if (background_BA) {
     
     plot_af(afs, xp/3 + xoffset, col = col, bwidth = 0.025, ...)
         
@@ -299,49 +288,19 @@ futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
     if (is.na(liki)) 
         browser()
     out = rbind(out, c(name, 'likelihood', '%', liki))
-    #    return(NULL)
-    #}
-    
-    #polygon(xs[c(1, 1, 2, 2)], af_tscale(range(afs, na.rm = TRUE)[c(1,2,2,1)]), 
-    #        border = NA, col = paste0(col, "66")) 
 
-    #ptest = perm_test_paired(afs)
-    #
-    #nmns = paste(c(names(afs), 'min', 'mean', 'max'), cfactual_name[2], min(years[[2]]), sep = '-')
-    #
-    #out = cbind(name, "af", nmns,
-    #            round(c(afs, min(afs), mean(afs), max(afs)),2))
-    #out = rbind(out, c(name, "Likilhood", "%", ptest$p_value))
     if (!is.null(csv_out)) 
             write.table(out, file = csv_out, sep = ",", 
                         append = TRUE, col.names = FALSE, row.names = FALSE)
-    #text(x = xs[1], y = af_tscale(out$mean), adj = c(-0.67, 0.5), round(out$mean, 2))
-    #text(x = xs[1], y = af_tscale(max(afs)), adj = c(-0.67, 0.5), round(max(afs), 2))
-    #text(x = xs[1], y = af_tscale(min(afs)), adj = c(-0.67, 0.5), round(min(afs), 2))
-    #text(x = mean(xs), y = af_tscale(min(afs)), adj = c(0.5, 1), round(out$p_value, 2))
 }
 
 futr_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, years,
                          BA, xp, xoffset, samples = NULL, name = name, col = col, width = 0.05, 
                          ylim0 = 0, yearss = NULL, csv_out = NULL, ...) {
     
-    if (exp == BA_varname) {
-        if (factual_name[2] == "ssp370") {
-            polygon(width/2 + c(xoffset, xoffset + 0.3)[c(1, 1, 2, 2)], c(0, 1, 1, 0),
-                     col = '#00000011', border = NA)
-            text(xp + xoffset, ylim0, adj = c(0.5, -0.3), 
-                 paste0(range(years[[2]]), collapse = ' - '), font = 2)
-        } else if (factual_name[2] == "ssp585")  {         
-            polygon(width/2 + c(xoffset, xoffset + 0.3)[c(1, 1, 2, 2)], c(0, 1, 1, 0),
-                     col = '#00000022', border = NA)
-            lines(rep(width/2 + xoffset + 0.3, 2), c(-9E9, 9E9), lty = 2)
-            print(rep(width/2 + xoffset + 0.3, 2))
-        }
-       
-    }
-    if (years[[2]][1]== yearss[[1]][[2]][1] && exp == BA_varname) 
-        text(xoffset + xp/2, ylim0, adj = c(-1, 0.5), srt = 90, factual_name[2])
     
+    futr_annotaion(exp, factual_name, xp, xoffset, width, ylim0, years, yearss)
+
     xs = xoffset + xp/3 + width*0.5*c(-1, 1)
     for_gcm <- function(i) {
         gcm = gcms[[i]]
@@ -366,46 +325,23 @@ futr_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
             
         } else {        
             prob = samples[[i]]
-            
-            #rr = sum(prob[[1]])/sum(prob[[2]])*sum(cfact[prob[[3]]]* prob[[2]])/sum(fact[prob[[3]]] * prob[[1]])
             rr = mean(cfact[prob[[3]]]/fact[prob[[3]]])
         }
-        #print(rr)
-        #lines(xs, rep(log10_plus(rr), 2), lwd = 1, col = col)
         return(list(rr, samples))
     }
     outs = sapply(1:length(gcms), for_gcm)
     rr = as.vector(unlist(outs[1,]))
-    #browser()
+    
     plot_af(as.vector(rr), xp/3 + xoffset, col = col, bwidth = 0.025, ...)
-    
-    #    return(NULL)
-    #}
-    #samples = outs[2,]   
-    #polygon(xs[c(1, 1, 2, 2)], log10_plus(range(rrs)[c(1,2,2,1)]), 
-    #        border = NA, col = paste0(col, "66"))
-    #
-    #
-    #ptest = perm_test_paired(rrs)
-    
     
     pc =  quantile(rr, c(0.05, 0.25, 0.5, 0.75, 0.95), na.rm = TRUE)
     out = cbind(paste(cfactual_name[2], min(years[[2]]), name), 'RR', names(pc), round(pc, 2))
     out = rbind(out, c(name, 'likelihood', '%', (mean(pc>1) + 0.5 * mean(pc==1))*100))
 
-
-    #nmns = paste(c(gcms, 'min', 'mean', 'max'), cfactual_name[2], min(years[[2]]), sep = '-')
-    #out = cbind(name, "rrs", nmns, 
-    #            round(c(rrs, min(rrs), mean(rrs), max(rrs)),2))
-    #out = rbind(out, c(name, "Likilhood", "%", ptest$p_value))
     if (!is.null(csv_out)) 
             write.table(out, file = csv_out, sep = ",", 
                         append = TRUE, col.names = FALSE, row.names = FALSE)
     
-    #text(x = xs[1], y = log10_plus(out$mean), adj = c(-0.1, 0.5), round(out$mean, 2))
-    #text(x = xs[1], y = log10_plus(max(rrs)), adj = c(-0.1, 0.5), round(max(rrs), 2))
-    #text(x = xs[1], y = log10_plus(min(rrs)), adj = c(-0.1, 0.5), round(min(rrs), 2))
-    #text(x = mean(xs), y = log10_plus(min(rrs)), adj = c(0.5, 1), round(out$p_value, 2))
     return(samples)
 }
 
