@@ -65,9 +65,37 @@ cumm_pdf <- function(x0, BA) {
     x = seq(0, 1, 0.0001)
     y = exp(BA*log(x) + (1.0-BA)*log((1-x)))
     y = cumsum(y)/sum(y)
-    out = sapply(x0, function(xi) y[which(x>xi)[1]])
+
+    find_inbetween <- function(xi) {
+        p1 = tail(which(x <= xi), 1)
+        p2 = which(x > xi)[1]
+        (y[p2] *(xi-x[p1]) + y[p1] *(x[p2]-xi))/((xi-x[p1]) + (x[p2]-xi))
+    }
+    out = sapply(x0, find_inbetween)
     
     return(out)
+}
+
+
+perm_test_paired <- function(d, transform = log, inverse = exp) {
+    
+    d = transform(d)
+    
+    obs = mean(d)
+    signs <- expand.grid(rep(list(c(-1, 1)), length(d)))
+    perm_means <- apply(signs, 1, function(s) mean(d * s))
+    p_value <- mean(abs(perm_means) >= abs(obs))
+    if (obs < 0) {
+        p_value = 100*p_value/2
+    } else {
+        p_value = 100-100*p_value/2
+    }
+    list(
+        mean_difference = inverse(obs),
+        median = inverse(quantile(obs, 0.5)),
+        p_value = round(p_value),
+        null_distribution = perm_means
+    )
 }
 
 ##########################################################
@@ -122,12 +150,10 @@ new_empty_plot_logit <- function(...) {
 ## plotting functions                                   ##
 ##########################################################
 
-plot_af <- function(fact, cfact = NULL, 
-                    xpos = 1, col = 'red', name = '', bar = TRUE, label = '', 
-                     csv_out = NULL, bwidth = 0.1, ...) {
+plot_af <- function(af, xpos = 1, col = 'red', name = '', bar = TRUE, label = '', 
+                     csv_out = NULL, csv_out_name = 'AF', bwidth = 0.1, ...) {
     bwidth_bar = 0.05*bwidth^(0.33)/0.1^(0.33)
-    if (!is.null(cfact)) af = fact/cfact
-        else af = fact
+    
     if (bar) {
         pc = quantile(af, c(0.05, 0.25, 0.5, 0.75, 0.95), na.rm = TRUE)
         outline = af_tscale(range(af, na.rm = TRUE))
@@ -141,7 +167,7 @@ plot_af <- function(fact, cfact = NULL,
         lines(xpos + bwidth*c(-1, 1), rep(pcs[3], 2), lwd = 2, xpd = NA)        
     }
     likelihood = round(mean(af>1)*100 + mean(af==1)*50)
-    out = cbind(name, 'AF', names(pc), round(pc, 2))
+    out = cbind(name, csv_out_name, names(pc), round(pc, 2))
     out = rbind(out, c(name, 'likelihood', '%', likelihood))
     if (!is.null(csv_out)) 
             write.table(out, file = csv_out, sep = ",", 
@@ -150,7 +176,7 @@ plot_af <- function(fact, cfact = NULL,
 
 ## Amplifcation Factor
 att_af_calc <- function(dir, region,factual_name, cfactual_name, exp, mnths, years,
-                        BA = NULL, xp, xoffset, samples = NULL, plot_fun = plot_af, ...) {
+                        BA = NULL, xp, xoffset, samples = NULL, ...) {
     
     fact = openDat(dir, region, factual_name, exp, cell_sample, mnths, years)
     cfact = openDat(dir, region, cfactual_name, exp, cell_sample, mnths, years)
@@ -172,19 +198,20 @@ att_af_calc <- function(dir, region,factual_name, cfactual_name, exp, mnths, yea
         fact = fact[samples]
         cfact = cfact[samples] 
     }
-    plot_fun(fact, cfact, xp + xoffset, ...)
+    plot_af(fact/cfact, xp + xoffset, ...)
     return(list(samples, BA))
 }
 
+
 att_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, years,
-                        BA = NULL, xp, xoffset, samples = NULL, 
-                        name = name, col = col, width = 0.2, csv_out = NULL, ...) {
+                        BA = NULL, xp, xoffset, samples = NULL, ...) {
     
-    xs = xoffset + xp + width*0.5*c(-1, 1)
+    #xs = xoffset + xp + width*0.5*c(-1, 1)
     fact = openDat(dir, region, factual_name, exp, cell_sample, mnths, years) 
     cfact = openDat(dir, region, cfactual_name, exp, cell_sample, mnths, years)
     if (is.null(samples)) {
-        if (is.null(BA)) BA = openDat(dir, region, factual_name, "observation", cell_sample, mnths, years)
+        if (is.null(BA))
+            BA = openDat(dir, region, factual_name, "observation", cell_sample, mnths, years)
         prob1 = cumm_pdf(fact, BA)
         prob2 = cumm_pdf(cfact, BA)
         
@@ -195,39 +222,21 @@ att_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, ye
         samples = samples[[1]]
         rr = (fact* samples[[1]])/(cfact * samples[[2]])
     }
-    lines(xs, rep(log10_plus(mean(rr)), 2), lwd = 3, col = col)
+    
+    plot_af(rr, xp + xoffset, csv_out_name = 'rr', ...)
+    
+    #xs = xoffset + xp + width*0.5*c(-1, 1)
+    #lines(xs, rep(log10_plus(mean(rr)), 2), lwd = 3, col = col)
 
-    pc =  quantile(rr[rr !=1], c(0.05, 0.25, 0.5, 0.75, 0.95), na.rm = TRUE)
-    out = cbind(name, 'RR', names(pc), round(pc, 2))
-    out = rbind(out, c(name, 'likelihood', '%', (mean(pc>1) + 0.5 * mean(pc==1))*100))
-    if (!is.null(csv_out)) 
-            write.table(out, file = csv_out, sep = ",", 
-                        append = TRUE, col.names = FALSE, row.names = FALSE)
+    #pc =  quantile(rr[rr !=1], c(0.05, 0.25, 0.5, 0.75, 0.95), na.rm = TRUE)
+    #out = cbind(name, 'RR', names(pc), round(pc, 2))
+    #out = rbind(out, c(name, 'likelihood', '%', (mean(pc>1) + 0.5 * mean(pc==1))*100))
+    #if (!is.null(csv_out)) 
+    #        write.table(out, file = csv_out, sep = ",", 
+    #                    append = TRUE, col.names = FALSE, row.names = FALSE)
     
     return(samples)
 }
-
-perm_test_paired <- function(d, transform = log, inverse = exp) {
-    
-    d = transform(d)
-    
-    obs = mean(d)
-    signs <- expand.grid(rep(list(c(-1, 1)), length(d)))
-    perm_means <- apply(signs, 1, function(s) mean(d * s))
-    p_value <- mean(abs(perm_means) >= abs(obs))
-    if (obs < 0) {
-        p_value = 100*p_value/2
-    } else {
-        p_value = 100-100*p_value/2
-    }
-    list(
-        mean_difference = inverse(obs),
-        median = inverse(quantile(obs, 0.5)),
-        p_value = round(p_value),
-        null_distribution = perm_means
-    )
-}
-
 
 futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, years,
                          BA, xp, xoffset, samples = NULL, name = name, col = col, width = 0.05, 
@@ -281,7 +290,7 @@ futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
     afs = as.vector(unlist(afs))
     #if (background_BA) {
     
-    plot_af(afs, NULL, xp/3 + xoffset, col = col, bwidth = 0.025, ...)
+    plot_af(afs, xp/3 + xoffset, col = col, bwidth = 0.025, ...)
         
     
     pc =  quantile(afs, c(0.05, 0.25, 0.5, 0.75, 0.95), na.rm = TRUE)
@@ -368,7 +377,7 @@ futr_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
     outs = sapply(1:length(gcms), for_gcm)
     rr = as.vector(unlist(outs[1,]))
     #browser()
-    plot_af(as.vector(rr), NULL, xp/3 + xoffset, col = col, bwidth = 0.025, ...)
+    plot_af(as.vector(rr), xp/3 + xoffset, col = col, bwidth = 0.025, ...)
     
     #    return(NULL)
     #}
