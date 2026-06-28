@@ -58,13 +58,21 @@ af_tscale <- function(x) {
 
 log10_plus <- function(x) (log10(x) + 1)/2
 
-
 af_iscale <- function(x) x/(1-x)
 
-##########################################################
-## defineing emplty plots                               ##
-##########################################################
 
+cumm_pdf <- function(x0, BA) {
+    x = seq(0, 1, 0.0001)
+    y = exp(BA*log(x) + (1.0-BA)*log((1-x)))
+    y = cumsum(y)/sum(y)
+    out = sapply(x0, function(xi) y[which(x>xi)[1]])
+    
+    return(out)
+}
+
+##########################################################
+## defineing empty plots                               ##
+##########################################################
 
 new_empty_plot <- function(y_tfun, labels, labels_txt, 
                                 xlim = c(0, 2), ylab =  'Amplifcation factor',
@@ -110,6 +118,9 @@ new_empty_plot_logit <- function(...) {
     return(out)
 }
 
+##########################################################
+## plotting functions                                   ##
+##########################################################
 
 plot_af <- function(fact, cfact = NULL, 
                     xpos = 1, col = 'red', name = '', bar = TRUE, label = '', 
@@ -127,33 +138,26 @@ plot_af <- function(fact, cfact = NULL,
             lines(xpos + c(-bwidth_bar, bwidth_bar), rep(pcs[i], 2), col = col)
         lines(rep(xpos, 2), pcs[c(1, 5)], col = col)
         polygon(xpos + bwidth*c(-1, -1, 1, 1), pcs[c(2, 4, 4, 2)], border = NA, col = col) 
-        lines(xpos + bwidth*c(-1, 1), rep(pcs[3], 2), lwd = 2, xpd = NA)
-        #points(rep(xpos, 2), outline, col = col)
-        
+        lines(xpos + bwidth*c(-1, 1), rep(pcs[3], 2), lwd = 2, xpd = NA)        
     }
     likelihood = round(mean(af>1)*100 + mean(af==1)*50)
-    #text(x = xpos - 0.1, y = pcs[3], paste0(likelihood, '%'), adj = 1.1) 
-    #if (!background_BA) text(x = xpos, y = pcs[1], paste0(likelihood, '%'), adj = c(0.5, 2)) 
-    #text(x = xpos, y = min(pcs), adj = 1.1, srt = 45, name)
     out = cbind(name, 'AF', names(pc), round(pc, 2))
     out = rbind(out, c(name, 'likelihood', '%', likelihood))
     if (!is.null(csv_out)) 
             write.table(out, file = csv_out, sep = ",", 
                         append = TRUE, col.names = FALSE, row.names = FALSE)
-    #for (i in c(1, 3, 5)) 
-    #    text(x = xpos, y = pcs[i], round(pc[i], 2), adj = c(-1, 0.5))    
 }
 
+## Amplifcation Factor
 att_af_calc <- function(dir, region,factual_name, cfactual_name, exp, mnths, years,
                         BA = NULL, xp, xoffset, samples = NULL, plot_fun = plot_af, ...) {
     
-    
     fact = openDat(dir, region, factual_name, exp, cell_sample, mnths, years)
     cfact = openDat(dir, region, cfactual_name, exp, cell_sample, mnths, years)
-    
 
     if (is.null(samples)) {
-        if (is.null(BA)) BA = openDat(dir, region, factual_name, "observation", cell_sample, mnths, years)
+        if (is.null(BA))
+            BA = openDat(dir, region, factual_name, "observation", cell_sample, mnths, years)
         prob = exp(BA*log(fact) + (1.0-BA)*log((1-fact)))
         samples = sample(1:length(prob), 1000, TRUE, prob)
     } else {
@@ -172,23 +176,13 @@ att_af_calc <- function(dir, region,factual_name, cfactual_name, exp, mnths, yea
     return(list(samples, BA))
 }
 
-
-cumm_pdf <- function(x0, BA) {
-    x = seq(0, 1, 0.0001)
-    y = exp(BA*log(x) + (1.0-BA)*log((1-x)))
-    y = cumsum(y)/sum(y)
-    out = sapply(x0, function(xi) y[which(x>xi)[1]])
-    
-    return(out)
-}
-
 att_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, years,
                         BA = NULL, xp, xoffset, samples = NULL, 
                         name = name, col = col, width = 0.2, csv_out = NULL, ...) {
     
     xs = xoffset + xp + width*0.5*c(-1, 1)
-    fact = openDat(dir, region, factual_name, exp, cell_sample, mnths, years) #+ 1E-20
-    cfact = openDat(dir, region, cfactual_name, exp, cell_sample, mnths, years) #+ 1E-20
+    fact = openDat(dir, region, factual_name, exp, cell_sample, mnths, years) 
+    cfact = openDat(dir, region, cfactual_name, exp, cell_sample, mnths, years)
     if (is.null(samples)) {
         if (is.null(BA)) BA = openDat(dir, region, factual_name, "observation", cell_sample, mnths, years)
         prob1 = cumm_pdf(fact, BA)
@@ -210,7 +204,6 @@ att_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, ye
             write.table(out, file = csv_out, sep = ",", 
                         append = TRUE, col.names = FALSE, row.names = FALSE)
     
-    #text(x = xs[1], y = log10_plus(rr), round(rr, 2), adj = c(-1, 0.5))
     return(samples)
 }
 
