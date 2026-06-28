@@ -1,4 +1,9 @@
 graphics.off()
+
+
+##########################################################
+## librarys                                             ##
+##########################################################
 openDat <- function(dir, region, subdirs, experiment, area, mnths, years) {
     openFile <- function(subdir) {
         file = gsub('<<region>>', gsub(' ', '_', region), dir)
@@ -54,70 +59,55 @@ af_tscale <- function(x) {
 log10_plus <- function(x) (log10(x) + 1)/2
 
 
-
 af_iscale <- function(x) x/(1-x)
 
+##########################################################
+## defineing emplty plots                               ##
+##########################################################
 
-regions = c("Midwestern Canadian Shield forests", 
-            "Chilean Temperate Forests and Matorral", 
-            "Northwest Iberia")
 
-HadGEM_dir = "outputs/outputs_scratch/SoW2526/attribution-HadGEM-test29-fuelcf4/<<region>>/time_series/_16-frac_points_0.5/"
-ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-4-notree/<<region>>/time_series/_15-frac_points_0.5/"
-
-gcms = c("GFDL-ESM4-", "IPSL-CM6A-LR-", "MPI-ESM1-2-HR-", "MRI-ESM2-0-", "UKESM1-0-LL-")
-
-region = tail(regions, 1)
-mnths = c('01','02', '03', '04', '05', '06', '07','08', '09', '10', '11', '12')
-mnths = c('08')
-years = c(2025)
-
-new_empty_plot_rr <- function(xlim = c(0, 2), ylab = 'Risk ratio', 
-                              add_xlabs = ylab != '', ylim = NULL, ...) {
+new_empty_plot <- function(y_tfun, labels, labels_txt, 
+                                xlim = c(0, 2), ylab =  'Amplifcation factor',
+                                add_xlabs = ylab != '', ylim =  NULL, ...) {
     if (is.null(ylim)) {
         ylim = c(0, 1)
     } else {
-        ylim = log10_plus(ylim)
+        ylim = y_tfun(ylim)
     }
+
     plot(xlim,  ylim, xlab = '', ylab = '', type = 'n', yaxt = 'n', yaxs = 'i', 
          xaxt = 'n', ...)
-    labels = c(1/10, 1/5, 1/2, 1, 2, 5, 8, 10)
+
+     at = y_tfun(labels)
     
-    at = log10_plus(labels)
-    axis(2, at = at, labels = labels)
+     if (!add_xlabs) labels_txt[] = ''
+    axis(2, at = at, labels = labels_txt)
+
     mtext(side = 2, line = 3, ylab)
     for (y in at)
         lines(c(-9E9, 9E9), c(y, y), col= 'grey', lty = 2)
     return(ylim[1])
 }
 
-new_empty_plot_logit <- function(xlim = c(0, 2), ylab =  'Amplifcation factor',
-                                 add_xlabs = ylab != '', ylim =  NULL, ...) {
-    if (is.null(ylim)) {
-        ylim = c(0, 1)
-    } else {
-        ylim = af_tscale(ylim)
-    }
-    plot(xlim,  ylim, xlab = '', ylab = '', type = 'n', yaxt = 'n', yaxs = 'i', 
-         xaxt = 'n', ...)
-    
-    labels = c(0, 1/128, 1/64, 1/32, 1/16, 1/8, 1/4, 1/2, 2/3, 1, 1.5, 2, 4, 8, 16, 32, 64, 128, 1000000)
-    at = af_tscale(labels)
-    if (add_xlabs) 
-        labels = c('0', '', '', '', '', '', '1/4', '1/2', '2/3', 'no\nchange', '1 1/2',
+new_empty_plot_rr <- function(...) {
+
+    labels = c(1/10, 1/5, 1/2, 1, 2, 5, 8, 10)
+    labels_txt = c('1/10', '1/5', '1/2', '1', '2', '5', '8', '10')
+    new_empty_plot(log10_plus, labels, labels_txt, ...)
+}
+
+new_empty_plot_logit <- function(...) {
+    labels = c(0, 1/128, 1/64, 1/32, 1/16, 1/8, 1/4, 1/2, 2/3, 1, 
+               1.5, 2, 4, 8, 16, 32, 64, 128, 1000000)
+    labels_txt = c('0', '', '', '', '', '', '1/4', '1/2', '2/3', 'no\nchange', '1 1/2',
                    '2', '4', '', '', '', '', '', 'All from\nclimate')
-    else
-        labels = rep('', length(labels))
-    axis(2, at = at, labels = labels)
-    mtext(side = 2, line = 3, ylab)
-    for (y in at)
-        lines(c(-9E9, 9E9), c(y, y), col= 'grey', lty = 2)
+    out = new_empty_plot(af_tscale, labels, labels_txt,...)
     
-    if (ylab == '') {   
-        mtext(side =4, line = 3, "% explained by climate change")
-        axis(4, seq(0, 1, length.out=  9), seq(-100, 100,length.out=  9))
-    }
-    return(ylim[1])
+    #if (ylab == '') {   
+    #    mtext(side =4, line = 3, "% explained by climate change")
+    #    axis(4, seq(0, 1, length.out=  9), seq(-100, 100,length.out=  9))
+    #}
+    return(out)
 }
 
 
@@ -504,10 +494,21 @@ plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NU
                     reduced = reduced, csv_out = csv_out)
     dev.off()
 }
-regions = c("Northwest Iberia", "Midwestern Canadian Shield forests", "Chilean Temperate Forests and Matorral")#, "Scottish_Highlands", "Southeast_South_Korea")
 
 
-ylim1 = list(c(0.5, 9E99), NULL, NULL)
+
+
+
+HadGEM_dir = "outputs/outputs_scratch/SoW2526/attribution-HadGEM-test29-fuelcf4/<<region>>/time_series/_16-frac_points_0.5/"
+ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-4-notree/<<region>>/time_series/_15-frac_points_0.5/"
+
+gcms = c("GFDL-ESM4-", "IPSL-CM6A-LR-", "MPI-ESM1-2-HR-", "MRI-ESM2-0-", "UKESM1-0-LL-")
+
+regions = c("Northwest Iberia", "Midwestern Canadian Shield forests", 
+            "Chilean Temperate Forests and Matorral")
+            #, "Scottish_Highlands", "Southeast_South_Korea")
+
+ylim1 = list(NULL, NULL, NULL)
 ylim2 = list(NULL, NULL, NULL)
 ylim1 = list(NULL, NULL, NULL)
 
@@ -516,7 +517,6 @@ mnths = list(c('08'), c('07', '08'), c('01', '02', '03'))#, c('06', '07'), c('03
 cell_sample = "mean"
 background_BA = FALSE
 BA_varname = "Control"
-
 
 mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2)
 mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)
