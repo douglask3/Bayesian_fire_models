@@ -250,7 +250,7 @@ futr_annotaion <- function(exp, factual_name, xp, xoffset, width, ylim0, years, 
 
 futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, years,
                          BA, xp, xoffset, samples = NULL, name = name, col = col, width = 0.05, 
-                        ylim0 = 0, yearss = NULL, csv_out = NULL, ...) {
+                        ylim0 = 0, yearss = NULL, ...) {
     
     futr_annotaion(exp, factual_name, xp, xoffset,width, ylim0, years, yearss)
     
@@ -262,14 +262,12 @@ futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
         if (!background_BA)  {
             prob = exp(BA*log(fact) + (1.0-BA)*log((1-fact)))
             samples = sample(1:length(prob), 1000, TRUE, prob)
-            fact = sort(fact)
-            cfact = sort(cfact)
+            
             fact = fact[samples]
             cfact = cfact[samples]
         }
         if (exp != BA_varname) {
-            mask = fact== 1 & cfact==1
-                
+            mask = fact== 1 & cfact==1   
             fact = -log(1-fact[!mask]*0.999999999)
             cfact = -log(1-cfact[!mask]*0.999999999)
         }
@@ -279,24 +277,26 @@ futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
     afs = sapply(gcms, for_gcm)
     afs = as.vector(unlist(afs))
     
-    plot_af(afs, xp/3 + xoffset, col = col, bwidth = 0.025, ...)
+    plot_af(afs, xp/3 + xoffset, 
+            name = paste(cfactual_name[2], min(years[[2]]), name), csv_out_name = 'AF-futr',
+            col = col, bwidth = 0.025, ...)
         
     
-    pc =  quantile(afs, c(0.05, 0.25, 0.5, 0.75, 0.95), na.rm = TRUE)
-    out = cbind(paste(cfactual_name[2], min(years[[2]]), name), 'AFs', names(pc), round(pc, 2))
-    liki = (mean(pc>1) + 0.5 * mean(pc==1))*100
-    if (is.na(liki)) 
-        browser()
-    out = rbind(out, c(name, 'likelihood', '%', liki))
-
-    if (!is.null(csv_out)) 
-            write.table(out, file = csv_out, sep = ",", 
-                        append = TRUE, col.names = FALSE, row.names = FALSE)
+    #pc =  quantile(afs, c(0.05, 0.25, 0.5, 0.75, 0.95), na.rm = TRUE)
+    #out = cbind(paste(cfactual_name[2], min(years[[2]]), name), 'AFs', names(pc), round(pc, 2))
+    ##liki = (mean(pc>1) + 0.5 * mean(pc==1))*100
+    #if (is.na(liki)) 
+    #    browser()
+    #out = rbind(out, c(name, 'likelihood', '%', liki))
+#
+    #if (!is.null(csv_out)) 
+     #       write.table(out, file = csv_out, sep = ",", 
+      #                  append = TRUE, col.names = FALSE, row.names = FALSE)
 }
 
 futr_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, years,
                          BA, xp, xoffset, samples = NULL, name = name, col = col, width = 0.05, 
-                         ylim0 = 0, yearss = NULL, csv_out = NULL, ...) {
+                         ylim0 = 0, yearss = NULL, ...) {
     
     
     futr_annotaion(exp, factual_name, xp, xoffset, width, ylim0, years, yearss)
@@ -332,15 +332,17 @@ futr_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
     outs = sapply(1:length(gcms), for_gcm)
     rr = as.vector(unlist(outs[1,]))
     
-    plot_af(as.vector(rr), xp/3 + xoffset, col = col, bwidth = 0.025, ...)
+    plot_af(as.vector(rr), xp/3 + xoffset, 
+            name = paste(cfactual_name[2], min(years[[2]]), name), csv_out_name = 'RR-futr',
+            col = col, bwidth = 0.025, ...)
     
-    pc =  quantile(rr, c(0.05, 0.25, 0.5, 0.75, 0.95), na.rm = TRUE)
-    out = cbind(paste(cfactual_name[2], min(years[[2]]), name), 'RR', names(pc), round(pc, 2))
-    out = rbind(out, c(name, 'likelihood', '%', (mean(pc>1) + 0.5 * mean(pc==1))*100))
-
-    if (!is.null(csv_out)) 
-            write.table(out, file = csv_out, sep = ",", 
-                        append = TRUE, col.names = FALSE, row.names = FALSE)
+    #pc =  quantile(rr, c(0.05, 0.25, 0.5, 0.75, 0.95), na.rm = TRUE)
+    #out = cbind(paste(cfactual_name[2], min(years[[2]]), name), 'RR', names(pc), round(pc, 2))
+    #out = rbind(out, c(name, 'likelihood', '%', (mean(pc>1) + 0.5 * mean(pc==1))*100))#
+#
+#    if (!is.null(csv_out)) 
+#            write.table(out, file = csv_out, sep = ",", 
+#                        append = TRUE, col.names = FALSE, row.names = FALSE)
     
     return(samples)
 }
@@ -433,12 +435,8 @@ plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NU
     dev.off()
 }
 
-
-
-
-
 HadGEM_dir = "outputs/outputs_scratch/SoW2526/attribution-HadGEM-test29-fuelcf4/<<region>>/time_series/_16-frac_points_0.5/"
-ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-4-notree/<<region>>/time_series/_15-frac_points_0.5/"
+ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-4-notree-notreechange/<<region>>/time_series/_15-frac_points_0.5/"
 
 gcms = c("GFDL-ESM4-", "IPSL-CM6A-LR-", "MPI-ESM1-2-HR-", "MRI-ESM2-0-", "UKESM1-0-LL-")
 
@@ -454,7 +452,7 @@ years = list(2025, 2025, 2026)#, 2025, 2025)
 mnths = list(c('08'), c('07', '08'), c('01', '02', '03'))#, c('06', '07'), c('03'))#
 cell_sample = "mean"
 background_BA = FALSE
-BA_varname = "Control"
+BA_varname = "Evaluate"
 
 mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2)
 mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)
