@@ -132,17 +132,13 @@ new_empty_plot_rr <- function(...) {
     new_empty_plot(log10_plus, labels, labels_txt, ...)
 }
 
-new_empty_plot_logit <- function(...) {
+new_empty_plot_logit <- function(..., ylab = 'Probability Ratio') {
     labels = c(0, 1/128, 1/64, 1/32, 1/16, 1/8, 1/4, 1/2, 2/3, 1, 
                1.5, 2, 4, 8, 16, 32, 64, 128, 1000000)
     labels_txt = c('0', '', '', '', '', '', '1/4', '1/2', '2/3', 'no\nchange', '1 1/2',
                    '2', '4', '', '', '', '', '', 'All from\nclimate')
-    out = new_empty_plot(af_tscale, labels, labels_txt,...)
+    out = new_empty_plot(af_tscale, labels, labels_txt, ylab = ylab, ...)
     
-    #if (ylab == '') {   
-    #    mtext(side =4, line = 3, "% explained by climate change")
-    #    axis(4, seq(0, 1, length.out=  9), seq(-100, 100,length.out=  9))
-    #}
     return(out)
 }
 
@@ -166,7 +162,8 @@ plot_af <- function(af, xpos = 1, col = 'red', name = '', bar = TRUE, label = ''
         polygon(xpos + bwidth*c(-1, -1, 1, 1), pcs[c(2, 4, 4, 2)], border = NA, col = col) 
         lines(xpos + bwidth*c(-1, 1), rep(pcs[3], 2), lwd = 2, xpd = NA)        
     }
-    likelihood = round(mean(af>1)*100 + mean(af==1)*50)
+    likelihood = round(mean(af>1, na.rm = T)*100 + mean(af==1, na.rm = T)*50)
+    
     out = cbind(name, csv_out_name, names(pc), round(pc, 2))
     out = rbind(out, c(name, 'likelihood', '%', likelihood))
     if (!is.null(csv_out)) 
@@ -228,7 +225,6 @@ att_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, ye
     return(samples)
 }
 
-
 futr_annotaion <- function(exp, factual_name, xp, xoffset, width, ylim0, years, yearss)  {
     if (exp == BA_varname) {
         if (factual_name[2] == "ssp370") {
@@ -255,14 +251,19 @@ futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
     futr_annotaion(exp, factual_name, xp, xoffset,width, ylim0, years, yearss)
     
     xs = xoffset + xp/3 + width*0.5*c(-1, 1)
-    for_gcm <- function(gcm) {
-        fact = openDat(dir, region, paste0(factual_name, '/', gcm), exp, cell_sample, mnths, years[[1]])
-        cfact = openDat(dir, region,  paste0(cfactual_name, '/', gcm), exp, cell_sample, mnths, years[[2]])
+    for_gcm <- function(gcm, i) {
+        fact = openDat(dir, region, paste0(factual_name, '/', gcm), 
+                       exp, cell_sample, mnths, years[[1]])
+        cfact = openDat(dir, region,  paste0(cfactual_name, '/', gcm),
+                        exp, cell_sample, mnths, years[[2]])
         
         if (!background_BA)  {
-            prob = exp(BA*log(fact) + (1.0-BA)*log((1-fact)))
-            samples = sample(1:length(prob), 1000, TRUE, prob)
-            
+            if (is.null(samples)) {
+                prob = exp(BA*log(fact) + (1.0-BA)*log((1-fact)))
+                samples = sample(1:length(prob), 1000, TRUE, prob)
+            } else {
+                samples = samples[[i]]
+            }
             fact = fact[samples]
             cfact = cfact[samples]
         }
@@ -271,27 +272,17 @@ futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
             fact = -log(1-fact[!mask]*0.999999999)
             cfact = -log(1-cfact[!mask]*0.999999999)
         }
-        return(sort(cfact)/sort(fact))
+        
+        return(list(sort(cfact)/sort(fact), samples))
 
     }
-    afs = sapply(gcms, for_gcm)
-    afs = as.vector(unlist(afs))
+    outs = mapply(for_gcm, gcms, 1:length(gcms))
+    afs = as.vector(unlist(outs[1,]))
+    samples = outs[2,]
     
     plot_af(afs, xp/3 + xoffset, 
             name = paste(cfactual_name[2], min(years[[2]]), name), csv_out_name = 'AF-futr',
             col = col, bwidth = 0.025, ...)
-        
-    
-    #pc =  quantile(afs, c(0.05, 0.25, 0.5, 0.75, 0.95), na.rm = TRUE)
-    #out = cbind(paste(cfactual_name[2], min(years[[2]]), name), 'AFs', names(pc), round(pc, 2))
-    ##liki = (mean(pc>1) + 0.5 * mean(pc==1))*100
-    #if (is.na(liki)) 
-    #    browser()
-    #out = rbind(out, c(name, 'likelihood', '%', liki))
-#
-    #if (!is.null(csv_out)) 
-     #       write.table(out, file = csv_out, sep = ",", 
-      #                  append = TRUE, col.names = FALSE, row.names = FALSE)
 }
 
 futr_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, years,
@@ -319,7 +310,6 @@ futr_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
             prob2 = cumm_pdf(cfacts, BA)
             
             rr = prob2/prob1
-            #rr = mean(cfact>BA)/mean(fact>BA)
             samples = list(prob1, prob2, samples)
             
             
@@ -331,18 +321,11 @@ futr_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
     }
     outs = sapply(1:length(gcms), for_gcm)
     rr = as.vector(unlist(outs[1,]))
+    samples = outs[2,]
     
     plot_af(as.vector(rr), xp/3 + xoffset, 
             name = paste(cfactual_name[2], min(years[[2]]), name), csv_out_name = 'RR-futr',
             col = col, bwidth = 0.025, ...)
-    
-    #pc =  quantile(rr, c(0.05, 0.25, 0.5, 0.75, 0.95), na.rm = TRUE)
-    #out = cbind(paste(cfactual_name[2], min(years[[2]]), name), 'RR', names(pc), round(pc, 2))
-    #out = rbind(out, c(name, 'likelihood', '%', (mean(pc>1) + 0.5 * mean(pc==1))*100))#
-#
-#    if (!is.null(csv_out)) 
-#            write.table(out, file = csv_out, sep = ",", 
-#                        append = TRUE, col.names = FALSE, row.names = FALSE)
     
     return(samples)
 }
