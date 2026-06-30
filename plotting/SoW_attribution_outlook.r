@@ -125,19 +125,19 @@ new_empty_plot <- function(y_tfun, labels, labels_txt,
     return(ylim[1])
 }
 
-new_empty_plot_rr <- function(...) {
+new_empty_plot_rr <- function(..., ylab = 'Probability Ratio') {
 
     labels = c(1/10, 1/5, 1/2, 1, 2, 5, 8, 10)
     labels_txt = c('1/10', '1/5', '1/2', '1', '2', '5', '8', '10')
-    new_empty_plot(log10_plus, labels, labels_txt, ...)
+    new_empty_plot(log10_plus, labels, labels_txt, ylab = ylab, ...)
 }
 
-new_empty_plot_logit <- function(..., ylab = 'Probability Ratio') {
+new_empty_plot_logit <- function(...) {
     labels = c(0, 1/128, 1/64, 1/32, 1/16, 1/8, 1/4, 1/2, 2/3, 1, 
                1.5, 2, 4, 8, 16, 32, 64, 128, 1000000)
     labels_txt = c('0', '', '', '', '', '', '1/4', '1/2', '2/3', 'no\nchange', '1 1/2',
                    '2', '4', '', '', '', '', '', 'All from\nclimate')
-    out = new_empty_plot(af_tscale, labels, labels_txt, ylab = ylab, ...)
+    out = new_empty_plot(af_tscale, labels, labels_txt, ...)
     
     return(out)
 }
@@ -225,14 +225,17 @@ att_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, ye
     return(samples)
 }
 
-futr_annotaion <- function(exp, factual_name, xp, xoffset, width, ylim0, years, yearss)  {
+futr_annotaion <- function(exp, factual_name, xp, xoffset, width, ylim0, years, yearss,
+                           addSSPlab = TRUE)  {
     if (exp == BA_varname) {
-        if (factual_name[2] == "ssp370") {
+        if (length(factual_name) > 1) factual_name = factual_name[2]
+        fname_test = substr(factual_name, nchar(factual_name)-5, nchar(factual_name))
+        if (fname_test == "ssp370") {
             polygon(width/2 + c(xoffset, xoffset + 0.3)[c(1, 1, 2, 2)], c(0, 1, 1, 0),
                      col = '#00000011', border = NA)
-            text(xp + xoffset, ylim0, adj = c(0.5, -0.3), 
+            text(xp + xoffset, ylim0, adj = c(0.5, 1.3), xpd = NA,
                  paste0(range(years[[2]]), collapse = ' - '), font = 2)
-        } else if (factual_name[2] == "ssp585")  {         
+        } else if (fname_test == "ssp585")  {         
             polygon(width/2 + c(xoffset, xoffset + 0.3)[c(1, 1, 2, 2)], c(0, 1, 1, 0),
                      col = '#00000022', border = NA)
             lines(rep(width/2 + xoffset + 0.3, 2), c(-9E9, 9E9), lty = 2)
@@ -240,8 +243,8 @@ futr_annotaion <- function(exp, factual_name, xp, xoffset, width, ylim0, years, 
        
     }
  
-    if (years[[2]][1]== yearss[[1]][1] && exp == BA_varname) 
-        text(xoffset + xp/2, ylim0, adj = c(-1, 0.5), srt = 90, factual_name[2])
+    if (years[[2]][1]== yearss[[1]][1] && exp == BA_varname &&  addSSPlab) 
+        text(xoffset + xp/2, ylim0, adj = c(-0.1, 0.5), srt = 90, factual_name)
 }
 
 futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, years,
@@ -262,27 +265,30 @@ futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
                 prob = exp(BA*log(fact) + (1.0-BA)*log((1-fact)))
                 samples = sample(1:length(prob), 1000, TRUE, prob)
             } else {
-                samples = samples[[i]]
+                samples = samples[[2,i]]
             }
             fact = fact[samples]
             cfact = cfact[samples]
         }
         if (exp != BA_varname) {
-            mask = fact== 1 & cfact==1   
-            fact = -log(1-fact[!mask]*0.999999999)
-            cfact = -log(1-cfact[!mask]*0.999999999)
+            #mask = fact== 1 & cfact==1   
+            fact = -log(1-fact*0.999999999)
+            cfact = -log(1-cfact*0.999999999)
+            if (length(fact) != 1000) browser()
         }
-        
+         
         return(list(sort(cfact)/sort(fact), samples))
 
     }
     outs = mapply(for_gcm, gcms, 1:length(gcms))
+    
     afs = as.vector(unlist(outs[1,]))
-    samples = outs[2,]
+    afs = afs[afs != 1]
     
     plot_af(afs, xp/3 + xoffset, 
             name = paste(cfactual_name[2], min(years[[2]]), name), csv_out_name = 'AF-futr',
             col = col, bwidth = 0.025, ...)
+    return(outs)
 }
 
 futr_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, years,
@@ -312,22 +318,20 @@ futr_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
             rr = prob2/prob1
             samples = list(prob1, prob2, samples)
             
-            
         } else {        
-            prob = samples[[i]]
+            prob = samples[[2, i]]
             rr = mean(cfact[prob[[3]]]/fact[prob[[3]]])
         }
         return(list(rr, samples))
     }
     outs = sapply(1:length(gcms), for_gcm)
     rr = as.vector(unlist(outs[1,]))
-    samples = outs[2,]
     
     plot_af(as.vector(rr), xp/3 + xoffset, 
             name = paste(cfactual_name[2], min(years[[2]]), name), csv_out_name = 'RR-futr',
             col = col, bwidth = 0.025, ...)
     
-    return(samples)
+    return(outs)
 }
 
 plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
@@ -339,34 +343,38 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
                         xoffset = 0.0, years = 2025, mnths = NULL, 
                         plot_FUN = att_FUN, BA = 0.0, ylim0 = 0.0, ...) {
             
+        
         add_experiemtnt <- function(exp = BA_varname, col = 'red', xp = 0.25, 
                                     name = 'Burned Areas',
                                     samples = NULL) {
             
-            samples = plot_FUN(dir, region, factual_name, cfactual_name, exp, mnths, years,
+            outs = plot_FUN(dir, region, factual_name, cfactual_name, exp, mnths, years,
                         BA, xp, xoffset, samples, name = name, col = col, ylim0 = ylim0, 
                         csv_out = csv_out, ...)
-            return(samples)
+            return(outs)
         } 
-        samples = add_experiemtnt(col = "#E98400")
+        outs_BA = add_experiemtnt(col = cols[1])
         exps = c("standard-Fuel", "standard-Moisture")#, "standard-Ignition","standard-Suppression")
-        cols = c("#0096A1", "#EE0074")#, "purple", "grey")
-        mapply(add_experiemtnt, exps, cols, c(0.5, 0.75), c("Fuel connectivity", "Dryness"),
-               MoreArgs = list(samples = samples))
+        outs_contol = mapply(add_experiemtnt, exps, cols[2:3], c(0.5, 0.75), 
+                             c("Fuel connectivity", "Dryness"),
+                             MoreArgs = list(samples = outs_BA))
         
-        return(samples[[2]])
+        return(c(outs_BA, outs_contol))#samples[[2]])
     }
     
     ylim0 = empty_plot(xlim = c(0, 3 - 2*reduced), ylim = ylim)
-    BA = add_run(HadGEM_dir, mnths = mnths, BA = NULL, ylim0 = ylim0)
-    text(x = 0.5, y = ylim0, adj = c(0.5, -0.3), font = 2, 'HadGEM3-A\nfull ensemble')
+    BA = add_run(HadGEM_dir, mnths = mnths, BA = NULL, ylim0 = ylim0)[[2]]
+    
+    if (reduced) hadgemtxt = 'HadGEM3-A'
+        else hadgemtxt = 'HadGEM3-A full ensemble'
+    text(x = 0.5, y = ylim0, adj = c(0.5, 1.3), font = 2, hadgemtxt, xpd = NA)
 
     if (!reduced) {
         add_run(HadGEM_dir, mnths = mnths, cfactual_name = "counterfactual_mean-", 
                 xoffset = 1, BA = BA, ylim0 = ylim0)
         add_run(ISIMIP_dir, xoffset = 2, years =  2002:2019, BA = BA, ylim0 = ylim0)        
-        text(x = 1.5, y = ylim0, adj = c(0.5, -0.3), font = 2, 'HadGEM3-A\nensemble mean')
-        text(x = 2.5, y = ylim0, adj = c(0.5, -0.3), font = 2, 'ISIMIP3a')
+        text(x = 1.5, y = ylim0, adj = c(0.5, 0.3), font = 2, 'HadGEM3-A ensemble mean', xpd = NA)
+        text(x = 2.5, y = ylim0, adj = c(0.5, 0.3), font = 2, 'ISIMIP3a', xpd = NA)
     }
     plot.new()
 
@@ -377,6 +385,7 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
                       2070:2079, 2080:2089, 2090:2099)
     }
     ylim0 = empty_plot(xlim = c(0, length(yearss)-0.075), ylab = '', xaxs = 'i', ylim = ylim)
+    #axis(1)
     for_ssp <- function(ssp, xmini_off, yearss) {
         subdir = c("historical", ssp)
         
@@ -387,10 +396,61 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
                     plot_FUN = futr_FUN, factual_name = subdir, cfactual_name = subdir, 
                     BA = BA, ylim0 = ylim0)
         }
-        mapply(for_yrss, yearss, 1:length(yearss))
+        mapply(for_yrss, yearss, 1:length(yearss), SIMPLIFY = FALSE)
     }
-    mapply(for_ssp, c("ssp126", "ssp370", "ssp585"), c(0, 0.3, 0.6), MoreArgs = list(yearss))
+    outs = mapply(for_ssp, c("ssp126", "ssp370", "ssp585"), c(0, 0.3, 0.6), 
+                  MoreArgs = list(yearss), SIMPLIFY = FALSE)
+
+    plot_ssp_diff <- function(i, ssp, xmini_off, years, ..., ylim0 = 1) {
+        ssp1 = outs[[i+1]]
+        ssp2 = outs[[i]]
+        for_time <- function(yrss, xoffset) {
+            ssp1 = ssp1[[xoffset]]
+            ssp1 = ssp1[seq(1, length(ssp1), by = 2)]
+            ssp2 = ssp2[[xoffset]]
+            ssp2 = ssp2[seq(1, length(ssp2), by = 2)]
+            for_control <- function(i, exp, name = '', xp = 0.25,...) {
+                print("yyyaaayyy!!")
+                print(ssp)
+                    
+                futr_annotaion(exp, ssp, xp, xmini_off + xoffset - 1,0.05, ylim0, 
+                               list(yearss[[1]], yrss), yearss)
+                ssp10 = ssp1; ssp20 = ssp2
+                index = ((i-1)*5+1):(i*5)
+                ssp1 = sort(unlist(ssp1[index]))
+                ssp2 = sort(unlist(ssp2[index]))
+                if (length(ssp1) != length(ssp2)) {   
+                    print("ooooops!")    
+                    #browser()
+                }
+                af = ssp2/ssp1
+                
+                
+                plot_af(af, xmini_off + xp/3 + xoffset-1, name = name, 
+                     csv_out = csv_out, csv_out_name = 'AF-migigation', bwidth = 0.025, ...)
+            }
+            mapply(for_control, 1:3, c(BA_varname, "standard-Fuel", "standard-Moisture"), 
+                  c('Burned Areas', "Fuel connectivity", "Dryness"),
+                    col = cols, xp = c(0.25, 0.5, 0.75),
+                    MoreArgs = list(...))
+            
+            
+        }
+        
+        mapply(for_time, yearss, 1:length(yearss), SIMPLIFY = FALSE)
+        
+    }
+    plot.new()
+    plot.new()
+    ylim0 = empty_plot(xlim = c(0, length(yearss)-0.075), ylab = '', xaxs = 'i', ylim = ylim,
+                       add_xlabs = TRUE)
+    mapply(plot_ssp_diff, 1:2, c("ssp370 -> ssp126", "ssp585 -> ssp370"), c(0, 0.3), 
+                  MoreArgs = list(yearss, ylim0 = ylim0)) 
     
+    mapply(function(x, yrss)
+          futr_annotaion(BA_varname, "ssp585", 0.3, x-0.4,0.05, ylim0, 
+                         list(yearss[[1]], yrss), yearss, addSSPlab = FALSE), 
+                          1:length(yearss), yearss)    
 }
 
 plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NULL, reduced = TRUE) {
@@ -401,12 +461,12 @@ plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NU
     
     fout = paste("figs/att_outlook", extra_filename, '.png', sep = '-')
     
-    png(fout, width = 14 - 7*reduced, height = 9, units = 'in', res = 300)
+    png(fout, width = 14 - 7*reduced, height = 10, units = 'in', res = 300)
     if (reduced)
         widths = c(0.2, 0.02, 0.4)
     else
         widths = c(0.1, 0.02, 0.4)
-    layout(rbind(1:3, 4:6), widths = c(0.2, 0.02, 0.4))
+    layout(rbind(1:3, 4:6, 7:9, 10:12), widths = c(0.2, 0.02, 0.4))
     par(oma = c(2, 5, 2, 5), mar = c(1, 0, 1, 0))
         plot_region(region,  HadGEM_dir, ISIMIP_dir, mnths, years, 
                     reduced = reduced, 
@@ -418,9 +478,12 @@ plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NU
     dev.off()
 }
 
+
+cols = c("#B50000", "#E98400", "#0096A1")#, "#EE0074")#, "purple", "grey")
+
 HadGEM_dir = "outputs/outputs_scratch/SoW2526/attribution-HadGEM-test29-fuelcf4/<<region>>/time_series/_16-frac_points_0.5/"
 ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-4-notree-notreechange/<<region>>/time_series/_15-frac_points_0.5/"
-
+ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-5-notree-notreechange/<<region>>/time_series/_15-frac_points_0.5/"
 gcms = c("GFDL-ESM4-", "IPSL-CM6A-LR-", "MPI-ESM1-2-HR-", "MRI-ESM2-0-", "UKESM1-0-LL-")
 
 regions = c("Northwest Iberia", "Midwestern Canadian Shield forests", 
