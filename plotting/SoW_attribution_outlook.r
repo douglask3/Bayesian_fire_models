@@ -1,5 +1,5 @@
 graphics.off()
-
+set.seed(123)
 
 ##########################################################
 ## librarys                                             ##
@@ -56,10 +56,15 @@ af_tscale <- function(x) {
     return((y+1)/2)
 }
 
+af_mit_tscale <- function(x) {
+    x = x /100
+    y= x
+    y[x>=0]= 1-0.5/(x[x>=0]+1)
+    y[x<0]= 1-(1-0.5/(-x[x<0]+1))
+    return(y)
+}
+
 log10_plus <- function(x) (log10(x) + 1)/2
-
-af_iscale <- function(x) x/(1-x)
-
 
 cumm_pdf <- function(x0, BA) {
     x = seq(0, 1, 0.0001)
@@ -114,9 +119,9 @@ new_empty_plot <- function(y_tfun, labels, labels_txt,
     plot(xlim,  ylim, xlab = '', ylab = '', type = 'n', yaxt = 'n', yaxs = 'i', 
          xaxt = 'n', ...)
 
-     at = y_tfun(labels)
+    at = y_tfun(labels)
     
-     if (!add_xlabs) labels_txt[] = ''
+    #if (!add_xlabs) labels_txt[] = ''
     axis(2, at = at, labels = labels_txt)
 
     mtext(side = 2, line = 3, ylab)
@@ -125,19 +130,41 @@ new_empty_plot <- function(y_tfun, labels, labels_txt,
     return(ylim[1])
 }
 
-new_empty_plot_rr <- function(..., ylab = 'Probability Ratio') {
+new_empty_plot_rr <- function(...,  mitigate = False, ylab = 'Probability Ratio') {
 
     labels = c(1/10, 1/5, 1/2, 1, 2, 5, 8, 10)
     labels_txt = c('1/10', '1/5', '1/2', '1', '2', '5', '8', '10')
     new_empty_plot(log10_plus, labels, labels_txt, ylab = ylab, ...)
 }
 
-new_empty_plot_logit <- function(...) {
+new_empty_plot_logit <- function(..., mitigate = FALSE, ylim = NULL) {
     labels = c(0, 1/128, 1/64, 1/32, 1/16, 1/8, 1/4, 1/2, 2/3, 1, 
                1.5, 2, 4, 8, 16, 32, 64, 128, 1000000)
     labels_txt = c('0', '', '', '', '', '', '1/4', '1/2', '2/3', 'no\nchange', '1 1/2',
                    '2', '4', '', '', '', '', '', 'All from\nclimate')
-    out = new_empty_plot(af_tscale, labels, labels_txt, ...)
+    
+    if (!is.null(ylim) && sum(((labels) > ylim[1]) & ((labels) < ylim[2]))<5) {
+        labels = c(0, 1/128, 1/64, 1/32, 1/16, 1/8, 1/4, 1/2, 2/3, 4/5, 1, 1.25,
+               1.5, 2, 4, 8, 16, 32, 64, 128, 1000000)
+        labels_txt = c('0', '', '', '', '', '', '1/4', '1/2', '2/3', '4/5', 'no\nchange', '1 1/5', '1 1/2',
+                   '2', '4', '', '', '', '', '', 'All from\nclimate')
+    }
+    out = new_empty_plot(af_tscale, labels, labels_txt, ylim = ylim,...)
+    
+    return(out)
+}
+
+
+new_empty_plot_mitigate <- function(..., mitigate = FALSE, ylim = NULL) {
+    
+    labels = c(-500, -200, -100, -50, -20, -10, -5, -2, -1, 0, 
+                1, 2, 5, 10, 20, 50, 100, 200, 500)
+    
+    
+    if (!is.null(ylim) && sum(((labels) > ylim[1]) & ((labels) < ylim[2]))<5) 
+        labels = labels/4
+    
+    out = new_empty_plot(af_mit_tscale, labels, labels, ylim = ylim,...)
     
     return(out)
 }
@@ -146,16 +173,17 @@ new_empty_plot_logit <- function(...) {
 ## plotting functions                                   ##
 ##########################################################
 
-plot_af <- function(af, xpos = 1, col = 'red', name = '', bar = TRUE, label = '', 
+plot_af <- function(af, xpos = 1, col = 'red', name = '', bar = TRUE, 
+                    FUN = af_tscale, label = '', 
                      csv_out = NULL, csv_out_name = 'AF', bwidth = 0.1, ...) {
     bwidth_bar = 0.05*bwidth^(0.33)/0.1^(0.33)
     
     if (bar) {
         pc = quantile(af, c(0.05, 0.25, 0.5, 0.75, 0.95), na.rm = TRUE)
-        outline = af_tscale(range(af, na.rm = TRUE))
+        outline = FUN(range(af, na.rm = TRUE))
         
         print(pc-1)
-        pcs = af_tscale(pc)
+        pcs = FUN(pc)
         for (i in c(1, 5))
             lines(xpos + c(-bwidth_bar, bwidth_bar), rep(pcs[i], 2), col = col)
         lines(rep(xpos, 2), pcs[c(1, 5)], col = col)
@@ -180,7 +208,11 @@ att_af_calc <- function(dir, region,factual_name, cfactual_name, exp, mnths, yea
 
     if (is.null(samples)) {
         if (is.null(BA))
-            BA = openDat(dir, region, factual_name, "observation", cell_sample, mnths, years)
+            if (background_BA)
+                BA = 0
+            else
+                BA = openDat(dir, region, factual_name, "observation", 
+                             cell_sample, mnths, years)
         prob = exp(BA*log(fact) + (1.0-BA)*log((1-fact)))
         samples = sample(1:length(prob), 1000, TRUE, prob)
     } else {
@@ -206,14 +238,19 @@ att_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, ye
     fact = openDat(dir, region, factual_name, exp, cell_sample, mnths, years) 
     cfact = openDat(dir, region, cfactual_name, exp, cell_sample, mnths, years)
     if (is.null(samples)) {
-        if (is.null(BA))
-            BA = openDat(dir, region, factual_name, "observation", cell_sample, mnths, years)
+        if (background_BA)
+            BA = quantile(fact, 0.5)
+        else
+            if (is.null(BA))
+                BA = openDat(dir, region, factual_name, "observation", 
+                            cell_sample, mnths, years)
         prob1 = cumm_pdf(fact, BA)
         prob2 = cumm_pdf(cfact, BA)
         
         rr = prob1/prob2
         samples = list(list(prob1, prob2), BA)
     } else {
+        samples0 = samples
         BA = samples[[2]]
         samples = samples[[1]]
         rr = (fact* samples[[1]])/(cfact * samples[[2]])
@@ -230,7 +267,7 @@ futr_annotaion <- function(exp, factual_name, xp, xoffset, width, ylim0, years, 
     if (exp == BA_varname) {
         if (length(factual_name) > 1) factual_name = factual_name[2]
         fname_test = substr(factual_name, nchar(factual_name)-5, nchar(factual_name))
-        if (fname_test == "ssp370") {
+        if (fname_test == "ssp370" || fname_test == 'igated') {
             polygon(width/2 + c(xoffset, xoffset + 0.3)[c(1, 1, 2, 2)], c(0, 1, 1, 0),
                      col = '#00000011', border = NA)
             text(xp + xoffset, ylim0, adj = c(0.5, 1.3), xpd = NA,
@@ -243,8 +280,19 @@ futr_annotaion <- function(exp, factual_name, xp, xoffset, width, ylim0, years, 
        
     }
  
-    if (years[[2]][1]== yearss[[1]][1] && exp == BA_varname &&  addSSPlab) 
-        text(xoffset + xp/2, ylim0, adj = c(-0.1, 0.5), srt = 90, factual_name)
+    if (years[[2]][1]== yearss[[1]][1] && exp == BA_varname &&  addSSPlab) {
+        yrange = par("usr")[3:4]
+        ywhich = which.max(abs(yrange-0.5))
+        if (ywhich == 2) {
+            yp = yrange[2]
+            adj = 1.1
+        } else {
+            yp = yrange[1]
+            adj = -0.1
+        }
+         text(xoffset + xp/2, yp, adj = c(adj, 0.5), srt = 90, factual_name)
+    }
+    
 }
 
 futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, years,
@@ -274,7 +322,7 @@ futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
             #mask = fact== 1 & cfact==1   
             fact = -log(1-fact*0.999999999)
             cfact = -log(1-cfact*0.999999999)
-            if (length(fact) != 1000) browser()
+            #if (length(fact) != 1000) browser()
         }
          
         return(list(sort(cfact)/sort(fact), samples))
@@ -304,9 +352,8 @@ futr_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
         fact = openDat(dir, region, paste0(factual_name, '/', gcm), exp, cell_sample, mnths, years[[1]])
         cfact = openDat(dir, region,  paste0(cfactual_name, '/', gcm), exp, cell_sample, mnths, years[[2]])
         
-        if (is.null(samples) || exp == BA_varname) {
-
-            
+        if (!background_BA && (is.null(samples) || exp == BA_varname)) {
+             
             prob = exp(BA*log(fact) + (1.0-BA)*log((1-fact)))
             samples = sample(1:length(prob), 1000, TRUE, prob)
             
@@ -318,9 +365,13 @@ futr_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
             rr = prob2/prob1
             samples = list(prob1, prob2, samples)
             
-        } else {        
-            prob = samples[[2, i]]
-            rr = mean(cfact[prob[[3]]]/fact[prob[[3]]])
+        } else {    
+            if (background_BA || is.null(samples)) { 
+                rr = mean(cfact/fact)   
+            } else {
+                prob = samples[[2, i]]
+                rr = mean(cfact[prob[[3]]]/fact[prob[[3]]])
+            }
         }
         return(list(rr, samples))
     }
@@ -337,7 +388,8 @@ futr_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
 plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
                         empty_plot = new_empty_plot_logit, 
                         att_FUN = att_af_calc, futr_FUN = futr_af_calc,
-                        ylim = NULL, reduced = TRUE, csv_out = csv_out) {
+                        ylim = list(NULL, NULL, NULL), mitigate = False, 
+                        reduced = TRUE, csv_out = csv_out) {
     
     add_run <- function(dir, factual_name = "factual-", cfactual_name = "counterfactual-",
                         xoffset = 0.0, years = 2025, mnths = NULL, 
@@ -357,25 +409,31 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
         exps = c("standard-Fuel", "standard-Moisture")#, "standard-Ignition","standard-Suppression")
         outs_contol = mapply(add_experiemtnt, exps, cols[2:3], c(0.5, 0.75), 
                              c("Fuel connectivity", "Dryness"),
-                             MoreArgs = list(samples = outs_BA))
+                            MoreArgs = list(samples = outs_BA))
         
         return(c(outs_BA, outs_contol))#samples[[2]])
     }
     
-    ylim0 = empty_plot(xlim = c(0, 3 - 2*reduced), ylim = ylim)
-    BA = add_run(HadGEM_dir, mnths = mnths, BA = NULL, ylim0 = ylim0)[[2]]
-    
-    if (reduced) hadgemtxt = 'HadGEM3-A'
-        else hadgemtxt = 'HadGEM3-A full ensemble'
-    text(x = 0.5, y = ylim0, adj = c(0.5, 1.3), font = 2, hadgemtxt, xpd = NA)
+    ylim0 = empty_plot(xlim = c(0, 1), ylim = ylim[[1]])
+    if (!background_BA) {
+        BA = add_run(HadGEM_dir, mnths = mnths, BA = NULL, ylim0 = ylim0)[[2]]
+        text(x = 0.5, y = ylim0, adj = c(0.5, 1.3), font = 2, 'HadGEM3-A', xpd = NA)
+    } else {
+        BA = add_run(ISIMIP_dir, years =  2002:2019, BA = NULL, ylim0 = ylim0) 
+        text(x = 0.5, y = ylim0, adj = c(0.5, 1.3), font = 2, 'ISIMIP3a', xpd = NA) 
 
-    if (!reduced) {
-        add_run(HadGEM_dir, mnths = mnths, cfactual_name = "counterfactual_mean-", 
-                xoffset = 1, BA = BA, ylim0 = ylim0)
-        add_run(ISIMIP_dir, xoffset = 2, years =  2002:2019, BA = BA, ylim0 = ylim0)        
-        text(x = 1.5, y = ylim0, adj = c(0.5, 0.3), font = 2, 'HadGEM3-A ensemble mean', xpd = NA)
-        text(x = 2.5, y = ylim0, adj = c(0.5, 0.3), font = 2, 'ISIMIP3a', xpd = NA)
     }
+    #if (reduced) hadgemtxt = 'HadGEM3-A'
+    #    else hadgemtxt = 'HadGEM3-A full ensemble'
+    #text(x = 0.5, y = ylim0, adj = c(0.5, 1.3), font = 2, hadgemtxt, xpd = NA)
+
+    #if (!reduced) {
+    #    add_run(HadGEM_dir, mnths = mnths, cfactual_name = "counterfactual_mean-", 
+    #            xoffset = 1, BA = BA, ylim0 = ylim0)
+    #    add_run(ISIMIP_dir, xoffset = 2, years =  2002:2019, BA = BA, ylim0 = ylim0)        
+    #    text(x = 1.5, y = ylim0, adj = c(0.5, 0.3), font = 2, 'HadGEM3-A ensemble mean', xpd = NA)
+    #    text(x = 2.5, y = ylim0, adj = c(0.5, 0.3), font = 2, 'ISIMIP3a', xpd = NA)
+    #}
     plot.new()
 
     if (reduced) {
@@ -384,7 +442,7 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
         yearss = list(2020:2029, 2030:2039, 2040:2049, 2050:2059, 2060:2069, 
                       2070:2079, 2080:2089, 2090:2099)
     }
-    ylim0 = empty_plot(xlim = c(0, length(yearss)-0.075), ylab = '', xaxs = 'i', ylim = ylim)
+    ylim0 = empty_plot(xlim = c(0, length(yearss)-0.075), ylab = '', xaxs = 'i', ylim = ylim[[2]])
     #axis(1)
     for_ssp <- function(ssp, xmini_off, yearss) {
         subdir = c("historical", ssp)
@@ -412,45 +470,51 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
             for_control <- function(i, exp, name = '', xp = 0.25,...) {
                 print("yyyaaayyy!!")
                 print(ssp)
-                    
+                 
                 futr_annotaion(exp, ssp, xp, xmini_off + xoffset - 1,0.05, ylim0, 
                                list(yearss[[1]], yrss), yearss)
                 ssp10 = ssp1; ssp20 = ssp2
                 index = ((i-1)*5+1):(i*5)
                 ssp1 = sort(unlist(ssp1[index]))
                 ssp2 = sort(unlist(ssp2[index]))
-                if (length(ssp1) != length(ssp2)) {   
-                    print("ooooops!")    
-                    #browser()
-                }
-                af = ssp2/ssp1
                 
+                af = 100*(ssp2-ssp1)/(ssp1-1)
                 
                 plot_af(af, xmini_off + xp/3 + xoffset-1, name = name, 
-                     csv_out = csv_out, csv_out_name = 'AF-migigation', bwidth = 0.025, ...)
+                     csv_out = csv_out, csv_out_name = 'AF-migigation', bwidth = 0.025, 
+                     FUN = af_mit_tscale, ...)
             }
             mapply(for_control, 1:3, c(BA_varname, "standard-Fuel", "standard-Moisture"), 
                   c('Burned Areas', "Fuel connectivity", "Dryness"),
                     col = cols, xp = c(0.25, 0.5, 0.75),
                     MoreArgs = list(...))
-            
-            
         }
         
         mapply(for_time, yearss, 1:length(yearss), SIMPLIFY = FALSE)
         
     }
-    plot.new()
-    plot.new()
-    ylim0 = empty_plot(xlim = c(0, length(yearss)-0.075), ylab = '', xaxs = 'i', ylim = ylim,
-                       add_xlabs = TRUE)
-    mapply(plot_ssp_diff, 1:2, c("ssp370 -> ssp126", "ssp585 -> ssp370"), c(0, 0.3), 
-                  MoreArgs = list(yearss, ylim0 = ylim0)) 
+    if (mitigate) {
+        plot(c(0,1), c(0, 1), type = 'n', xaxt = 'n', yaxt = 'n', axes = FALSE)
+        
+        legend_point <- function(col, x, name) {
+            plot_af(runif(1000, 0.8, 1), x, col, FUN = function(i) i)
+            text(x, 0.8, adj = c(0.5, 1.1), name)
+        }
+        mapply(legend_point, cols, c(0.25, 0.5, 0.75), 
+               c('Burned\nArea', 'Fuel\nLoad', 'Dryness'))
     
-    mapply(function(x, yrss)
-          futr_annotaion(BA_varname, "ssp585", 0.3, x-0.4,0.05, ylim0, 
-                         list(yearss[[1]], yrss), yearss, addSSPlab = FALSE), 
-                          1:length(yearss), yearss)    
+        plot.new()
+        ylim0 = new_empty_plot_mitigate(xlim = c(0, length(yearss)-0.075), 
+                           ylab = '', xaxs = 'i', ylim = ylim[[3]],
+                           add_xlabs = TRUE)
+        mapply(plot_ssp_diff, 1:2, c("Mitigation\npotential", "Already\nmitigated"), c(0, 0.3), 
+                      MoreArgs = list(yearss, ylim0 = ylim0)) 
+        
+        mapply(function(x, yrss)
+              futr_annotaion(BA_varname, "ssp585", 0.3, x-0.4,0.05, ylim0, 
+                             list(yearss[[1]], yrss), yearss, addSSPlab = FALSE), 
+                              1:length(yearss), yearss)   
+    } 
 }
 
 plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NULL, reduced = TRUE) {
@@ -461,16 +525,16 @@ plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NU
     
     fout = paste("figs/att_outlook", extra_filename, '.png', sep = '-')
     
-    png(fout, width = 14 - 7*reduced, height = 10, units = 'in', res = 300)
+    #png(fout, width = 14 - 7*reduced, height = 7, units = 'in', res = 300)
     if (reduced)
-        widths = c(0.2, 0.02, 0.4)
+        widths = c(0.15, 0.05, 0.4)
     else
-        widths = c(0.1, 0.02, 0.4)
-    layout(rbind(1:3, 4:6, 7:9, 10:12), widths = c(0.2, 0.02, 0.4))
-    par(oma = c(2, 5, 2, 5), mar = c(1, 0, 1, 0))
+        widths = c(0.09, 0.025, 0.46)
+    layout(rbind(1:3, 4:6, 7:9), widths = widths)
+    par(oma = c(2, 5, 2, 5), mar = c(0.5, 0, 0.5, 0))
         plot_region(region,  HadGEM_dir, ISIMIP_dir, mnths, years, 
                     reduced = reduced, 
-                     ylim = ylim1, csv_out = csv_out)
+                     ylim = ylim1, csv_out = csv_out, mitigate = TRUE)
         plot_region(region,  HadGEM_dir, ISIMIP_dir, mnths, years, 
                     empty_plot = new_empty_plot_rr,
                     att_FUN = att_rr_calc, futr_FUN = futr_rr_calc, ylim = ylim2, 
@@ -492,7 +556,9 @@ regions = c("Northwest Iberia", "Midwestern Canadian Shield forests",
 
 ylim1 = list(NULL, NULL, NULL)
 ylim2 = list(NULL, NULL, NULL)
-ylim1 = list(NULL, NULL, NULL)
+ylim1 = list(list(c(0.48, 9E9), c(0.85, 4.2),c(-200, 200)),
+             list(c(0.65, 9E9), c(0.65, 8.2), c(-200, 200)),
+             list(c(0.5, 9E9), c(0.75, 3), c(-200, 2000)))
 
 years = list(2025, 2025, 2026)#, 2025, 2025)
 mnths = list(c('08'), c('07', '08'), c('01', '02', '03'))#, c('06', '07'), c('03'))#
