@@ -57,6 +57,7 @@ af_tscale <- function(x) {
 }
 
 af_mit_tscale <- function(x) {
+    return(af_tscale((x/100) +1))
     x = x /100
     y= x
     y[x>=0]= 1-0.5/(x[x>=0]+1)
@@ -157,9 +158,7 @@ new_empty_plot_logit <- function(..., mitigate = FALSE, ylim = NULL) {
 
 new_empty_plot_mitigate <- function(..., mitigate = FALSE, ylim = NULL) {
     
-    labels = c(-500, -200, -100, -50, -20, -10, -5, -2, -1, 0, 
-                1, 2, 5, 10, 20, 50, 100, 200, 500)
-    
+    labels = c(-100, -50, -25, -10, -5, 0, 5, 10, 25, 50, 100)
     
     if (!is.null(ylim) && sum(((labels) > ylim[1]) & ((labels) < ylim[2]))<5) 
         labels = labels/4
@@ -478,7 +477,7 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
                 ssp1 = sort(unlist(ssp1[index]))
                 ssp2 = sort(unlist(ssp2[index]))
                 
-                af = 100*(ssp2-ssp1)/(ssp1-1)
+                af = 100*((ssp2/ssp1)-1)
                 
                 plot_af(af, xmini_off + xp/3 + xoffset-1, name = name, 
                      csv_out = csv_out, csv_out_name = 'AF-migigation', bwidth = 0.025, 
