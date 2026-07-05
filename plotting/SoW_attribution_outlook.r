@@ -128,10 +128,11 @@ new_empty_plot <- function(y_tfun, labels, labels_txt,
     mtext(side = 2, line = 3, ylab)
     for (y in at)
         lines(c(-9E9, 9E9), c(y, y), col= 'grey', lty = 2)
+    lines(c(-9E9, 9E9), c(0.5,0.5), lty = 3)
     return(ylim[1])
 }
 
-new_empty_plot_rr <- function(...,  mitigate = False, ylab = 'Probability Ratio') {
+new_empty_plot_rr <- function(...,  mitigate = FALSE, ylab = 'Probability Ratio') {
 
     labels = c(1/10, 1/5, 1/2, 1, 2, 5, 8, 10)
     labels_txt = c('1/10', '1/5', '1/2', '1', '2', '5', '8', '10')
@@ -156,14 +157,15 @@ new_empty_plot_logit <- function(..., mitigate = FALSE, ylim = NULL) {
 }
 
 
-new_empty_plot_mitigate <- function(..., mitigate = FALSE, ylim = NULL) {
+new_empty_plot_mitigate <- function(..., mitigate = FALSE, ylim = NULL, 
+                                    ylab = "BA reduction (%)") {
     
     labels = c(-100, -50, -25, -10, -5, 0, 5, 10, 25, 50, 100)
     
     if (!is.null(ylim) && sum(((labels) > ylim[1]) & ((labels) < ylim[2]))<5) 
-        labels = labels/4
+        labels = labels/2
     
-    out = new_empty_plot(af_mit_tscale, labels, labels, ylim = ylim,...)
+    out = new_empty_plot(af_mit_tscale, labels, labels, ylim = ylim, ylab = ylab,...)
     
     return(out)
 }
@@ -307,16 +309,20 @@ futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
         cfact = openDat(dir, region,  paste0(cfactual_name, '/', gcm),
                         exp, cell_sample, mnths, years[[2]])
         
-        if (!background_BA)  {
-            if (is.null(samples)) {
+        
+        if (is.null(samples)) {
+            if (background_BA)  
+                prob = exp(0*log(fact) + (1.0-0)*log((1-fact)))
+            else
                 prob = exp(BA*log(fact) + (1.0-BA)*log((1-fact)))
-                samples = sample(1:length(prob), 1000, TRUE, prob)
-            } else {
-                samples = samples[[2,i]]
-            }
-            fact = fact[samples]
-            cfact = cfact[samples]
+            
+            samples = sample(1:length(prob), 1000, TRUE, prob)
+        } else {
+            samples = samples[[2,i]]
         }
+        fact = fact[samples]
+        cfact = cfact[samples]
+        
         if (exp != BA_varname) {
             #mask = fact== 1 & cfact==1   
             fact = -log(1-fact*0.999999999)
@@ -387,7 +393,7 @@ futr_rr_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
 plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
                         empty_plot = new_empty_plot_logit, 
                         att_FUN = att_af_calc, futr_FUN = futr_af_calc,
-                        ylim = list(NULL, NULL, NULL), mitigate = False, 
+                        ylim = list(NULL, NULL, NULL), mitigate = FALSE, 
                         reduced = TRUE, csv_out = csv_out) {
     
     add_run <- function(dir, factual_name = "factual-", cfactual_name = "counterfactual-",
@@ -499,12 +505,12 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
             plot_af(runif(1000, 0.8, 1), x, col, FUN = function(i) i)
             text(x, 0.8, adj = c(0.5, 1.1), name)
         }
-        mapply(legend_point, cols, c(0.25, 0.5, 0.75), 
+        mapply(legend_point, cols, c(0.2, 0.425, 0.65), 
                c('Burned\nArea', 'Fuel\nLoad', 'Dryness'))
     
         plot.new()
         ylim0 = new_empty_plot_mitigate(xlim = c(0, length(yearss)-0.075), 
-                           ylab = '', xaxs = 'i', ylim = ylim[[3]],
+                           xaxs = 'i', ylim = ylim[[3]],
                            add_xlabs = TRUE)
         mapply(plot_ssp_diff, 1:2, c("Mitigation\npotential", "Already\nmitigated"), c(0, 0.3), 
                       MoreArgs = list(yearss, ylim0 = ylim0)) 
@@ -524,7 +530,7 @@ plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NU
     
     fout = paste("figs/att_outlook", extra_filename, '.png', sep = '-')
     
-    #png(fout, width = 14 - 7*reduced, height = 7, units = 'in', res = 300)
+    png(fout, width = 14 - 7*reduced, height = 7, units = 'in', res = 300)
     if (reduced)
         widths = c(0.15, 0.05, 0.4)
     else
@@ -558,7 +564,9 @@ ylim2 = list(NULL, NULL, NULL)
 ylim1 = list(list(c(0.48, 9E9), c(0.85, 4.2),c(-200, 200)),
              list(c(0.65, 9E9), c(0.65, 8.2), c(-200, 200)),
              list(c(0.5, 9E9), c(0.75, 3), c(-200, 2000)))
-
+ylim1 = list(list(c(0.48, 9E9), c(0.85, 4.2),c(-50, 20)),
+             list(c(0.65, 9E9), c(0.65, 8.2), c(-50,25)),
+             list(c(0.5, 9E9), c(0.75, 3), c(-40, 5)))
 years = list(2025, 2025, 2026)#, 2025, 2025)
 mnths = list(c('08'), c('07', '08'), c('01', '02', '03'))#, c('06', '07'), c('03'))#
 cell_sample = "mean"
