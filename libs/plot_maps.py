@@ -478,6 +478,7 @@ def get_cube_extent(cube):
 
 def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, extent = None, figsize = None, 
                             size_scale = 4, flatten = True, transpose = False,
+                            oma = [0.5, 0.1, 0.25, 0.1],
                             *args, **kw):
     """
     Creates a grid of Cartopy map subplots with a consistent geographic extent.
@@ -524,9 +525,25 @@ def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, extent = None, figsize = No
         figsize = (n_cols*size_scale, n_rows * size_scale * ratio)
         print("Automated figure size: " + str(figsize))
         
+    
+    if oma is not None:
+        figsize = (figsize[0] + oma[1] + oma[3], figsize[1] + oma[0] + oma[2])
+        
+        
     fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize, 
                              subplot_kw={'projection': ccrs.PlateCarree()}, 
+                             #constrained_layout=True,
                              *args, **kw)
+
+    fig_w, fig_h = figsize
+    if oma is not None:
+        fig.subplots_adjust(left = oma[1] / fig_w,
+                            right = 1 - (oma[3] / fig_w),
+                            bottom = oma[0] / fig_h,
+                            top = 1 - (oma[2] / fig_h),
+                            wspace=0.2,
+                            hspace=0.2)
+    
     if transpose: axes = np.transpose(axes)
     try:
         for ax in axes.flat:
@@ -631,9 +648,11 @@ def add_confidence(cube_pvs, ax):
 def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_BlueRed'], 
              levels = None, extend = 'both', ax=None,
              cbar_label = '', cbar_orientation = 'vertical',
+             tick_labels = None,
              overlay_value = None, overlay_cube = None,
              overlay_col = "#cfe9ff", overlay_size = 1,
-             cube_pvs = None, add_cbar = True, figure_filename = None, use_pcolmesh = True, 
+             cube_pvs = None, add_cbar = True, figure_filename = None, use_pcolmesh = True,
+             cbar_lab_rotate = None, cbar_top_and_bottom = False,
              *args, **kw):
     """
     Plot a SoW-style map of fire (or climate) data with optional overlays and confidence markers.
@@ -728,7 +747,7 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
     ## Plot boundary where mask changes
     #ax.contour(cube.coord('longitude').points, cube.coord('latitude').points, nan_mask,
     #    levels=[0.5], colors='black', linewidths=1)
-    #set_trace()
+    
     if overlay_cube is not None:
         add_overlay_cube(overlay_cube, overlay_value, overlay_col, overlay_size, ax)
     elif overlay_value is not None:
@@ -739,17 +758,71 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
         if is_catigorical:
             tick_positions = np.array(levels) + 0.5
             tick_labels = [str(level) for level in levels]
-            cbar = plt.colorbar(img, ax=ax, orientation=cbar_orientation,
+            cbar = plt.colorbar(img, ax=ax, 
+                                orientation=cbar_orientation,
                                 ticks=tick_positions,
                                 fraction=0.046,  # width of colorbar relative to figure
                                 pad=0.05)
             cbar.ax.set_yticklabels(tick_labels) 
         else:
-            cbar = plt.colorbar(img, ax=ax, ticks=levels, orientation=cbar_orientation,
-                                fraction=0.05,  # width of colorbar relative to figure
-                                pad=0.05, shrink=1.0, aspect=40)
+            divider = make_axes_locatable(ax)
+            side = "right" if cbar_orientation == "vertical" else "bottom"
+            cax = divider.append_axes(side, size=0.08, pad=0.32, axes_class=plt.Axes)
+
+            cbar = plt.colorbar(
+                img, cax=cax,
+                orientation = cbar_orientation,
+                ticks=levels
+            )
+            
+            #cbar = plt.colorbar(img, ax=ax, ticks=levels, orientation=cbar_orientation,
+            #                    fraction=0.05, # width of colorbar relative to figure
+            #                    pad=0.15, shrink=1.0, aspect=40)
+            
+            if tick_labels is not None: cbar.set_ticklabels(tick_labels)
         cbar.set_label(cbar_label, labelpad=10, loc='center')
         cbar.ax.xaxis.set_label_position('top')
+        if cbar_lab_rotate != 0:
+            cbar.ax.set_xticklabels(cbar.ax.get_xticklabels(), rotation=cbar_lab_rotate)
+        if cbar_top_and_bottom:
+            # --- Get ticks dynamically ---
+            if cbar_orientation == 'horizontal':
+                ticks = cbar.ax.get_xticks()
+                axis = cbar.ax.xaxis
+                transform = cbar.ax.get_xaxis_transform()
+                is_horizontal = True
+            else:
+                ticks = cbar.ax.get_yticks()
+                axis = cbar.ax.yaxis
+                transform = cbar.ax.get_yaxis_transform()
+                is_horizontal = False
+            
+            # Remove default tick labels
+            axis.set_ticklabels([])
+            
+            # --- Add alternating labels ---
+            for i, t in enumerate(ticks):
+                offset = 1.4 if i % 2 == 0 else -0.4  # above / below (or left/right)
+                va = 'bottom' if i % 2 == 0 else 'top'
+                ha = 'center'
+            
+                if is_horizontal:
+                    x, y = t, offset
+                else:
+                    x, y = offset, t
+                    ha = 'left' if i % 2 == 0 else 'right'
+                    va = 'center'
+                
+                if tick_labels is None:
+                    lab = f"{t:g}"
+                else:
+                    lab = tick_labels[i]
+                cbar.ax.text(
+                    x, y, lab,   # nice formatting
+                    transform=transform,
+                    ha=ha, va=va,
+                    rotation=cbar_lab_rotate
+                )
          
     # Add boundaries
     ax.add_feature(cfeature.COASTLINE, linewidth=0.5)
@@ -759,7 +832,28 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
 
     # Optional observed burned area anomaly contour
     if contour_obs is not None:
-        qplt.contour(contour_obs, levels=[0], colors='#8a3b00', linewidths=1, axes=ax)
+        import numpy.ma as ma
+        qplt.contour(contour_obs, levels=[0], colors='#999999', linewidths=1, axes=ax)
+        #masked = ma.masked_where(contour_obs.data != 1, contour_obs.data)
+        #set_trace()
+        #qplt.scatter(masked, c='#724B49', s=10, marker='o')
+        
+
+        # Find where values == 1
+        mask = contour_obs.data == 1
+
+        # Get coordinates (adjust names if needed)
+        lons = cube.coord('longitude').points
+        lats = cube.coord('latitude').points
+
+        # Create 2D grids if needed
+        lon2d, lat2d = np.meshgrid(lons, lats)
+
+        # Plot only the points where value == 1
+        
+        ax.scatter(lon2d[mask], lat2d[mask],
+                s=2000/(contour_obs.shape[1]**2), 
+                c='#999999', marker='o', transform=ccrs.PlateCarree())
 
     print(title)
     ax.set_title(title, fontsize = 12)
