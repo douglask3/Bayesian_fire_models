@@ -8,6 +8,7 @@ from pdb import set_trace
 SoW_cmap = {
     "categorial": ["#ee007f", "#0096a1", "#7a44ff", "#e98400", "#91c4ff", "#b50000", "#f597b0", "#c4b0ff"],
     "gradient_hues": ["#cfe9ff", "#fc6", "#f68373", "#c7384e", "#862976"],
+    "gradient_hues_ipcc": ['#0a90ff', '#7bc3ff', '#cfe9ff', "#fc6", "#f68373", "#c7384e", "#862976"],
     "gradient_reversed_hues": ["#ffe1e1", "#ffb380", "#f8c99c", "#7497d9", "#2670b2"],
     "gredient_inverted_hues": ["#ffcfcf", "#6cf", "#73f6dc", "#38c77b", "#278662"],
     "gradient_hues_extended": [  # Extended version of gradient_hues with smoother transitions
@@ -23,7 +24,10 @@ SoW_cmap = {
         "#431533",   # deep purple
         "#030001"    # almost black
     ],
-    
+    "diverging_Highlight2": ['#173B73', '#4D99BD', '#BAFAFF', '#FFFFFF', '#FFF5D9','#EDBA75', '#E37326'],
+#["#163A72", "#1E598D", "#3178A6", "#4C99BD", "#6DB9D3", "#92DAE9", "#BAFBFF", "#FFF0FF", "#FFF5DA", "#F9BEB4", "#F1A69B", "#E88E82", "#DE756A", "#D35C53", "#C7403D"],
+
+
     "gradient_teal": ["#e7f8ec", "#c3ecd3", "#9ee0c0", "#71c0a0", "#4eac8d", "#30937f", "#1d8078", "#0a5f65", "#004156"],
 
     "gradient_red": ["#fff7ec", "#fee8c8", "#fdd49e", "#fdbb84", "#fc8d59", "#ef6548", "#d7301f", "#b30000", "#7f0000"],
@@ -37,6 +41,11 @@ SoW_cmap = {
     "diverging_TealOrange": [  # Diverging color scale from teal to orange
         "#004c4b", "#008786", "#6bbbaf", "#b6e0db",
         "#ffffff",  # neutral midpoint
+        "#ffd8b8", "#ffb271", "#e57100", "#8a3b00"
+    ],
+    "diverging_TealGreyOrange": [  # Diverging color scale from teal to orange
+        "#004c4b", "#008786", "#6bbbaf", "#b6e0db",
+        "#eeeeee",  # neutral midpoint
         "#ffd8b8", "#ffb271", "#e57100", "#8a3b00"
     ],
 
