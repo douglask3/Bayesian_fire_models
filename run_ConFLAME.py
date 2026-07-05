@@ -147,6 +147,7 @@ def Potential_climateology_limitation(training_namelist, namelist,
   
 def make_time_series(cube, name, output_path, percentile = None, cube_assess = None, 
                      grab_old = False, *args, **kw):
+    
     print("finding " + str(percentile) + " for " + name + "\n\t into:" + output_path)
     print(datetime.datetime.now())
     if percentile is None or percentile == 0.0:        
@@ -154,7 +155,10 @@ def make_time_series(cube, name, output_path, percentile = None, cube_assess = N
     else:
         out_dir = output_path + '/pc-' + str(percentile) + '/'
     
-    lock_file = out_dir + '.txt'
+    lock_file = out_dir + 'lock/' 
+    makeDir(lock_file)
+    lock_file += name + '.txt'
+     
     if os.path.isfile(lock_file) and grab_old:    
         return out_dir
     
@@ -164,27 +168,45 @@ def make_time_series(cube, name, output_path, percentile = None, cube_assess = N
     
     cube.data = np.ma.masked_invalid(cube.data)
     grid_areas = iris.analysis.cartography.area_weights(cube)
-            
+       
     if percentile is None or percentile == 0.0:
         area_weighted_mean =  [cube[i].collapsed(['latitude', 'longitude'],
                                                  iris.analysis.MEAN, weights = grid_areas[i]) \
                                    for i in range(cube.shape[0])]
         
         area_weighted_mean = iris.cube.CubeList(area_weighted_mean).merge_cube().data
+        if area_weighted_mean.ndim == 1:
+            area_weighted_mean = area_weighted_mean.reshape([1, len(area_weighted_mean)])
     
     else:
-        def percentile_for_relization(cube, i):
+        def percentile_for_relization(cube, i = None):
             print("\tprocessing enemble" + str(i))
-            out = [above_percentile_mean(cube[i][j], cube_assess[i][j], percentile, *args, **kw) for j in range(cube.shape[1])]
+            if i is not None:
+                cubei = cube[i]
+                cube_assessi = cube_assess[i]
+                ntime =  range(cube.shape[1])
+            else:
+                cubei = cube
+                cube_assessi = cube_assess
+                ntime =  range(cube.shape[0])
+                
+            out = [above_percentile_mean(cubei[j], cube_assessi[j], percentile, *args, **kw) \
+                   for j in ntime]
             return out
-
-        area_weighted_mean = np.array([percentile_for_relization(cube, i) \
-                                      for i in range(cube.shape[0])])      
+        
+        if cube.ndim == 4:
+            area_weighted_mean = np.array([percentile_for_relization(cube, i) \
+                                          for i in range(cube.shape[0])])  
+        else:
+            
+            area_weighted_mean =np.array([percentile_for_relization(cube, None)])
+    
     
     climatology, anomaly, ratio = climtatology_difference(area_weighted_mean)
     makeDir(out_dir)
     
     def output_cube_to_csv(data, realizations, extra_dim, filename): 
+        
         times = cube.coord('time').units.num2date(cube.coord('time').points)[0:data.shape[1]]
         try:
             df = pd.DataFrame(data, index=realizations, columns=[t.isoformat() for t in times])
@@ -195,7 +217,6 @@ def make_time_series(cube, name, output_path, percentile = None, cube_assess = N
         df.index.name = extra_dim
         df.to_csv(filename)
         #np.savetxt(out_file_points, area_weighted_mean.data, delimiter=',')
-    
 
     percentiles = [5, 10, 25, 50, 75, 90, 95]
 
@@ -205,10 +226,16 @@ def make_time_series(cube, name, output_path, percentile = None, cube_assess = N
         out_file_TS = out_dir + '/percentles/' + dir + '/' 
         makeDir(out_file_points)
         makeDir(out_file_TS)
-        output_cube_to_csv(data, cube.coord('realization').points, 
+        
+        rownames = cube.coord('realization').points
+        if len(rownames) == 1: 
+            rownames = [0]
+        
+        output_cube_to_csv(data, rownames, 
                        'realization', out_file_points  + name + '.csv')
         TS = np.nanpercentile(data, percentiles, axis = 0)
         output_cube_to_csv(TS, percentiles,  'percentiles', out_file_TS  + name + '.csv')
+    
     
     make_output_TS(area_weighted_mean, 'absolute')
     make_output_TS(climatology, 'climatology')
@@ -257,12 +284,27 @@ def run_experiment(training_namelist, namelist, control_direction,
                         fig_dir = fig_dir,
                         *args, **kws)
     
+        
     grab_old = read_variables_from_namelist(namelist)['grab_old_trace']
     out_dir_ts = output_dir +'/time_series/' +  output_file + '/' + name
+
+    try:
+        obs = Control[1].copy()
+        obs.data[~obs.data.mask] = Y
+        out_dir_samples = output_dir + '/samples/' +  output_file + '/' + name +  \
+                        '/observation.nc'
+    
+        iris.save(obs, out_dir_samples)
+        make_both_time_series(time_series_percentiles, obs, 'observation', 
+                              out_dir_ts, grab_old = grab_old)
+    except:
+        pass
     
     evaluate_TS = make_both_time_series(time_series_percentiles, Evaluate[0], 'Evaluate', 
                                         out_dir_ts,
                                         cube_assess = Control[0], grab_old = grab_old)
+
+    
     
     control_TS = make_both_time_series(time_series_percentiles, Control[0], 'Control', 
                                        out_dir_ts,
@@ -395,7 +437,7 @@ def run_ConFire(namelist):
         names_all = ['baseline']
         exp_type = ['single']        
         dirs_all = [params['dir']]
-        common_noises = [False]
+        common_noises = [True]
         limitation_types = select_from_info('limitation_types')
         max_no_ensembles =  select_from_info('max_no_ensembles')
         try:
@@ -415,7 +457,7 @@ def run_ConFire(namelist):
             dirs_all = dirs_all + experiment_dirs
             y_filen = y_filen + y_filen1 * len(experiment_dirs)
             common_noises = common_noises + \
-                select_from_info('experiment_common_noise',[False] * len(experiment_names))
+                select_from_info('experiment_common_noise',[True] * len(experiment_names))
             
         except:
             pass   
@@ -446,6 +488,7 @@ def run_ConFire(namelist):
                         in zip(names_all, dirs_all, exp_type, y_filen, common_noises)
                 ]
         #args_list.reverse()
+
         
         if len(args_list) > 1 and select_from_info('parallelize', True): 
             try:
@@ -458,13 +501,13 @@ def run_ConFire(namelist):
             for args in args_list:
                 run_experiment_wrapper(args)
 
-        if len(args_list)>1:
-            try:    
-                attribution_analysis(output_dir, '/' + output_file + '/', 
-                                     [x["dir"] for x in args_list if x["name"] == "factual"][0],
-                                     obs_file_nc = args_list[0]['y_filen'], out_dir = fig_dir)
-            except:
-                pass
+        #if len(args_list)>1:
+        #    #try:    
+        #    attribution_analysis(output_dir, '/' + output_file + '/', 
+        #                             [x["dir"] for x in args_list if x["name"] == "factual"][0],
+        #                             obs_file_nc = args_list[0]['y_filen'], out_dir = fig_dir)
+        #    #except:
+        #    #    pass
     if regions is None:
         run_for_regions(None)
     else:
