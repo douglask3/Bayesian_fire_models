@@ -142,14 +142,15 @@ new_empty_plot_rr <- function(...,  mitigate = FALSE, ylab = 'Probability Ratio'
 new_empty_plot_logit <- function(..., mitigate = FALSE, ylim = NULL) {
     labels = c(0, 1/128, 1/64, 1/32, 1/16, 1/8, 1/4, 1/2, 2/3, 1, 
                1.5, 2, 4, 8, 16, 32, 64, 128, 1000000)
-    labels_txt = c('0', '', '', '', '', '', '1/4', '1/2', '2/3', 'no\nchange', '1 1/2',
-                   '2', '4', '', '', '', '', '', 'All from\nclimate')
+    labels_txt = c('0', '', '', '', '', '1/8', '1/4', '1/2', '2/3', 'no\nchange', '3/2',
+                   '2', '4', '8', '', '', '', '', 'All from\nclimate')
     
     if (!is.null(ylim) && sum(((labels) > ylim[1]) & ((labels) < ylim[2]))<5) {
         labels = c(0, 1/128, 1/64, 1/32, 1/16, 1/8, 1/4, 1/2, 2/3, 4/5, 1, 1.25,
                1.5, 2, 4, 8, 16, 32, 64, 128, 1000000)
-        labels_txt = c('0', '', '', '', '', '', '1/4', '1/2', '2/3', '4/5', 'no\nchange', '1 1/5', '1 1/2',
-                   '2', '4', '', '', '', '', '', 'All from\nclimate')
+        labels_txt = c('0', '', '', '', '', '', '1/4', '1/2', '2/3', '4/5', 
+                       'no\nchange', '5/4', '3/2',
+                       '2', '4', '', '', '', '', '', 'All from\nclimate')
     }
     out = new_empty_plot(af_tscale, labels, labels_txt, ylim = ylim,...)
     
@@ -176,7 +177,7 @@ new_empty_plot_mitigate <- function(..., mitigate = FALSE, ylim = NULL,
 
 plot_af <- function(af, xpos = 1, col = 'red', name = '', bar = TRUE, 
                     FUN = af_tscale, label = '', 
-                     csv_out = NULL, csv_out_name = 'AF', bwidth = 0.1, ...) {
+                     csv_out = NULL, csv_out_name = 'AF', bwidth = 0.1, zeroPnt = 1, ...) {
     bwidth_bar = 0.05*bwidth^(0.33)/0.1^(0.33)
     
     if (bar) {
@@ -191,7 +192,7 @@ plot_af <- function(af, xpos = 1, col = 'red', name = '', bar = TRUE,
         polygon(xpos + bwidth*c(-1, -1, 1, 1), pcs[c(2, 4, 4, 2)], border = NA, col = col) 
         lines(xpos + bwidth*c(-1, 1), rep(pcs[3], 2), lwd = 2, xpd = NA)        
     }
-    likelihood = round(mean(af>1, na.rm = T)*100 + mean(af==1, na.rm = T)*50)
+    likelihood = round(mean(af>zeroPnt, na.rm = T)*100 + mean(af==1, na.rm = T)*50)
     
     out = cbind(name, csv_out_name, names(pc), round(pc, 2))
     out = rbind(out, c(name, 'likelihood', '%', likelihood))
@@ -214,8 +215,12 @@ att_af_calc <- function(dir, region,factual_name, cfactual_name, exp, mnths, yea
             else
                 BA = openDat(dir, region, factual_name, "observation", 
                              cell_sample, mnths, years)
-        prob = exp(BA*log(fact) + (1.0-BA)*log((1-fact)))
-        samples = sample(1:length(prob), 1000, TRUE, prob)
+        if (background_BA) {
+            samples = sample(1:length(fact), 1000, TRUE)
+        } else {
+            prob = exp(BA*log(fact) + (1.0-BA)*log((1-fact)))
+            samples = sample(1:length(prob), 1000, TRUE, prob)
+        }
     } else {
         samples = samples[[1]]
         BA = samples[[2]]
@@ -308,25 +313,36 @@ futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
                        exp, cell_sample, mnths, years[[1]])
         cfact = openDat(dir, region,  paste0(cfactual_name, '/', gcm),
                         exp, cell_sample, mnths, years[[2]])
+
+        moist = openDat(dir, region, paste0(factual_name, '/', gcm), 
+                      "standard-Moisture",cell_sample, mnths, years[[1]])
+        #browser()
         
-        
+        #if (factual_name[2] == "ssp370" && gcm == "IPSL-CM6A-LR-")
+        #    browser()
         if (is.null(samples)) {
             if (background_BA)  
                 prob = exp(0*log(fact) + (1.0-0)*log((1-fact)))
             else
                 prob = exp(BA*log(fact) + (1.0-BA)*log((1-fact)))
             
+            prob[moist>0.9] = 0.0
             samples = sample(1:length(prob), 1000, TRUE, prob)
+            #if (cfactual_name[2] == 'ssp585' && years[[2]][[1]] == 2090) browser()
         } else {
             samples = samples[[2,i]]
         }
         fact = fact[samples]
         cfact = cfact[samples]
-        
+        fact0 = fact
+        cfact0 = cfact
         if (exp != BA_varname) {
             #mask = fact== 1 & cfact==1   
             fact = -log(1-fact*0.999999999)
             cfact = -log(1-cfact*0.999999999)
+            
+            #if (cfactual_name[2] == "ssp585" && years[[2]][1] == 2090) browser()
+            #return(list((sort(cfact)/sort(fact))^(1/4), samples))
             #if (length(fact) != 1000) browser()
         }
          
@@ -420,7 +436,7 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
     }
     
     ylim0 = empty_plot(xlim = c(0, 1), ylim = ylim[[1]])
-    if (!background_BA) {
+    if (!background_BA || TRUE) {
         BA = add_run(HadGEM_dir, mnths = mnths, BA = NULL, ylim0 = ylim0)[[2]]
         text(x = 0.5, y = ylim0, adj = c(0.5, 1.3), font = 2, 'HadGEM3-A', xpd = NA)
     } else {
@@ -484,10 +500,12 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
                 ssp2 = sort(unlist(ssp2[index]))
                 
                 af = 100*((ssp2/ssp1)-1)
-                
-                plot_af(af, xmini_off + xp/3 + xoffset-1, name = name, 
-                     csv_out = csv_out, csv_out_name = 'AF-migigation', bwidth = 0.025, 
-                     FUN = af_mit_tscale, ...)
+                #af = 100*(ssp2-ssp1)/(ssp1-1)
+                #af[ssp1<1] = -af[ssp1<1]
+                plot_af(af, xmini_off + xp/3 + xoffset-1, 
+                        name = gsub('\n', ' ', paste(ssp, yrss[1], name)), 
+                        csv_out = csv_out, csv_out_name = 'AF-migigation', bwidth = 0.025, 
+                        FUN = af_mit_tscale, zeroPnt = 0, ...)
             }
             mapply(for_control, 1:3, c(BA_varname, "standard-Fuel", "standard-Moisture"), 
                   c('Burned Areas', "Fuel connectivity", "Dryness"),
@@ -505,7 +523,7 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
             plot_af(runif(1000, 0.8, 1), x, col, FUN = function(i) i)
             text(x, 0.8, adj = c(0.5, 1.1), name)
         }
-        mapply(legend_point, cols, c(0.2, 0.425, 0.65), 
+        mapply(legend_point, cols, c(0.17, 0.425, 0.68), 
                c('Burned\nArea', 'Fuel\nLoad', 'Dryness'))
     
         plot.new()
@@ -523,12 +541,13 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
 }
 
 plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NULL, reduced = TRUE) {
+    if (region != regions[2]) return()
     extra_filename = paste(cell_sample, c('', 'reduced')[reduced+1], 
                  c('event', 'background')[background_BA+1], region, sep = '-')
     csv_out = paste0("outputs/SoW_att_outlook", extra_filename, '.csv')
     file.create(csv_out)
     
-    fout = paste("figs/att_outlook", extra_filename, '.png', sep = '-')
+    fout = paste("figs/att_outlook", extra_filename, '-7.png', sep = '-')
     
     png(fout, width = 14 - 7*reduced, height = 7, units = 'in', res = 300)
     if (reduced)
@@ -544,6 +563,7 @@ plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NU
                     empty_plot = new_empty_plot_rr,
                     att_FUN = att_rr_calc, futr_FUN = futr_rr_calc, ylim = ylim2, 
                     reduced = reduced, csv_out = csv_out)
+    #browser()
     dev.off()
 }
 
@@ -551,38 +571,49 @@ plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NU
 cols = c("#B50000", "#E98400", "#0096A1")#, "#EE0074")#, "purple", "grey")
 
 HadGEM_dir = "outputs/outputs_scratch/SoW2526/attribution-HadGEM-test29-fuelcf4/<<region>>/time_series/_16-frac_points_0.5/"
-ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-4-notree-notreechange/<<region>>/time_series/_15-frac_points_0.5/"
-ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-5-notree-notreechange/<<region>>/time_series/_15-frac_points_0.5/"
+#ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-4-notree-notreechange/<<region>>/time_series/_15-frac_points_0.5/"
+ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-11-notree-notreechange-noGP/<<region>>/time_series/_15-frac_points_0.5/"
+#ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-5-notree-notreechange/<<region>>/time_series/_15-frac_points_0.5/"
 gcms = c("GFDL-ESM4-", "IPSL-CM6A-LR-", "MPI-ESM1-2-HR-", "MRI-ESM2-0-", "UKESM1-0-LL-")
 
 regions = c("Northwest Iberia", "Midwestern Canadian Shield forests", 
             "Chilean Temperate Forests and Matorral")
             #, "Scottish_Highlands", "Southeast_South_Korea")
 
-ylim1 = list(NULL, NULL, NULL)
+
 ylim2 = list(NULL, NULL, NULL)
-ylim1 = list(list(c(0.48, 9E9), c(0.85, 4.2),c(-200, 200)),
-             list(c(0.65, 9E9), c(0.65, 8.2), c(-200, 200)),
-             list(c(0.5, 9E9), c(0.75, 3), c(-200, 2000)))
-ylim1 = list(list(c(0.48, 9E9), c(0.85, 4.2),c(-50, 20)),
-             list(c(0.65, 9E9), c(0.65, 8.2), c(-50,25)),
-             list(c(0.5, 9E9), c(0.75, 3), c(-40, 5)))
+
+ylim1 = list(list(c(0.65, 9E9), c(0.65, 9E9),c(-100, 20)),
+             list(c(0.65, 9E9), c(0.8, 1.6), c(-18,5)),
+             list(c(0.65, 9E9), c(0.75, 4.2), c(-52, 5)))
+#ylim1 = list(list(c(0.48, 9E9), c(0.85, 4.2),c(-200, 200)),
+#             list(c(0.65, 9E9), c(0.65, 9), c(-200,200)),
+#             list(c(0.5, 9E9), c(0.75, 6.5), c(-200, 200)))
 years = list(2025, 2025, 2026)#, 2025, 2025)
 mnths = list(c('08'), c('07', '08'), c('01', '02', '03'))#, c('06', '07'), c('03'))#
 cell_sample = "mean"
 background_BA = FALSE
 BA_varname = "Evaluate"
 
-mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2)
-mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)
-
+#mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2)
+#mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)
+ylim1 = list(list(c(0.48, 9E9), c(0, 9E9),c(-100, 20)),
+             list(c(0.65, 9E9), c(0.8, 1.8), c(-25,5)),
+             list(c(0.65, 9E9), c(0.75, 4.2), c(-52, 5)))
 
 cell_sample = "pc-95.0"
-mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)
+#mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2)
+#mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)
 
 mnths = c(paste0('0', 1:9), 10:12)
 mnths = list(mnths, mnths, mnths)
 cell_sample = "mean"
 background_BA = TRUE
 
-mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)
+
+ylim1 = list(list(c(0.65, 4), c(0, 9E9),c(-100, 20)),
+             list(c(0.65, 9E9), c(0.8, 1.7), c(-15, 5)),
+             list(c(0.65, 8), c(0.75, 4.2), c(-52, 5)))
+
+mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2)
+#mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)
