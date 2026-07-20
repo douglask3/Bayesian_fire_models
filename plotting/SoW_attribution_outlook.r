@@ -438,10 +438,10 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
     ylim0 = empty_plot(xlim = c(0, 1), ylim = ylim[[1]])
     if (!background_BA || TRUE) {
         BA = add_run(HadGEM_dir, mnths = mnths, BA = NULL, ylim0 = ylim0)[[2]]
-        text(x = 0.5, y = ylim0, adj = c(0.5, 1.3), font = 2, 'HadGEM3-A', xpd = NA)
+        text(x = 0.5, y = ylim0, adj = c(0.5, 1.3), font = 2, 'Present', xpd = NA)
     } else {
         BA = add_run(ISIMIP_dir, years =  2002:2019, BA = NULL, ylim0 = ylim0) 
-        text(x = 0.5, y = ylim0, adj = c(0.5, 1.3), font = 2, 'ISIMIP3a', xpd = NA) 
+        text(x = 0.5, y = ylim0, adj = c(0.5, 1.3), font = 2, 'Present', xpd = NA) 
 
     }
     #if (reduced) hadgemtxt = 'HadGEM3-A'
@@ -517,13 +517,14 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
         
     }
     if (mitigate) {
-        plot(c(0,1), c(0, 1), type = 'n', xaxt = 'n', yaxt = 'n', axes = FALSE)
+        
+        plot(c(0,1), c(0.7, 1), type = 'n', xaxt = 'n', yaxt = 'n', axes = FALSE)
         
         legend_point <- function(col, x, name) {
             plot_af(runif(1000, 0.8, 1), x, col, FUN = function(i) i)
             text(x, 0.8, adj = c(0.5, 1.1), name)
         }
-        mapply(legend_point, cols, c(0.17, 0.425, 0.68), 
+        mapply(legend_point, cols, c(0.25, 0.5, 0.75), 
                c('Burned\nArea', 'Fuel\nLoad', 'Dryness'))
     
         plot.new()
@@ -537,11 +538,13 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
               futr_annotaion(BA_varname, "ssp585", 0.3, x-0.4,0.05, ylim0, 
                              list(yearss[[1]], yrss), yearss, addSSPlab = FALSE), 
                               1:length(yearss), yearss)   
+        plot.new()
+        plot.new()
     } 
 }
 
 plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NULL, reduced = TRUE) {
-    if (region != regions[2]) return()
+    if (region == regions[2]) return()
     extra_filename = paste(cell_sample, c('', 'reduced')[reduced+1], 
                  c('event', 'background')[background_BA+1], region, sep = '-')
     csv_out = paste0("outputs/SoW_att_outlook", extra_filename, '.csv')
@@ -549,20 +552,20 @@ plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NU
     
     fout = paste("figs/att_outlook", extra_filename, '-7.png', sep = '-')
     
-    png(fout, width = 14 - 7*reduced, height = 7, units = 'in', res = 300)
+    png(fout, width = 14 - 7*reduced, height = 7*2.75/3, units = 'in', res = 300)
     if (reduced)
         widths = c(0.15, 0.05, 0.4)
     else
         widths = c(0.09, 0.025, 0.46)
-    layout(rbind(1:3, 4:6, 7:9), widths = widths)
+    layout(rbind(1:3, 4:6, 7:9), widths = widths, heights = c(1, 1, 0.6))
     par(oma = c(2, 5, 2, 5), mar = c(0.5, 0, 0.5, 0))
         plot_region(region,  HadGEM_dir, ISIMIP_dir, mnths, years, 
                     reduced = reduced, 
                      ylim = ylim1, csv_out = csv_out, mitigate = TRUE)
-        plot_region(region,  HadGEM_dir, ISIMIP_dir, mnths, years, 
-                    empty_plot = new_empty_plot_rr,
-                    att_FUN = att_rr_calc, futr_FUN = futr_rr_calc, ylim = ylim2, 
-                    reduced = reduced, csv_out = csv_out)
+    #    plot_region(region,  HadGEM_dir, ISIMIP_dir, mnths, years, 
+    #                empty_plot = new_empty_plot_rr,
+    #                att_FUN = att_rr_calc, futr_FUN = futr_rr_calc, ylim = ylim2, 
+    #                reduced = reduced, csv_out = csv_out)
     #browser()
     dev.off()
 }
@@ -573,7 +576,7 @@ cols = c("#B50000", "#E98400", "#0096A1")#, "#EE0074")#, "purple", "grey")
 HadGEM_dir = "outputs/outputs_scratch/SoW2526/attribution-HadGEM-test29-fuelcf4/<<region>>/time_series/_16-frac_points_0.5/"
 #ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-4-notree-notreechange/<<region>>/time_series/_15-frac_points_0.5/"
 ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-11-notree-notreechange-noGP/<<region>>/time_series/_15-frac_points_0.5/"
-#ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-5-notree-notreechange/<<region>>/time_series/_15-frac_points_0.5/"
+ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-5-notree-notreechange/<<region>>/time_series/_15-frac_points_0.5/"
 gcms = c("GFDL-ESM4-", "IPSL-CM6A-LR-", "MPI-ESM1-2-HR-", "MRI-ESM2-0-", "UKESM1-0-LL-")
 
 regions = c("Northwest Iberia", "Midwestern Canadian Shield forests", 
@@ -595,7 +598,7 @@ cell_sample = "mean"
 background_BA = FALSE
 BA_varname = "Evaluate"
 
-#mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2)
+mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2)
 #mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)
 ylim1 = list(list(c(0.48, 9E9), c(0, 9E9),c(-100, 20)),
              list(c(0.65, 9E9), c(0.8, 1.8), c(-25,5)),
