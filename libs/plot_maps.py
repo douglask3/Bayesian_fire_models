@@ -1,5 +1,6 @@
 import iris
 import numpy as np
+import numpy.ma as ma
 import cartopy.crs as ccrs
 
 import iris.analysis
@@ -643,17 +644,40 @@ def add_confidence(cube_pvs, ax):
     conf_lat = lat2d[mask]
 
     # Plot dots
-    ax.plot(conf_lon, conf_lat, 'k.', markersize=2.5, transform=ccrs.PlateCarree(), zorder=10)   
+    ax.plot(conf_lon, conf_lat, 'k.', markersize=2.5, transform=ccrs.PlateCarree(), zorder=10)  
+'''
+def point_based_legend():
 
-def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_BlueRed'], 
-             levels = None, extend = 'both', ax=None,
-             cbar_label = '', cbar_orientation = 'vertical',
-             tick_labels = None,
-             overlay_value = None, overlay_cube = None,
-             overlay_col = "#cfe9ff", overlay_size = 1,
-             cube_pvs = None, add_cbar = True, figure_filename = None, use_pcolmesh = True,
-             cbar_lab_rotate = None, cbar_top_and_bottom = False,
-             *args, **kw):
+# Create labels like "A to B"
+labels = [f"{levels[i]} to {levels[i+1]}" for i in range(len(levels)-1)]
+
+# Create legend handles
+handles = []
+for i in range(len(levels)-1):
+    color = cmap(norm((levels[i] + levels[i+1]) / 2))
+    handles.append(
+        Line2D([0], [0],
+               marker='o',
+               color='none',
+               markerfacecolor=color,
+               markersize=8,
+               label=labels[i])
+    )
+
+# Add legend
+ax = plt.gca()
+ax.legend(handles=handles, title="Range") 
+'''
+def plot_map_sow(cube, title='', contour_obs=None, scatter_obs = None, 
+                 cmap=SoW_cmap['diverging_BlueRed'], 
+                 levels = None, extend = 'both', ax=None,
+                 cbar_label = '', cbar_orientation = 'vertical',
+                 tick_labels = None,
+                 overlay_value = None, overlay_cube = None,
+                 overlay_col = "#cfe9ff", overlay_size = 1,
+                 cube_pvs = None, add_cbar = True, figure_filename = None, use_pcolmesh = True,
+                 cbar_lab_rotate = None, cbar_top_and_bottom = False,
+                 *args, **kw):
     """
     Plot a SoW-style map of fire (or climate) data with optional overlays and confidence markers.
 
@@ -832,16 +856,15 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
 
     # Optional observed burned area anomaly contour
     if contour_obs is not None:
-        import numpy.ma as ma
         qplt.contour(contour_obs, levels=[0], colors='#999999', linewidths=1, axes=ax)
         #masked = ma.masked_where(contour_obs.data != 1, contour_obs.data)
         #set_trace()
         #qplt.scatter(masked, c='#724B49', s=10, marker='o')
         
-
+    if scatter_obs is not None:
         # Find where values == 1
-        mask = contour_obs.data == 1
-
+        mask = scatter_obs.data == 1
+        
         # Get coordinates (adjust names if needed)
         lons = cube.coord('longitude').points
         lats = cube.coord('latitude').points
@@ -852,8 +875,9 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
         # Plot only the points where value == 1
         
         ax.scatter(lon2d[mask], lat2d[mask],
-                s=2000/(contour_obs.shape[1]**2), 
-                c='#999999', marker='o', transform=ccrs.PlateCarree())
+                s=2000/(scatter_obs.shape[1]**2), 
+                c='#000000', marker='o', transform=ccrs.PlateCarree())
+        
 
     print(title)
     ax.set_title(title, fontsize = 12)
