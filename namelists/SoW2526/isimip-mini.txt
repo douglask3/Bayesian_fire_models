@@ -42,8 +42,8 @@ inference_step_type:: "metropolis"
 link_func_class:: MaxEnt
 niterations:: 1000
 cores:: 10
-fraction_data_for_sample:: 0.02
-min_data_points_for_sample:: 2000
+fraction_data_for_sample:: 0.001
+min_data_points_for_sample:: 20
 subset_function:: sub_year_months
 subset_function_args:: {'months_of_year': [0, 1, 2, 3, 11]}
 region_months:: {"Northwest_Iberia": [7], "Southeast_South_Korea": [2], 'Midwestern_Canadian_Shield_forests': [6, 7], 'Scottish_Highlands': [6], 'Chilean_Temperate_Forests_and_Matorral': [0, 1]}

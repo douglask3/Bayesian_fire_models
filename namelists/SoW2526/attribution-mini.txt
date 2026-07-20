@@ -1,9 +1,9 @@
 ## model info
-regions:: ['Midwestern_Canadian_Shield_forests',  "Northwest_Iberia",'Chilean_Temperate_Forests_and_Matorral', "Southeast_South_Korea" , 'Scottish_Highlands']
-model_title::  'SoW2526/attribution-HadGEM-test29-fuelcf4-rerun2/<<region>>'
+regions:: ["Northwest_Iberia"]# 'Chilean_Temperate_Forests_and_Matorral', #"Southeast_South_Korea" , 'Scottish_Highlands', 'Midwestern_Canadian_Shield_forests']
+model_title::  'SoW2526/attribution-HadGEM-test30-fuelcf4-test/<<region>>'
 
 ## input data paths and filenames
-dir_training:: "data/data/driving_data2526/<<region>>/nrt/factual/"
+dir_training:: "data/data/driving_data2526/<<region>>/nrt24/factual/"
 y_filen:: "burned_area.nc"
 CA_filen:: None
 
@@ -62,8 +62,8 @@ inference_step_type:: "metropolis"
 link_func_class:: MaxEnt
 niterations:: 1000
 cores:: 10
-fraction_data_for_sample:: 0.5
-min_data_points_for_sample:: 5000
+fraction_data_for_sample:: 0.0001
+min_data_points_for_sample:: 1000
 subset_function:: sub_year_range
 subset_function_args:: {'year_range': [2019, 2026]}
 grab_old_trace::  True # set to True till you get the code running. 
@@ -76,14 +76,14 @@ y_filen_eval:: 'burned_area.nc'
 subset_function_eval:: [sub_year_range]
 subset_function_args_eval:: [{'year_range': [2025, 2026]}]
 
-sample_for_plot:: 1000
+sample_for_plot:: 4
 
 control_names:: ['Fuel', 'Moisture', 'Ignition', 'Suppression']
 levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
 dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
 cmap:: 'gradient_red' 
 dcmap:: 'diverging_TealOrange'
-parallelize:: True
+parallelize:: False
 
 ## experiment info
 plot_control_maps:: True
