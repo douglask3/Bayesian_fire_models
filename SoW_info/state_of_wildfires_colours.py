@@ -24,6 +24,14 @@ SoW_cmap = {
         "#431533",   # deep purple
         "#030001"    # almost black
     ],
+    "confidence_hues": [
+    "#edf8fb",
+    "#bfd3e6",
+    "#ffffbf",
+    "#fee08b",
+    "#fdae61",
+    "#D35C53",
+    "#730943"],
     "diverging_Highlight2": ['#173B73', '#4D99BD', '#BAFAFF', '#FFFFFF', '#FFF5D9','#EDBA75', '#E37326'],
 #["#163A72", "#1E598D", "#3178A6", "#4C99BD", "#6DB9D3", "#92DAE9", "#BAFBFF", "#FFF0FF", "#FFF5DA", "#F9BEB4", "#F1A69B", "#E88E82", "#DE756A", "#D35C53", "#C7403D"],
 
