@@ -226,7 +226,7 @@ def make_input(variable, region, dir, eg_file, start_year = 2002, shapefile_path
     eg_cube = eg_cube[0]
     
     def make_subout(i_dir, o_dir, counter = False):
-        
+        o_dir = dir.replace('nrt_raw', region) + '/nrt/' + o_dir
         def make_file(files, ens = None):
             cubes = iris.load(files, varname)
             
@@ -271,7 +271,7 @@ def make_input(variable, region, dir, eg_file, start_year = 2002, shapefile_path
                 ens_txt = '/ens-' + str(ens)
             else:
                 ens_txt = ''
-            out_file = dir.replace('nrt_raw', region) + '/nrt/' + o_dir + '/' + \
+            out_file = o_dir + '/' + \
                         out_name + ens_txt + '.nc'
             os.makedirs(os.path.dirname(out_file), exist_ok=True)  
             
@@ -279,7 +279,7 @@ def make_input(variable, region, dir, eg_file, start_year = 2002, shapefile_path
             if shapefile_path is not None:
                 cube = contrain_to_sow_shapefile(cube, shapefile_path, 
                                                  region.replace('_', ' '))
-            
+            print(out_file)
             iris.save(cube, out_file)
             return cube
         
@@ -298,7 +298,16 @@ def make_input(variable, region, dir, eg_file, start_year = 2002, shapefile_path
         files = sorted(glob.glob(filename, recursive = True))#[0:6]   
         
         if counter:
-            [make_file(file, i) for i, file in enumerate(files)]
+            cubes = [make_file(file, i) for i, file in enumerate(files)]
+            o_file_mn = o_dir  + '_mean/' + out_name + '.nc'
+            os.makedirs(os.path.dirname(o_file_mn), exist_ok=True) 
+            if len(cubes) > 0:
+                ocube = cubes[0].copy()
+                if len(cubes) > 1:
+                    for cube in cubes[1:]:
+                        ocube.data += cube.data
+                    ocube.data /= len(cubes)
+                iris.save(ocube, o_file_mn)
         else:
             make_file(files)
     
@@ -335,10 +344,11 @@ if __name__=="__main__":
     dir = "data/data/driving_data2526/nrt_raw/"
     
     shapefile_path = "data/data/driving_data2526/Focal_regions/SoW2526_Focal_MASTER_20260218.shp" 
-    regions = [#"Midwestern Canadian Shield forests", 
-               #"Chilean Temperate Forests and Matorral", 
-               #"Southeast South Korea", 
-               #"Northwest Iberia", 
+    regions = [
+               "Northwest Iberia",
+               "Midwestern Canadian Shield forests", 
+               "Chilean Temperate Forests and Matorral", 
+               "Southeast South Korea",  
                "Scottish Highlands"
                ]
     
