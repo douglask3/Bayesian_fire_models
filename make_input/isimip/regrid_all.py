@@ -90,8 +90,11 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
         #set_trace()
         filename = [filename + ext + '.nc' for ext in overlapping_years]
         
-        sbs_funs = [sub_year_range] + subset_functions 
-        sbs_args = [{'year_range': yeari}] + subset_function_argss
+        sbs_funs = [sub_year_range]
+        sbs_args = [{'year_range': yeari}]
+        if subset_functions is not None:
+            sbs_funs += subset_functions 
+            sbs_args += subset_function_argss
         
         out = None
         
@@ -302,16 +305,18 @@ def process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, yea
                            *args, **kw):
     def process(process, dir):
         [make_variables_for_year_range(year, process, dir, *args, **kw) for year in  years]
-    #process(process_jules, dir_jules)
+    process(process_jules, dir_jules)
     process(process_clim, dir_clim)
     
     
 def for_region(subset_functions, subset_function_argss, 
-               vcf_region_name, region_name = None, output_dir = '', *args, **kw):   
-    years = [[2010, 2012], [1901, 1920], [2000, 2019], [2002, 2019]]
+               vcf_region_name, region_name = None, output_dir = '',
+               years = [[2010, 2012], [1901, 1920], [2000, 2019], [2002, 2019]],
+               hist_years = [[1994, 2014]], futr_years = [[2015, 2099]],
+               *args, **kw):   
     dataset_name = 'isimp3a/obsclim/GSWP3-W5E5'
     dataset_name_control = dataset_name
-
+    
     filenames = {"tas": "tas_global_daily_",
              "tas_range": "tas_range_global_daily_",
              "pr": "pr_global_daily_",
@@ -343,17 +348,17 @@ def for_region(subset_functions, subset_function_argss,
     
     dir_jules0 = "/data/scratch/douglas.kelley/Bayesian_fire_models/temp/isimip/"
     dir_jules = dir_jules0 + "jules-es-vn6p3_gswp3-w5e5_obsclim_histsoc_default_pft-"  
-    #process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, years,
-    #                       dataset_name, filenames, subset_functions, subset_function_argss, 
-    #                       region_name, output_dir, *args, **kw)  
+    process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, years,
+                           dataset_name, filenames, subset_functions, subset_function_argss, 
+                           region_name, output_dir, *args, **kw)  
     
     dir_clim = "/data/users/douglas.kelley/isimip3a_driving/climate/atmosphere/counterclim/GSWP3-W5E5/gswp3-w5e5_counterclim_"
     dir_jules = dir_jules0 + "jules-es-vn6p3_gswp3-w5e5_counterclim_histsoc_default_pft-"  
     dataset_name = 'isimp3a/counterclim/GSWP3-W5E5'
     print("Processing isimip3a")
-    #process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, years,
-    #                       dataset_name, filenames, subset_functions, subset_function_argss,
-    #                       region_name, output_dir,*args, **kw)  
+    process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, years,
+                           dataset_name, filenames, subset_functions, subset_function_argss,
+                           region_name, output_dir,*args, **kw)  
     
     filenames = {"tas": "tasAdjust_global_daily_",
                  "tas_range": "tas_rangeAdjust_global_daily_",
@@ -382,14 +387,13 @@ def for_region(subset_functions, subset_function_argss,
                  "soil": "soil_global_annual_",
                  "total":  "total_global_annual_"}
     
-    futr_years = [[2015, 2099]]
-    yearss = [[[1994, 2014]],futr_years, futr_years, futr_years]
+    yearss = [hist_years,futr_years, futr_years, futr_years]
     ismip3b_models = ['GFDL-ESM4', 'IPSL-CM6A-LR', 'MPI-ESM1-2-HR', 'MRI-ESM2-0', 'UKESM1-0-LL']
     codes = ['r1i1p1f1', 'r1i1p1f1', 'r1i1p1f1', 'r1i1p1f1', 'r1i1p1f2']
     experiments = ['historical', 'ssp126', 'ssp370', 'ssp585']
     socs = ['histsoc', '2015soc-from-histsoc', '2015soc-from-histsoc', '2015soc-from-histsoc']
     print("Processing isimip3b")
-    '''
+    
     for experiment, soc, years in zip(experiments, socs, yearss):
         for model, code in zip(ismip3b_models, codes):
             print(model + '\t' + experiment + '\t' + str(years[0][0]) + '-' + str(years[0][1]))
@@ -404,7 +408,7 @@ def for_region(subset_functions, subset_function_argss,
             process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, years,
                            dataset_name, filenames, subset_functions, subset_function_argss,
                            region_name, output_dir, *args, **kw)
-    '''
+    
     if region_name is None:
         region_name = subset_function_argss[0][next(iter(subset_function_argss[0]))]
     if vcf_region_name == 'same': vcf_region_name = region_name + '/isimp3a/obsclim/GSWP3-W5E5/period_2002_2019/'
@@ -467,6 +471,22 @@ def for_region(subset_functions, subset_function_argss,
         iris.save(burned_area, out_fname)
     regrid_Burned_area([2002, 2019])
     regrid_Burned_area([2000, 2019])
+
+
+def run_for_report(region_names, output_dir, shp_filename = None, *args, **kw):
+    if shp_filename is None:
+        subset_functions_main = None
+    else:
+        subset_functions_main = [contrain_to_sow_shapefile]
+    vcf_dir = "same"
+    
+    for region_name in region_names:
+        subset_function_argss_main = [{'shp_filename': shp_filename, 
+                                       'name': region_name}]
+        for_region(subset_functions_main, subset_function_argss_main, 
+                   vcf_dir, region_name = region_name.replace(' ', '_'), 
+                   output_dir = output_dir, *args, **kw)
+    run_LULCC_for_all_regions(region_names, output_dir)
 
 if __name__=="__main__":
     output_dir = "data/data/driving_data/"
