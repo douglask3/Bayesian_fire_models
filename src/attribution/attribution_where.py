@@ -115,9 +115,19 @@ def add_attribubtion_map_cbar(img, ax, levels = [0, 33, 50, 66, 80, 85, 90, 99, 
                               top_tick_labels = ["Unlikely", "About as\nlikely as not", 
                                                  "Likely", "Very\nlikely", 
                                                  "Virtually\ncertain"],
-                              cbar_label = "P(Factual > Counterfactual)"):
+                              cbar_label = "P(Factual > Counterfactual)", cbar_orientation = 'horizontal'):
 
-    cbar = plt.colorbar(img, ax=ax, ticks=levels, orientation='horizontal')
+    divider = make_axes_locatable(ax)
+    side = "right" if cbar_orientation == "vertical" else "bottom"
+    cax = divider.append_axes(side, size=0.08, pad=0.32, axes_class=plt.Axes)
+
+    cbar = plt.colorbar(
+        img, cax=cax,
+        orientation = cbar_orientation,
+        ticks=levels
+    )
+
+    
     cbar.set_label(cbar_label, labelpad=10, loc='center')
     cbar.ax.xaxis.set_label_position('bottom')
     
@@ -127,9 +137,9 @@ def add_attribubtion_map_cbar(img, ax, levels = [0, 33, 50, 66, 80, 85, 90, 99, 
     cax_top.set_xticklabels([''] * len(range_edges))  # No labels on edge ticks
     for pos, label in zip(top_tick_pos, top_tick_labels):
         cax.text(pos, 1.4, label, ha='center', va='bottom', 
-                 fontsize=9, rotation=0, transform=cax_top.transData)
+                 fontsize=6.5, rotation=22, transform=cax_top.transData)
             
-        cax_top.tick_params(axis='x', length=10, width = 1.5, direction='out', top=True)
+        cax_top.tick_params(axis='x', length=3, width = 0.5, direction='out', top=True)
 
 
 def plot_confidence_in_attribution(dir1, dir2, region, out_dir = "figs/"):
