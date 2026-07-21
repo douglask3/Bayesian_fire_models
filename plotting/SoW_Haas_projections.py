@@ -18,6 +18,12 @@ import iris
 import iris.coords
 import iris.analysis
 
+def signif(x, p):
+    x = np.asarray(x)
+    x_positive = np.where(np.isfinite(x) & (x != 0), np.abs(x), 10**(p-1))
+    mags = 10 ** (p - 1 - np.floor(np.log10(x_positive)))
+    return np.round(x * mags) / mags
+
 
 def upscale_cube_bilinear(cube, factor=5):
     """
@@ -120,7 +126,8 @@ def plot_agreement_map(region_agree, ax, cmap = SoW_cmap["diverging_TealGreyOran
     
 def for_variable_rcp(variable, longname, rcp, region, ax,
                      shapefile_path, dir, baseline, future, experiment, 
-                     return_eg = False, plot_baseline = False, *args, **kw):
+                     return_eg = False, plot_baseline = False, 
+                     cbar_orientation = 'horizontal', *args, **kw):
     base_file = dir + baseline + variable + '.nc'
 
     def load_regid(file):
@@ -135,9 +142,12 @@ def for_variable_rcp(variable, longname, rcp, region, ax,
     if plot_baseline:
         if variable == 'BA':
             base *= 100
+            levels = signif(auto_pretty_levels(base.data), 1)
+        else:
+            levels = None
         plot_map_sow(base, add_cbar = True, extend = 'max',
                  cmap = SoW_cmap['gradient_red'], use_pcolmesh = True, ax = ax,
-                 cbar_orientation = 'horizontal')
+                 cbar_orientation = cbar_orientation, levels = levels)
         #ax.set_title('baseline, ' + variable)
         ax.annotate(longname, xy=(-0.1, 0.5),  rotation=90, 
                     fontsize=14,  # <-- Change text size here (in points)
@@ -189,26 +199,28 @@ if __name__=="__main__":
                 "Chilean Temperate Forests and Matorral"]
 
     hist_locs = ["lower right", "lower left", "upper left"]
+    size_scales = [4.5, 4.5, 1.5]
+    cbar_orientations = ['horizontal', 'horizontal', 'vertical']
     #region = regions[0]
-    for region, hist_loc in zip(regions, hist_locs):
+    for region, hist_loc, size_scale, cbar_orientation in \
+            zip(regions, hist_locs, size_scales, cbar_orientations):
         eg_cube = for_variable_rcp(variables[0], longnames[0], rcps[0], region, None,
-                                 shapefile_path, dir, baseline, future, experiment, True)
-        if region == regions[2]:
-            size_scale = 3.5
-        else:
-            size_scale = 5
-        fig, axes = set_up_sow_plot_windows(3, 3, eg_cube,  size_scale = size_scale)
+                                 shapefile_path, dir, baseline, future, experiment, True, 
+                                 cbar_orientation=cbar_orientation)
+        
+        fig, axes = set_up_sow_plot_windows(3, 3, eg_cube,  size_scale = size_scale, 
+                                            oma = [0.5, 0.5, 0.5, 0.1])
         i = 0
         for variable, longname in zip(variables, longnames):
                     
             for_variable_rcp(variable, longname, rcps[0], region, axes[i],
                              shapefile_path, dir, baseline, future, experiment,
-                             plot_baseline = True)
+                             plot_baseline = True, cbar_orientation=cbar_orientation)
             i += 1
             for rcp in rcps:    
                 for_variable_rcp(variable, longname, rcp, region, axes[i],
                                  shapefile_path, dir, baseline, future, experiment,
-                                 hist_loc = hist_loc)
+                                 hist_loc = hist_loc, cbar_orientation=cbar_orientation)
                 i += 1
         
         plt.savefig('figs/Haas-' + region + '.png')
