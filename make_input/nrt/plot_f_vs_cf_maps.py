@@ -25,7 +25,10 @@ def load_and_average_months(file, months, years):
     
     if cube.ndim > 2:
         season = sub_year_months(cube, months)  
-        season_year = sub_year_range(season, years)
+        try:
+            season_year = sub_year_range(season, years)
+        except: 
+            set_trace()
         if len(months) > 1 and season_year.ndim > 2:
             season_year = season_year.collapsed('time', iris.analysis.MEAN)
         season_year.data[season_year.data > 9E9] = np.nan
@@ -138,7 +141,7 @@ variable_info = {'tas_mean':{"file": 'tas_mean', 'label': 'Mean Monthly Temp', '
                             'range': [0.0, None],
                             'cmap': SoW_cmap['gradient_teal'], 
                             'dcmap': SoW_cmap['diverging_TealOrange'].reversed()},
-                 'dry_days': {"file": 'dry_days', 'label': 'Mean. no dry days', 
+                 'dry_days': {"file": 'no_of_dry_days', 'label': 'Mean. no dry days', 
                               'Units': "fraction",
                               "shift": 0.0, 'scale': 1.0, 
                             'range': [0.0, None],
@@ -150,14 +153,38 @@ variable_info = {'tas_mean':{"file": 'tas_mean', 'label': 'Mean Monthly Temp', '
                             'range': [0.0, None],
                               'cmap': SoW_cmap['gradient_teal'].reversed(), 
                               'dcmap': SoW_cmap['diverging_TealOrange']},
+                 'cumm_dry_days_mean': {"file": 'cumm_dry_days_mean', 'label': 'Mean no consecutive dry days',
+                              'Units': "no. days",
+                              "shift": 0.0, 'scale': 1.0, 
+                            'range': [0.0, None],
+                              'cmap': SoW_cmap['gradient_teal'].reversed(), 
+                              'dcmap': SoW_cmap['diverging_TealOrange']},
                  #'hurs_mean': {"file": 'hurs_mean', 'label': 'Humidity', 
                  #              'Units': "%",
                  #              "shift": 0.0, 'scale': 1.0, 
                  #           'range': [0.0, 100.0],
                  #              'cmap': SoW_cmap['gradient_hotpink'], 
                  #s              'dcmap': SoW_cmap['diverging_TealPurple'].reversed()},
-                 'hursmin_mean': {"file": 'hursmin_mean', 'label': 'Min. Humidity', 
+                 'hursmin_mean': {"file": 'hursmin_mean', 'label': 'Mean Min. Humidity', 
                                'Units': "%",
+                               "shift": 0.0, 'scale': 1.0, 
+                            'range': [0.0, 1.0],
+                               'cmap': SoW_cmap['gradient_hotpink'], 
+                               'dcmap': SoW_cmap['diverging_TealPurple'].reversed()},
+                 'hursmin_min': {"file": 'hursmin_min', 'label': 'Min. Min. Humidity', 
+                               'Units': "%",
+                               "shift": 0.0, 'scale': 1.0, 
+                            'range': [0.0, 1.0],
+                               'cmap': SoW_cmap['gradient_hotpink'], 
+                               'dcmap': SoW_cmap['diverging_TealPurple'].reversed()},
+                 'vpd_mean': {"file": 'vpd_mean', 'label': 'Mean VPD', 
+                               'Units': "",
+                               "shift": 0.0, 'scale': 1.0, 
+                            'range': [0.0, 1.0],
+                               'cmap': SoW_cmap['gradient_hotpink'], 
+                               'dcmap': SoW_cmap['diverging_TealPurple'].reversed()},
+                 'vpd_max': {"file": 'vpd_max', 'label': 'Max. VPD', 
+                               'Units': "",
                                "shift": 0.0, 'scale': 1.0, 
                             'range': [0.0, 1.0],
                                'cmap': SoW_cmap['gradient_hotpink'], 
@@ -180,25 +207,37 @@ variable_info = {'tas_mean':{"file": 'tas_mean', 'label': 'Mean Monthly Temp', '
                             'range': [0.0, None],
                                'cmap': SoW_cmap['gradient_purple'], 
                                'dcmap': SoW_cmap['diverging_GreenPink'].reversed()},
-                 'Wood': {"file": 'wood_HYDE31', 'label': 'Woody cover', 
+                 'Wood': {"file": 'wood_HADGEM', 'label': 'Woody cover', 
                                'Units': "",
                                "shift": 0.0, 'scale': 1.0, 
                                'range': [0.0, 1.0],
                                'cmap': SoW_cmap['gradient_teal'], 
                                'dcmap': SoW_cmap['diverging_GreenPink'].reversed()},
-                 'Tree': {"file": 'tree_HYDE31', 'label': 'Tree cover', 
+                 'Tree': {"file": 'tree_HADGEM', 'label': 'Tree cover', 
                                'Units': "",
                                "shift": 0.0, 'scale': 1.0, 
                                'range': [0.0, 1.0],
                                'cmap': SoW_cmap['gradient_teal'], 
                                'dcmap': SoW_cmap['diverging_GreenPink'].reversed()},
-                 'Veg_cover': {"file": 'veg_HYDE31', 'label': 'Veg cover', 
+                 'Shrub': {"file": 'shrub_HADGEM', 'label': 'Shrub cover', 
                                'Units': "",
                                "shift": 0.0, 'scale': 1.0, 
                                'range': [0.0, 1.0],
                                'cmap': SoW_cmap['gradient_teal'], 
                                'dcmap': SoW_cmap['diverging_GreenPink'].reversed()},
-                 'Veg_cover_log': {"file": 'veg_HYDE31_log', 'label': 'Log of Veg cover', 
+                 'Grass': {"file": 'grass_HADGEM', 'label': 'Grass cover', 
+                               'Units': "",
+                               "shift": 0.0, 'scale': 1.0, 
+                               'range': [0.0, 1.0],
+                               'cmap': SoW_cmap['gradient_teal'], 
+                               'dcmap': SoW_cmap['diverging_GreenPink'].reversed()},
+                 'Veg_cover': {"file": 'veg_HADGEM', 'label': 'Veg cover', 
+                               'Units': "",
+                               "shift": 0.0, 'scale': 1.0, 
+                               'range': [0.0, 1.0],
+                               'cmap': SoW_cmap['gradient_teal'], 
+                               'dcmap': SoW_cmap['diverging_GreenPink'].reversed()},
+                 'Veg_cover_log': {"file": 'veg_log_HADGEM', 'label': 'Log of Veg cover', 
                                'Units': "",
                                "shift": 0.0, 'scale': 1.0, 
                                'range': [0.0, 1.0],
@@ -223,12 +262,13 @@ variable_info = {'tas_mean':{"file": 'tas_mean', 'label': 'Mean Monthly Temp', '
                                'cmap': SoW_cmap['gradient_red'], 
                                'dcmap': SoW_cmap['diverging_TealOrange'].reversed()}}
 
-variables = ["Veg_cover_log", 'Burned Area', 'tas_mean', 'tas_max',  'gust1_mean', 'Cropland', 'Pasture', 'Veg_cover', 'Tree', 'Wood', 'pr', 'dry_days', 'cumm_dry_days_max', 'hursmin_mean', 'gust1_mean']
+variables = ["Veg_cover_log", 'Burned Area', 'Veg_cover', 'Wood', 'Tree', 'tas_mean', 'tas_max',  'gust1_mean', 'Cropland', 'Pasture', 'vpd_mean', 'vpd_max', 'pr', 'dry_days', 'cumm_dry_days_max', 'cumm_dry_days_mean', 'hursmin_mean','hursmin_min', 'gust1_mean']
 
-    
 regions = [ 'Northwest_Iberia', 'Chilean_Temperate_Forests_and_Matorral', 'Midwestern_Canadian_Shield_forests','Scottish_Highlands', 'Southeast_South_Korea']
 
-for region in regions:
+months = [[7], [0, 1], [6, 7],[6], [2]]
+
+for mnths, region in zip(months, regions):
     #region_info = get_region_info(region)[region]
     
     eg_cube = iris.load_cube('data/data/driving_data2526/' + region + \
@@ -244,8 +284,8 @@ for region in regions:
             factual_path = 'data/data/driving_data2526/' + region + \
                            '/nrt/factual/' + info['file'] + '.nc',
             cf_dir = 'data/data/driving_data2526/' + region + \
-                     '/nrt//countfactual//',
-            months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'],
+                     '/nrt//counterfactual//',
+            months = mnths,
             years = [2025],
             label = info['label'],
             units = info['Units'],
