@@ -127,7 +127,7 @@ class MaxEnt(object):
         logp_global = ((alpha - 1) * tt.log(mean_fx)+ (beta - 1) * tt.log(1 - mean_fx) \
                        - (gammaln(alpha) + gammaln(beta) - gammaln(alpha + beta)))
         #logp_global = mean_y * tt.log(mean_fx) + (1 - mean_y) * tt.log(1 - mean_fx)
-        return prob + logp_global/Ncells #tt.sum(prob)
+        return prob #+ logp_global/Ncells #tt.sum(prob)
 
 
     def deterministic_lognormal_array(self, i, mu, sigma):
@@ -185,7 +185,7 @@ class MaxEnt(object):
         else:
             epsilon = 0.0
         return epsilon
-    
+     
     def obs_given_(self, fx, Y, CA = None, params = None):
         if params is not None:
             param_names = [param.name[5:] for param in params]
@@ -233,7 +233,9 @@ class MaxEnt(object):
             error = pm.DensityDist("error", fx, len(Y), qSpread, detection_epslion, CA,
                                    logp = self.DensityDistFun, 
                                    observed = Y)
-        
+
+        #pm.logp(error, Y).eval()
+        #set_trace()
         #penalty = tt.switch(mean_pred < 0.0000001, -1e8, 0.0)  # discourage implausibly low burn
 
         # Apply the penalty
