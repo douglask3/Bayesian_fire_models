@@ -1,0 +1,102 @@
+## model info
+regions:: ['Northwest_Iberia']#, 'Scottish_Highlands']
+model_title::  'SoW2526/attribution/<<region>>'
+
+## input data paths and filenames
+dir_training:: "data/data/driving_data2526/<<region>>/nrt/factual/"
+y_filen:: "burned_area.nc"
+CA_filen:: None
+
+# Fuel load
+x_filen_list:: "lwo_pred" #0
+x_filen_list:: "lle_pred" #1
+x_filen_list:: "dfo_pred" #2
+x_filen_list:: "dwo_pred" #3 
+x_filen_list:: "LAI" #4
+
+# Fuel Moisture
+x_filen_list:: "LFMC_high" #5
+x_filen_list:: "LFMC_low" #6
+x_filen_list:: "DFMC_Foliage" #7
+x_filen_list:: "DFMC_Wood" #8
+
+# Weather
+x_filen_list:: "pr" #9
+x_filen_list:: "dry_days" #10
+x_filen_list:: "cumm_dry_days_max" #11
+x_filen_list:: "tasmax" #12
+x_filen_list:: "hursmin" #13
+x_filen_list:: "gust1_max.nc" #14
+
+# Nat ignitions
+x_filen_list:: "LI.nc" #15
+
+# Human
+x_filen_list:: "cropland_regridded_to_era5" #16
+x_filen_list:: "pasture_regridded_to_era5" #17
+x_filen_list:: "rural_population_regridded_to_era5"#18
+x_filen_list:: "total_irrigated_regridded_to_era5" #19
+x_filen_list:: "urban_area_regridded_to_era5" #20
+x_filen_list:: "urban_population_regridded_to_era5" #21
+
+Y_scale:: 0.01
+
+## Model info
+model_class:: ConFire
+
+priors:: {'pname': "link-qSpread_mu",'np': 1, 'dist': 'Normal', 'mu': 1.0, 'sigma': 0.5}
+priors:: {'pname': "link-qSpread_sigma",'np': 1, 'dist': 'HalfNormal', 'sigma': 0.5}
+#priors:: {'pname': "link-qSpread",'np': 1, 'dist': 'LogNormal', 'mu': 2.0, 'sigma': 1.0}
+priors:: {'pname': "controlID", 'value': [[0, 1, 2, 3, 4], [5, 6, 7, 8],  [9, 10, 11, 12, 13, 14], [15, 16, 17, 18], [16, 17, 19, 20]]}
+priors:: {'pname': "driver_Direction", 'value': [[1, 1, 1, 1, 1], [-1, -1, -1, -1], [-1, 1, 1, 1, -1, 1], [1, 1, 1, 1], [1, 1, 1, 1]]}
+priors:: {'pname': "control_Direction", 'value': [1, 1, 1, 1, 1]}
+#priors:: {'pname': "Fmax",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 1.0}
+#priors:: {'pname': 'lin_correct', 'np': 1, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 4.0}
+priors:: {'pname': "x0",'np': 5, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
+priors:: {'pname': "betas",'np': 5, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas",'np': 6, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 5, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 6, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+
+### optimization info
+inference_step_type:: "metropolis"
+link_func_class:: MaxEnt
+niterations:: 1000
+cores:: 10
+fraction_data_for_sample:: 0.001
+min_data_points_for_sample:: 100
+subset_function:: sub_year_range
+subset_function_args:: {'year_range': [2019, 2026]}
+grab_old_trace::  True # set to True till you get the code running. 
+                      # Then set to False when you start adding in new response curves
+### output info
+dir_outputs:: 'outputs/outputs_scratch/'
+
+## evaluation info
+y_filen_eval:: 'burned_area.nc'
+subset_function_eval:: [sub_year_range]
+subset_function_args_eval:: [{'year_range': [2024, 2026]}]
+
+sample_for_plot:: 10
+
+control_names:: ['Fuel', 'Moisture', 'Weather', 'Ignition', 'Suppression']
+levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
+dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
+cmap:: 'gradient_red' 
+dcmap:: 'diverging_TealOrange'
+parallelize:: True
+
+## experiment info
+limitation_types:: ['standard']
+controls_to_plot:: [0, 1, 2, 3, 4]
+experiment_dir:: "data/data/driving_data2526/Northwest_Iberia/nrt/factual/"
+experiment_dir:: "data/data/driving_data2526/Northwest_Iberia/nrt/countfactual/||data/data/driving_data2526/Northwest_Iberia/nrt/factual/"
+
+experiment_names:: ["factual", "counterfactual"]
+time_series_percentiles:: [0.0, 95.0]

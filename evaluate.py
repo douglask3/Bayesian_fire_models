@@ -70,8 +70,8 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
 
     #  Set new y-axis limits with the padding
     plt.ylim(y_min - padding, y_max + padding)
-    plt.xlabel('Observed')
-    plt.ylabel('P(Obs|model')
+    plt.xlabel('Observed BA (frac)')
+    plt.ylabel('P(Obs|model)')
     print("Starting colorbar creation...")
     try:
         data = plot_id[3].get_array()
@@ -138,7 +138,7 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
     #    pass
     
     Sim_p = Sim[1].copy()
-    Sim_p.data[Obs.data == 0] = np.nan
+    #Sim_p.data[Obs.data == 0] = np.nan
     
     plot_BayesModel_maps(Sim_p, [0.0, 0.5, 0.75, 0.9, 0.95, 0.99, 1.0], 
                         'gradient_teal', '', None, 
@@ -180,7 +180,7 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
     
 
 def compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, levels, cmap,
-                        *args, **kw):    
+                        fig_dir = None, *args, **kw):    
  
     
     """ Plots the summery evaluation plot.
@@ -207,12 +207,9 @@ def compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, levels, cmap
     plt.clf()
     plt.close()
     
-    fig_dir = combine_path_and_make_dir(dir_outputs, '/figs/')
+    if fig_dir is None: fig_dir = combine_path_and_make_dir(dir_outputs, '/figs/')
     figure_filename = fig_dir + filename_out + '-evaluation'
     figure_dir =  combine_path_and_make_dir(figure_filename)
-    
-    #Sim[0].data = 100 * Sim[0].data
-    #Obs.data = Obs.data * 100
     
     plot_BayesModel_maps(Sim[0].collapsed('time', iris.analysis.MEAN), 
                          None, cmap, '', 
@@ -258,16 +255,21 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
                           model_class = FLAME,
                           link_func_class = MaxEnt, hyper = True, sample_error = True,
                           dir = '', 
-                          dir_outputs = '', model_title = '', filename_out = '',
+                          dir_outputs = '', 
+                          fig_dir = None, 
+                          model_title = '', filename_out = '',
                           filename_out_ext = '',
                           control_run_name = "control",
                           experiment_type = 'single',
                           subset_function = None, subset_function_args = None,
+                          max_no_ensembles = False,
                           sample_for_plot = 1, grab_old_trace = False, 
                           run_response_curves = False, 
                           response_grouping = None, run_only = False, return_inputs = False,
-                          Y = None, X = None, lmask = None, scalers = None, *args, **kw):
-
+                          Y = None, X = None, lmask = None, scalers = None, 
+                          data_store = None, common_noise = False, 
+                          *args, **kw):
+    #set_trace()
     """ Runs prediction and evalutation of the sampled model based on previously run trace.
     Arguments:
         trace - pymc traces nc or nc fileiles, probably from a 'train_MaxEnt_model' run
@@ -289,6 +291,8 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
                 data to spatial locations and time periods/months. Default is not to 
                 constrain (i.e "None" for no functions")
         subset_function_args -- list of arguements that feed into subset_function
+        max_no_ensembles -- if there is an esemble of input data, what's the maxmimum we will 
+                                use.
         sample_for_plot -- fraction of gridcells used for optimization
         grab_old_trace -- Boolean. If True, and a filename starting with 'filename' and 
                 containing some of the same setting (saved in filename) exists,  it will open 
@@ -305,11 +309,14 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
     dir_samples = combine_path_and_make_dir(dir_outputs, '/samples/')     
     dir_samples = combine_path_and_make_dir(dir_samples, filename_out)
 
-    dir_driving_data = combine_path_and_make_dir(dir_outputs, '/driving_data_store/')     
+    dir_data_store = combine_path_and_make_dir(dir_outputs, '/data_store/')
+    dir_driving_data = combine_path_and_make_dir(dir_data_store, '/driving_data/')
+    dir_optimisation_data = combine_path_and_make_dir(dir_data_store, '/optimisation_data/')
+     
     dir_driving_data = combine_path_and_make_dir(dir_driving_data, 
                                                  filename_out + '/' + control_run_name)
     
-    fig_dir = combine_path_and_make_dir(dir_outputs, '/figs/')
+    if fig_dir is None: fig_dir = combine_path_and_make_dir(dir_outputs, '/figs/')
     trace = az.from_netcdf(trace_file)
     
     scalers = pd.read_csv(scale_file).values  
@@ -328,21 +335,24 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
         'x_find_mode': experiment_type,
         'dir_driving_data': dir_driving_data,
         'subset_function': subset_function,
-        'subset_function_args': subset_function_args
+        'subset_function_args': subset_function_args,
+        'max_no_ensembles': max_no_ensembles
     }
         
     if CA_filen is not None:
-        Y, X, CA, lmask, scalers = read_all_data_from_netcdf(CA_filename = CA_filen, **common_args)   
+        Y, X, CA, lmask, scalers = read_all_data_from_netcdf(CA_filename = CA_filen, 
+                                                             **common_args)
     else:
         if Y is  None or X is  None or lmask is  None or scalers is  None:
-            Y, X, lmask, scalers = read_all_data_from_netcdf(**common_args)
+            Y, X, lmask, scalers = read_all_data_from_netcdf(**common_args, test_trace = True)
     
     Obs = read_variable_from_netcdf(y_filen, dir,
                                     subset_function = subset_function, 
                                     subset_function_args = subset_function_args)
-    Obs.data = Obs.data / 100.0
+    
+    Obs.data = Obs.data 
     Obs.data[~np.reshape(lmask, Obs.shape)] = np.nan
-    if Y_scale is not None: Y_scale = Y_scale / 100.0
+    if Y_scale is not None: Y_scale = Y_scale 
     #plot_basic_parameter_info(trace, fig_dir)
     #paramter_map(trace, x_filen_list, fig_dir) 
     
@@ -358,10 +368,11 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
         'eg_cube': Obs,
         'lmask': lmask,
         'dir_samples': dir_samples,
-        'grab_old_trace': grab_old_trace}
-    
+        'grab_old_trace': grab_old_trace,
+        'data_store': dir_optimisation_data,  
+        'common_noise': common_noise}
     Sim = runSim_MaxEntFire(**common_args, run_name = control_run_name, test_eg_cube = True)
-    run_only = True
+     
     if run_only: 
         if return_inputs: 
             return Sim, Y, X, lmask, scalers 
@@ -371,7 +382,10 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
     common_args['Sim'] = Sim[0]
     
     filename_out += filename_out_ext 
-    compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, *args, **kw)
+    
+    compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, fig_dir = fig_dir,
+                        *args, **kw)
+    
     Bayes_benchmark(filename_out, fig_dir, Sim, Obs, lmask)
 
     if run_response_curves: 

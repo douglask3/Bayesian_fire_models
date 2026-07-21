@@ -13,6 +13,7 @@ import shapely.geometry as sgeom
 import shapely.ops as ops
 from shapely.geometry import Point
 from shapely.vectorized import contains
+from shapely import intersects_xy
 import numpy as np
 import cartopy.crs as ccrs
 import geopandas as gp
@@ -146,7 +147,7 @@ def make_time_series(cube, annual_aggregate = None, year_range = None):
         
     return collapsed_cube
 
-def sub_year_range(cube, year_range):
+def sub_year_range(cube, year_range, time_coord_name = None):
     """Selects months of a year from data   
     Arguments:
         cube -- iris cube with time array with year information.
@@ -154,15 +155,18 @@ def sub_year_range(cube, year_range):
     Returns:
         cube of just years between to years provided.
     """
-    if len(year_range) == 1: year_range = [year_range[0], year_range[0]]
+    if time_coord_name is None:
+        time_coord_name = cube.coords()[0].name()
     
+    if len(year_range) == 1: year_range = [year_range[0], year_range[0]]
+     
     try:
-        icc.add_year(cube, 'time')
+        icc.add_year(cube, time_coord_name)
     except:
         pass
     
-    constraint = iris.Constraint(year=lambda cell: (year_range[0]-0.95) <= cell <= (year_range[1]+0.95))
-    
+    constraint = iris.Constraint(year=lambda cell: 
+                            (year_range[0]-0.99) <= cell <= (year_range[1]+0.99))
     return cube.extract(constraint)
     
     
@@ -186,7 +190,11 @@ def sub_year_months(cube, months_of_year):
         months_of_year = np.array(months_of_year)+1
     season = iris.Constraint(month_number = lambda cell, mnths = months_of_year: \
                              np.any(np.abs(mnths - cell[0])<0.5))
-    return cube.extract(season)
+    if len(np.unique(cube.coord('month_number').points)) == 1:
+        return cube
+    else:
+        return cube.extract(season)
+    return out
 
 def constrain_to_time(cube, years, months_of_year):
     cube = sub_year_range(cube, years)
@@ -291,29 +299,50 @@ def constrain_olson(cube, ecoregions):
     biomes = iris.load_cube('data/wwf_terr_ecos_0p5.nc')
     return constrain_cube_by_cube_and_numericIDs(cube, biomes, ecoregions)
 
-def contrain_to_shape(cube, geom, constrain = True):
+def contrain_to_shape(cube, geom, constrain = True, mask = True):
+    
     if constrain: 
         minx, miny, maxx, maxy = geom.bounds
         cube = contrain_coords(cube, (minx, maxx, miny, maxy))
     
-    # Get cube latitude and longitude coordinates
-    lons, lats = np.meshgrid(cube.coord('longitude').points, cube.coord('latitude').points)
+    if mask:
+        # Get cube latitude and longitude coordinates
+        lons, lats = np.meshgrid(cube.coord('longitude').points, cube.coord('latitude').points)
+        
+        # Create a mask: True for points outside the continent
+        mask = ~intersects_xy(geom, lons, lats)
+        
+        # Handle multi-dimensional cubes
+        expanded_mask = np.broadcast_to(mask, cube.shape)
     
-    # Create a mask: True for points outside the continent
-    mask = ~contains(geom, lons, lats)
-    
-    # Handle multi-dimensional cubes
-    expanded_mask = np.broadcast_to(mask, cube.shape)
-
-    # Apply the mask to the cube data
-    masked_data = np.ma.masked_array(cube.data, mask=expanded_mask)
-    masked_cube = cube.copy(data=masked_data)
-    
+        # Apply the mask to the cube data
+        
+        masked_data = np.ma.masked_array(cube.data, mask=expanded_mask)
+        masked_cube = cube.copy(data=masked_data)
+    else:
+        masked_cube = cube
     return masked_cube
 
+def contrain_to_shapefile(cube, shp_filename, name = None, *args, **kw):
+    shp = gp.read_file(shp_filename)
+    shp["geometry"] = shp["geometry"].buffer(0)
+    
+    if name is None:
+        geom = shp.geometry.unary_union
+    else:
+        try:
+            geom = shp[shp['name'].str.contains(name, case=False, na=False)].geometry.unary_union
+        except:
+            if name in shp_filename:
+                print("WARNING: name ''" + name + "'' not a shape in ''" + shp_filename + \
+                      "''. Using all shapes instead")
+                geom = shp.geometry.unary_union
+    return contrain_to_shape(cube, geom, *args, **kw)
 
 def contrain_to_sow_shapefile(cube, shp_filename, name, *args, **kw):
+    
     shp = gp.read_file(shp_filename)
+    
     try:
         geom = shp[shp['name'].str.contains(name, case=False, na=False)].geometry.unary_union
     except:
@@ -378,7 +407,7 @@ def mask_data_with_geometry(cube, geometry):
     for i in range(lon_grid.shape[0]):
         for j in range(lon_grid.shape[1]):
             point = sgeom.Point(lon_grid[i, j], lat_grid[i, j])
-            mask[i, j] = not geometry.contains(point)  # Mark as True if outside the geometry
+            mask[i, j] = not geometry.intersects_xy(point)  # Mark as True if outside the geometry
 
     # Expand the mask to match the shape of the cube's data (broadcasting)
     # Assuming the first two dimensions are latitude and longitude
@@ -427,4 +456,23 @@ def constrain_BR_biomes(cube, biome_ID):
     return constrain_cube_by_cube_and_numericIDs (cube, mask, biome_ID)
 
 
+def constrain_to_common_time(cubes):
+    time_name = cubes[0].coords()[0].name()
+    # Extract valid_time points from each cube
+    time_arrays = [cube.coord(time_name).points for cube in cubes]
+    
+    # Find common times (intersection across all cubes)
+    common_times = set(time_arrays[0])
+    for t in time_arrays[1:]:
+        common_times = common_times.intersection(t)
+    
+    # Convert back to sorted numpy array
+    common_times = np.array(sorted(common_times))
+    constrained_cubes = []
 
+    for cube in cubes:
+        times = cube.coord(time_name).points
+        mask = np.isin(times, common_times)
+        constrained_cubes.append(cube[mask])
+    return constrained_cubes
+    

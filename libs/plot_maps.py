@@ -1,5 +1,6 @@
 import iris
 import numpy as np
+import numpy.ma as ma
 import cartopy.crs as ccrs
 
 import iris.analysis
@@ -20,6 +21,7 @@ import matplotlib.colors as mcolors
 import math
 
 import sys
+import copy
 sys.path.append('../../libs/')
 sys.path.append('libs/')
 sys.path.append('SoW_info/')
@@ -46,7 +48,7 @@ def plot_BayesModel_maps(Sim, levels = None, cmap = 'gradient_reds', ylab = '', 
         if Sim.dim_coords[0].name() == collapse_dim:
             
             pSim = Sim[0:2].copy()
-            pSim.data = np.nanpercentile(Sim.data, [10, 95], axis = 0)
+            pSim.data = np.nanpercentile(Sim.data, [10, 90], axis = 0)
             Sim = pSim
             #set_trace()
             #Sim = Sim.collapsed(collapse_dim, iris.analysis.PERCENTILE, percent=[5, 95])
@@ -72,7 +74,9 @@ def plot_BayesModel_maps(Sim, levels = None, cmap = 'gradient_reds', ylab = '', 
         #plot_map_sow(cube, plot_name,  cmap = SoW_cmap[cmap], levels=levels, ax=ax, cbar_label = "", **kw, **kw2)
         #set_trace()
         try:
-            plot_annual_mean(cube, levels, cmap, plot_name = plot_name, scale = scale,                      Nrows = Nrows, Ncols = Ncols, plot_n = plot_n + plot0, *args, **kw, **kw2)
+            plot_annual_mean(cube, levels, cmap, plot_name = plot_name, scale = scale,      
+                             Nrows = Nrows, Ncols = Ncols, plot_n = plot_n + plot0, 
+                             *args, **kw, **kw2)
         except:
             set_trace()
         if plot_n == 1:
@@ -284,8 +288,6 @@ def hist_limits(dat, lims = None, nlims = 5, symmetrical = True):
     
     return (lims, extend)
 
-import numpy as np
-
 def concat_cube_data(cubes):
     """
     Concatenate data from a list of Iris cubes into one flat NumPy array,
@@ -325,11 +327,21 @@ def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = None, force0 = Fal
             data = data.data
         except:
             pass
+    
+    try:
+        data = data[data>data.min()]
+        data = data[data<data.max()]
+        data = data[data>np.percentile(data, 5)]
+        data = data[data<np.percentile(data, 95)]
+    except:
+        pass
     # Flatten data and mask NaNs
     try:
         data = np.ma.masked_invalid(np.ravel(data))
     except:
         set_trace()
+
+    
     data = data[np.abs(data) < 9E9]
     if ignore_v is not None:
         data = data[data != ignore_v]
@@ -358,7 +370,11 @@ def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = None, force0 = Fal
         return mantissa * magnitude
 
     levels_rounded = sorted(set([nice_round(lv) for lv in levels_raw]))
-
+    if data.min() > 300 and len(levels_rounded) == 1:
+        levels_raw = levels_raw - 300
+        levels_rounded = sorted(set([nice_round(lv) for lv in levels_raw]))
+        levels_rounded = np.array(levels_rounded) + 300
+        
     # Ensure levels are strictly increasing and unique
     while len(levels_rounded) <= 2 and n_levels < 20:
         n_levels += 2  # try with more bins if too few unique rounded levels
@@ -371,14 +387,18 @@ def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = None, force0 = Fal
         levels_rounded[levels_rounded < 1/1000.0] = 1/1000.0
         levels_rounded = np.log(levels_rounded) / ratio
         data =  np.log(data ) / ratio
-        
+    
+
+    power10 = 10 ** np.floor(np.log10(levels_rounded.max())) 
+    threshold = 0.0001 * power10   
+    #levels_rounded = levels_rounded[levels_rounded >= threshold]
+
     if force0 or (any(levels_rounded < 0) and any(data > 0)) or \
             (any(levels_rounded > 0) and any(data < 0)):
         levels_rounded = np.sort(np.unique(np.append(levels_rounded, - levels_rounded)))
         
     if ratio is not None:
         levels_rounded = np.exp(levels_rounded)
-        
         try:
             levels_rounded = np.vectorize(nice_round)(levels_rounded)
         except:
@@ -389,26 +409,28 @@ def auto_pretty_levels(data, n_levels=7, log_ok=True, ratio = None, force0 = Fal
     #    set_trace()
     #if len(levels_rounded) < 4:
     #    set_trace()
+    
+    #if len(levels_rounded) == 2:
+    #set_trace() 
     if len(levels_rounded) < 2:
-        levels_rounded = levels_rounded + np.array([-0.001, 0, 0.001])
+        if levels_rounded == 100:
+            levels_rounded = np.array([99.9, 99.99, 100])        
+        else:
+            levels_rounded = levels_rounded + np.array([-0.001, 0, 0.001])
+
+    
     return levels_rounded
 
-def add_overlay_value(cube, value, col, ax):
-    '''
-    import matplotlib.colors as mcolors
-    
-    ax.imshow((cube.data == 0), origin='lower', cmap=mcolors.ListedColormap(['none', 'black']), alpha=0.3,
-          extent=[cube.coord('longitude').points.min(), cube.coord('longitude').points.max(),
-                  cube.coord('latitude').points.min(), cube.coord('latitude').points.max()])
-    '''
-    
-
-
+def add_overlay_value(cube, value, col, ax):    
     # --- Create a binary mask for where cube == 0 ---
-    zero_mask = (cube.data == value)
     
+    if isinstance(value, list):
+        zero_mask = (cube.data  > value[0]) &  (cube.data < value[1])
+    else:
+        zero_mask = (cube.data == value)
+        
     # Create a new cube with 1 where data == 0, masked elsewhere
-    import copy
+    
     highlight_cube = copy.deepcopy(cube)
     highlight_cube.data = zero_mask.astype(float)
     highlight_cube.data[~zero_mask] = np.nan  # Mask non-zero
@@ -422,6 +444,31 @@ def add_overlay_value(cube, value, col, ax):
     # --- Overlay the mask ---
     iplt.contourf(highlight_cube, levels=[0.5, 1.5], cmap=highlight_cmap, norm=highlight_norm, axes=ax, add_colorbar=False)
 
+def add_overlay_cube(cube, values, cols, size, ax):
+    
+    data = cube.data  # NumPy array
+    lats = cube.coord('latitude').points
+    lons = cube.coord('longitude').points
+
+    # If 1D → turn into 2D with meshgrid to match data shape
+    if lats.ndim == 1 and lons.ndim == 1:
+        lons2d, lats2d = np.meshgrid(lons, lats)
+    else:
+        lats2d = lats
+        lons2d = lons
+    
+    for i, val in enumerate(values):
+        idx_mod = np.where(data  == val)
+        lat_mod = lats2d[idx_mod]
+        lon_mod = lons2d[idx_mod]
+
+        ax.scatter(
+            lon_mod, lat_mod,   
+            s=(i+1)*size/len(values), c='white', edgecolor='white', linewidth=0.001,
+            transform=ccrs.PlateCarree()
+        )   
+        
+
 
 def get_cube_extent(cube):
     lon_min = cube.coord('longitude').points.min()
@@ -430,8 +477,10 @@ def get_cube_extent(cube):
     lat_max = cube.coord('latitude').points.max()
     return [lon_min, lon_max, lat_min, lat_max]
 
-def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, figsize = None, size_scale = 4,
-                            flatten = True):
+def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, extent = None, figsize = None, 
+                            size_scale = 4, flatten = True, transpose = False,
+                            oma = [0.5, 0.1, 0.25, 0.1],
+                            *args, **kw):
     """
     Creates a grid of Cartopy map subplots with a consistent geographic extent.
 
@@ -463,24 +512,48 @@ def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, figsize = None, size_scale 
     - Automatically adjusts figure size based on aspect ratio of the geographic extent.
     - Intended for plotting multiple maps side-by-side with shared spatial context.
     """
-    extent = get_cube_extent(eg_cube)
-    extent[0] -= (extent[1] - extent[0])*0.1
-    extent[1] += (extent[1] - extent[0])*0.1
-    extent[2] -= (extent[3] - extent[2])*0.1
-    extent[3] += (extent[3] - extent[2])*0.1
+    if extent is None:
+        extent = get_cube_extent(eg_cube)
+        if extent[0] < -175.0 and extent[1] > 175.0:
+            extent[0] = -180.0
+        extent[0] -= (extent[1] - extent[0])*0.1
+        extent[1] += (extent[1] - extent[0])*0.1
+        extent[2] -= (extent[3] - extent[2])*0.1
+        extent[3] += (extent[3] - extent[2])*0.1
+
     if figsize is None:
-        ratio = (extent[3] - extent[2])/(extent[1] - extent[0])
+        ratio = (extent[3] - extent[2])/(extent[1] - extent[0])*1.1
         figsize = (n_cols*size_scale, n_rows * size_scale * ratio)
         print("Automated figure size: " + str(figsize))
         
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize, 
-                             subplot_kw={'projection': ccrs.PlateCarree()})
     
-    for ax in axes.flat:
-        ax.set_extent(extent, crs=ccrs.PlateCarree())
+    if oma is not None:
+        figsize = (figsize[0] + oma[1] + oma[3], figsize[1] + oma[0] + oma[2])
+        
+        
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize, 
+                             subplot_kw={'projection': ccrs.PlateCarree()}, 
+                             #constrained_layout=True,
+                             *args, **kw)
 
-    # Flatten axes for easy indexing
-    if flatten: axes = axes.flatten()
+    fig_w, fig_h = figsize
+    if oma is not None:
+        fig.subplots_adjust(left = oma[1] / fig_w,
+                            right = 1 - (oma[3] / fig_w),
+                            bottom = oma[0] / fig_h,
+                            top = 1 - (oma[2] / fig_h),
+                            wspace=0.2,
+                            hspace=0.2)
+    
+    if transpose: axes = np.transpose(axes)
+    try:
+        for ax in axes.flat:
+            ax.set_extent(extent, crs=ccrs.PlateCarree())
+        # Flatten axes for easy indexing
+        if flatten: axes = axes.flatten()
+    except: 
+        axes.set_extent(extent, crs=ccrs.PlateCarree())
+    
     return fig, axes
  
 
@@ -571,12 +644,40 @@ def add_confidence(cube_pvs, ax):
     conf_lat = lat2d[mask]
 
     # Plot dots
-    ax.plot(conf_lon, conf_lat, 'k.', markersize=2.5, transform=ccrs.PlateCarree(), zorder=10)   
+    ax.plot(conf_lon, conf_lat, 'k.', markersize=2.5, transform=ccrs.PlateCarree(), zorder=10)  
+'''
+def point_based_legend():
 
-def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_BlueRed'], 
-             levels = None, extend = 'both', ax=None,
-             cbar_label = '', overlay_value = None, overlay_col = "#cfe9ff",
-             cube_pvs = None, add_cbar = True, figure_filename = None, *args, **kw):
+# Create labels like "A to B"
+labels = [f"{levels[i]} to {levels[i+1]}" for i in range(len(levels)-1)]
+
+# Create legend handles
+handles = []
+for i in range(len(levels)-1):
+    color = cmap(norm((levels[i] + levels[i+1]) / 2))
+    handles.append(
+        Line2D([0], [0],
+               marker='o',
+               color='none',
+               markerfacecolor=color,
+               markersize=8,
+               label=labels[i])
+    )
+
+# Add legend
+ax = plt.gca()
+ax.legend(handles=handles, title="Range") 
+'''
+def plot_map_sow(cube, title='', contour_obs=None, scatter_obs = None, 
+                 cmap=SoW_cmap['diverging_BlueRed'], 
+                 levels = None, extend = 'both', ax=None,
+                 cbar_label = '', cbar_orientation = 'vertical',
+                 tick_labels = None,
+                 overlay_value = None, overlay_cube = None,
+                 overlay_col = "#cfe9ff", overlay_size = 1,
+                 cube_pvs = None, add_cbar = True, figure_filename = None, use_pcolmesh = True,
+                 cbar_lab_rotate = None, cbar_top_and_bottom = False,
+                 *args, **kw):
     """
     Plot a SoW-style map of fire (or climate) data with optional overlays and confidence markers.
 
@@ -625,13 +726,27 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
     # Main filled contour
     if levels is  None:
         levels = auto_pretty_levels(cube.data, *args, **kw)
-        
+        if levels.max() > 10 and levels.min() > 0 and levels.min() < 0.01:
+            levels = np.append(0,  levels[levels > 0.01])
+        elif levels.max() > 1 and levels.min() > 0 and levels.min() < 0.001:
+            levels = np.append(0,  levels[levels > 0.001])
         if extend == 'max' and levels[0]>0.0:
             levels = np.append(0, levels[1:])
         if extend == 'max'  and len(levels) > 2: levels = levels[:-1]
             
     elif isinstance(levels, str) and levels == 'auto':
         levels = None
+    
+    if  extend is None:
+        if levels.max() == 100.0:
+            if levels.min() == 0.0:
+                extend = 'neither'
+            else:
+                extend = 'min'
+        elif levels.min() == 0.0:
+            extend = 'max'
+        else:
+            extend = 'both'
     if is_catigorical:
         norm = BoundaryNorm(boundaries=np.array(levels) + 0.5, ncolors=cmap.N)
     elif levels is not None:   
@@ -639,26 +754,100 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
     else:
         norm = None
     
-    img = iplt.contourf(cube, levels=levels, cmap=cmap, axes=ax, extend = extend, 
-                        norm = norm)
+    if use_pcolmesh:
+        img = iplt.pcolormesh(cube,cmap=cmap, axes=ax, 
+                            norm = norm)
+    else:
+        img = iplt.contourf(cube, levels=levels, cmap=cmap, axes=ax, extend = extend, 
+                            norm = norm)
 
-    if overlay_value is not None:
+
+    ## Create mask: 1 where NaN, 0 where valid
+    #nan_mask = cube.data.copy()
+    #nan_mask.mask[:] = False
+    #nan_mask.data[cube.data.mask] = 0
+    #nan_mask.data[~cube.data.mask] = 1
+    ##
+    ## Plot boundary where mask changes
+    #ax.contour(cube.coord('longitude').points, cube.coord('latitude').points, nan_mask,
+    #    levels=[0.5], colors='black', linewidths=1)
+    
+    if overlay_cube is not None:
+        add_overlay_cube(overlay_cube, overlay_value, overlay_col, overlay_size, ax)
+    elif overlay_value is not None:
         add_overlay_value(cube, overlay_value, overlay_col, ax)
-
     if cube_pvs is not None:
         add_confidence(cube_pvs, ax)
     if add_cbar:
         if is_catigorical:
             tick_positions = np.array(levels) + 0.5
             tick_labels = [str(level) for level in levels]
-            cbar = plt.colorbar(img, ax=ax, orientation='vertical',
-                                ticks=tick_positions)
+            cbar = plt.colorbar(img, ax=ax, 
+                                orientation=cbar_orientation,
+                                ticks=tick_positions,
+                                fraction=0.046,  # width of colorbar relative to figure
+                                pad=0.05)
             cbar.ax.set_yticklabels(tick_labels) 
         else:
-            cbar = plt.colorbar(img, ax=ax, ticks=levels, orientation='vertical')
+            divider = make_axes_locatable(ax)
+            side = "right" if cbar_orientation == "vertical" else "bottom"
+            cax = divider.append_axes(side, size=0.08, pad=0.32, axes_class=plt.Axes)
+
+            cbar = plt.colorbar(
+                img, cax=cax,
+                orientation = cbar_orientation,
+                ticks=levels
+            )
+            
+            #cbar = plt.colorbar(img, ax=ax, ticks=levels, orientation=cbar_orientation,
+            #                    fraction=0.05, # width of colorbar relative to figure
+            #                    pad=0.15, shrink=1.0, aspect=40)
+            
+            if tick_labels is not None: cbar.set_ticklabels(tick_labels)
         cbar.set_label(cbar_label, labelpad=10, loc='center')
         cbar.ax.xaxis.set_label_position('top')
-     
+        if cbar_lab_rotate != 0:
+            cbar.ax.set_xticklabels(cbar.ax.get_xticklabels(), rotation=cbar_lab_rotate)
+        if cbar_top_and_bottom:
+            # --- Get ticks dynamically ---
+            if cbar_orientation == 'horizontal':
+                ticks = cbar.ax.get_xticks()
+                axis = cbar.ax.xaxis
+                transform = cbar.ax.get_xaxis_transform()
+                is_horizontal = True
+            else:
+                ticks = cbar.ax.get_yticks()
+                axis = cbar.ax.yaxis
+                transform = cbar.ax.get_yaxis_transform()
+                is_horizontal = False
+            
+            # Remove default tick labels
+            axis.set_ticklabels([])
+            
+            # --- Add alternating labels ---
+            for i, t in enumerate(ticks):
+                offset = 1.4 if i % 2 == 0 else -0.4  # above / below (or left/right)
+                va = 'bottom' if i % 2 == 0 else 'top'
+                ha = 'center'
+            
+                if is_horizontal:
+                    x, y = t, offset
+                else:
+                    x, y = offset, t
+                    ha = 'left' if i % 2 == 0 else 'right'
+                    va = 'center'
+                
+                if tick_labels is None:
+                    lab = f"{t:g}"
+                else:
+                    lab = tick_labels[i]
+                cbar.ax.text(
+                    x, y, lab,   # nice formatting
+                    transform=transform,
+                    ha=ha, va=va,
+                    rotation=cbar_lab_rotate
+                )
+         
     # Add boundaries
     ax.add_feature(cfeature.COASTLINE, linewidth=0.5)
     ax.add_feature(cfeature.RIVERS, linewidth=0.5)
@@ -667,7 +856,28 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
 
     # Optional observed burned area anomaly contour
     if contour_obs is not None:
-        qplt.contour(contour_obs, levels=[0], colors='#8a3b00', linewidths=1, axes=ax)
+        qplt.contour(contour_obs, levels=[0], colors='#999999', linewidths=1, axes=ax)
+        #masked = ma.masked_where(contour_obs.data != 1, contour_obs.data)
+        #set_trace()
+        #qplt.scatter(masked, c='#724B49', s=10, marker='o')
+        
+    if scatter_obs is not None:
+        # Find where values == 1
+        mask = scatter_obs.data == 1
+        
+        # Get coordinates (adjust names if needed)
+        lons = cube.coord('longitude').points
+        lats = cube.coord('latitude').points
+
+        # Create 2D grids if needed
+        lon2d, lat2d = np.meshgrid(lons, lats)
+
+        # Plot only the points where value == 1
+        
+        ax.scatter(lon2d[mask], lat2d[mask],
+                s=2000/(scatter_obs.shape[1]**2), 
+                c='#000000', marker='o', transform=ccrs.PlateCarree())
+        
 
     print(title)
     ax.set_title(title, fontsize = 12)

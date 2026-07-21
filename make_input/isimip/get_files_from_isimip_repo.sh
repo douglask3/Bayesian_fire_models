@@ -1,1 +1,1 @@
-wget -i filelist.txt -P /scratch/dkelley/Bayesian_fire_models/temp/isimip/ -nc --continue
+wget -i filelist.txt -P /data/scratch/douglas.kelley/Bayesian_fire_models/temp/isimip/ -nc --continue

@@ -8,7 +8,7 @@ from plot_attribution_scatter import *
 from scipy.ndimage import gaussian_filter1d
 
 def effect_ratio_and_rr_over_range(factual_flat, counterfactual_flat, 
-                                   obs, plot_name, add_RR = True, ax = None):
+                                   obs, plot_name, add_RR = True, ax = None, *args, **kw):
     effect_ratio = factual_flat/counterfactual_flat
     
     try:

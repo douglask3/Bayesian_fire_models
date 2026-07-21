@@ -1,16 +1,24 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+import seaborn as sns
 
+import sys
+sys.path.append('SoW_info/')
+from state_of_wildfires_colours  import SoW_cmap
+from state_of_wildfires_region_info  import get_region_info
+
+from pdb import set_trace
 def pseudo_log(y):
     """Safe log-like transform that handles zero."""
-    return np.sign(y) * np.log1p(np.abs(y))
+    return np.sign(y) * np.log(1+ np.abs(y))
 
 def pseudo_log_inverse(y_log):
     """Inverse of pseudo_log, to convert tick labels back to real units."""
     return np.sign(y_log) * (np.expm1(np.abs(y_log)))
 
-def scatter_each_x_vs_y(x_filen_list, X, Y, cmap='viridis', bins=20):
+def scatter_each_x_vs_y(x_filen_list, X, Y, 
+                        cmap = SoW_cmap['gradient_hues_extended'], bins=20):
     if X.shape[1] != len(x_filen_list):
         raise ValueError("Length of x_filen_list must match number of columns in X")
     if X.shape[0] != Y.shape[0]:
@@ -24,12 +32,14 @@ def scatter_each_x_vs_y(x_filen_list, X, Y, cmap='viridis', bins=20):
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 3.5 * n_rows), squeeze=False)
 
     # Sensible ticks and their pseudo-log-transformed positions
-    y_real_ticks = [0.3, 1, 3, 10, 30, 100]
+    y_real_ticks = [0.00, 0.1, 0.3, 1, 3, 10, 30, 100]
     y_log_ticks = pseudo_log(np.array(y_real_ticks))
     for i in range(N):
         row, col = divmod(i, n_cols)
         ax = axes[row][col]
-        hb = ax.hexbin(X[:, i], Y_log, gridsize=bins, cmap=cmap, mincnt=1, linewidths=0.2)
+        #set_trace()
+        hb = sns.kdeplot(x = X[:,i], y = Y_log, fill = True, ax = ax, cmap=cmap)
+        #hb = ax.hexbin(X[:, i], Y_log, gridsize=bins, cmap=cmap, mincnt=1, linewidths=0.2)
 
         # In-plot title
         ax.text(0.05, 0.95, x_filen_list[i], ha='left', va='top',
@@ -69,7 +79,7 @@ def scatter_each_x_vs_y(x_filen_list, X, Y, cmap='viridis', bins=20):
     plt.subplots_adjust(right=0.92)
 
     # Shared colorbar
-    cbar_ax = fig.add_axes([0.95, 0.15, 0.01, 0.7])
-    cbar = fig.colorbar(hb, cax=cbar_ax)
-    cbar.set_label("Point Density")
+    #cbar_ax = fig.add_axes([0.95, 0.15, 0.01, 0.7])
+    #cbar = fig.colorbar(hb, cax=cbar_ax)
+    #cbar.set_label("Point Density")
     return fig

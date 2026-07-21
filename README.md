@@ -58,7 +58,7 @@ Follow these steps to install the necessary software and dependencies:
     ```
 
 ## Obtaining Driving Data
-The driving data required for the models are listed [here](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/Datasets). Once you have downloaded the dataset you want, save it to the `data/data/driving_data/` directory within the project folder or update the path in the corresponding configuration file (see below) to its location.
+The driving data required for the models are listed [here](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/Datasets.md). Once you have downloaded the dataset you want, save it to the `data/data/driving_data/` directory within the project folder or update the path in the corresponding configuration file (see below) to its location.
 
 ## Configuration Settings
 Configuration settings can be found in the text files in `namelists\` dir. [namelists/nrt-evaluation.txt](https://github.com/douglask3/Bayesian_fire_models/blob/main/namelists/Pantanal_example.txt) is quite a good simple example that works for [ConFLAME](https://github.com/douglask3/Bayesian_fire_models/blob/main/README/ConFLAME.md). There are some model speific parameters, so you'll have to check specific under [Model Setup](#model-setup). But this is common to all models.

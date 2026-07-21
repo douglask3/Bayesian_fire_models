@@ -49,6 +49,7 @@ class ConFire(object):
             X_i = X[:,ids]
             if self.powers is not None:
                 powers_i = self.powers[cid]
+                
                 X_i = self.numPCK.power(powers_i, X_i)  
                 #mask = self.numPCK.where(self.powers[cid] < 1)
                 #X_i[:,mask] = 2-X_i[:,mask]
