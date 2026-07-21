@@ -15,16 +15,16 @@ if __name__=="__main__":
     region_names = [
                     #"Midwestern Canadian Shield forests",
                     #"Chilean Temperate Forests and Matorral",
-                    #"Northwest Iberia",
+                    "Northwest Iberia",
                     #"Scottish Highlands",
-                    "Southeast South Korea"
+                    #"Southeast South Korea"
                     ]
 
            
     #set_trace()
-    run_era5_download_for_report(shapefile_path, region_names,  out_dir)
+    #run_era5_download_for_report(shapefile_path, region_names,  out_dir)
     
-    make_era5_extra_vars(data_dir + '/nrt_raw/', region_names)
+    #make_era5_extra_vars(data_dir + '/nrt_raw/', region_names)
     
     temp_dir = data_dir + "/hadgem_nrt2/"
     
@@ -35,5 +35,5 @@ if __name__=="__main__":
                           region_names = region_names,
                           shapefile_path = shapefile_path)
     
-    regrid_hyde_for_regions(region_names, data_dir) 
+    #regrid_hyde_for_regions(region_names, data_dir) 
     
