@@ -138,7 +138,7 @@ def plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 1, Nrows = 3, Nco
     #    pass
     
     Sim_p = Sim[1].copy()
-    #Sim_p.data[Obs.data == 0] = np.nan
+    Sim_p.data[Obs.data == 0] = np.nan
     
     plot_BayesModel_maps(Sim_p, [0.0, 0.5, 0.75, 0.9, 0.95, 0.99, 1.0], 
                         'gradient_teal', '', None, 
@@ -217,7 +217,7 @@ def compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, levels, cmap
                          Nrows = 3, Ncols = 3, scale = 100,
                          extend = 'max',
                          figure_filename = figure_dir)
-     
+    
     plot_BayesModel_signifcance_maps(Obs, Sim, lmask, plot_n = 4, Nrows = 3, Ncols = 3,
                                      figure_filename = figure_dir)
     
@@ -255,6 +255,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
                           other_params_file = None, CA_filen = None, 
                           model_class = FLAME,
                           link_func_class = MaxEnt, hyper = True, sample_error = True,
+                          test_eg_cube = True,
                           dir = '', 
                           dir_outputs = '', 
                           fig_dir = None, 
@@ -361,6 +362,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
         'class_object': model_class,
         'link_func_class': link_func_class,
         'hyper': hyper,
+        'test_eg_cube': test_eg_cube,
         'sample_error': sample_error,
         'trace': trace,
         'extra_params': extra_params,
@@ -372,8 +374,9 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
         'grab_old_trace': grab_old_trace,
         'data_store': dir_optimisation_data,  
         'common_noise': common_noise}
-    Sim = runSim_MaxEntFire(**common_args, run_name = control_run_name, test_eg_cube = True)
-     
+    
+    Sim = runSim_MaxEntFire(**common_args, run_name = control_run_name)
+    
     if run_only: 
         if return_inputs: 
             return Sim, Y, X, lmask, scalers 

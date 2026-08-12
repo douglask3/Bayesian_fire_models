@@ -25,12 +25,14 @@ except:
     pass
 
 def call_eval(training_namelist, namelist,
-              control_run_name, extra_params = None, run_only = True, *args, **kw):
+              control_run_name, extra_params = None, run_only = True, 
+              test_eg_cube = False, *args, **kw):
     
     return evaluate_MaxEnt_model_from_namelist(training_namelist, namelist,
                                                run_only = run_only, 
                                                control_run_name = control_run_name,
-                                               extra_params = extra_params, *args, **kw)
+                                               extra_params = extra_params, 
+                                               test_eg_cube = test_eg_cube, *args, **kw)
     
    
 def Standard_limitation(training_namelist, namelist,
@@ -275,6 +277,7 @@ def run_experiment(training_namelist, namelist, control_direction,
     Evaluate, Y, X, lmask, scalers  = call_eval(training_namelist, namelist,
                         name + '/Evaluate', run_only = run_only, return_inputs = True,
                         filename_out_ext = 'stochastic', fig_dir = fig_dir, 
+                        test_eg_cube = True,
                         *args, **kws)
 
     Control, Y, X, lmask, scalers  = call_eval(training_namelist, namelist,
@@ -282,6 +285,7 @@ def run_experiment(training_namelist, namelist, control_direction,
                         Y = Y, X = X, lmask = lmask, scalers = scalers,
                         sample_error = False, filename_out_ext = 'none_stochastic',
                         fig_dir = fig_dir,
+                        test_eg_cube = True,
                         *args, **kws)
     
         
@@ -334,9 +338,9 @@ def run_experiment(training_namelist, namelist, control_direction,
                                    control_colours = control_colours,
                                    output_path = fig_dir + \
                                             ltype + 'controls_maps.png')
-
+            
             limitation_TS = np.array([make_both_time_series(time_series_percentiles, \
-                                                        cube[0], \
+                                                        cube, \
                                                         ltype + '-' + name, out_dir_ts, \
                                                         grab_old = grab_old) \
                                for cube, name in zip(limitation, control_names)])
@@ -487,7 +491,7 @@ def run_ConFire(namelist):
                     for name, dir, expt, yfile, common_noise \
                         in zip(names_all, dirs_all, exp_type, y_filen, common_noises)
                 ]
-        #args_list.reverse()
+        args_list.reverse()
 
         
         if len(args_list) > 1 and select_from_info('parallelize', True): 
