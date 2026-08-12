@@ -73,14 +73,14 @@ if __name__=="__main__":
     dir1 = "outputs/outputs_scratch/SoW2526/attribution-HadGEM-test29-fuelcf4-rerun2/"
     dir2 = "/_16-frac_points_0.5/" 
 
-    regions = ["Northwest Iberia", "Midwestern Canadian Shield forests", "Chilean Temperate Forests and Matorral"]
+    regions = ["Scottish Highlands", "Northwest Iberia", "Midwestern Canadian Shield forests", "Chilean Temperate Forests and Matorral"]
     #regions = "Northwest_Iberia"
-    mnthss = [[7], [6, 7], [0,1]]#, c('06', '07'), c('03'))
-    years = [2025, 2025, 2026]#, 2025, 2025)
+    mnthss = [[2, 3, 4, 5,6, 7], [7], [6, 7], [0,1]]#, c('06', '07'), c('03'))
+    years = [2025, 2025, 2025, 2026]#, 2025, 2025)
 
     obs_dir = 'data/data/driving_data2526/'
-    obs_file_nc = 'nrt/factual/burned_area.nc' 
-    obs_file_csv = 'nrt/factual/burned_area.csv'  
+    obs_file_nc = 'nrt24/factual/burned_area.nc' 
+    obs_file_csv = 'nrt24/factual/burned_area.csv'  
     
     for region, mnths, year in zip(regions, mnthss, years):
         attribution_analysis(dir1, dir2, obs_dir, region = region.replace(' ', '_'), year = year, mnths = mnths,
