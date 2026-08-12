@@ -207,7 +207,7 @@ att_af_calc <- function(dir, region,factual_name, cfactual_name, exp, mnths, yea
     
     fact = openDat(dir, region, factual_name, exp, cell_sample, mnths, years)
     cfact = openDat(dir, region, cfactual_name, exp, cell_sample, mnths, years)
-
+    
     if (is.null(samples)) {
         if (is.null(BA))
             if (background_BA)
@@ -222,6 +222,7 @@ att_af_calc <- function(dir, region,factual_name, cfactual_name, exp, mnths, yea
             samples = sample(1:length(prob), 1000, TRUE, prob)
         }
     } else {
+        samples0 = samples
         samples = samples[[1]]
         BA = samples[[2]]
     }
@@ -230,8 +231,8 @@ att_af_calc <- function(dir, region,factual_name, cfactual_name, exp, mnths, yea
         fact = sort(fact) + 0.0000001
         cfact = sort(cfact) + 0.0000001
     } else {
-        fact = fact[samples]
-        cfact = cfact[samples] 
+        fact = sort(fact[samples])
+        cfact = sort(cfact[samples] )
     }
     plot_af(fact/cfact, xp + xoffset, ...)
     return(list(samples, BA))
@@ -544,7 +545,7 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
 }
 
 plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NULL, reduced = TRUE) {
-    if (region == regions[2]) return()
+    if (region != regions[4]) return()
     extra_filename = paste(cell_sample, c('', 'reduced')[reduced+1], 
                  c('event', 'background')[background_BA+1], region, sep = '-')
     csv_out = paste0("outputs/SoW_att_outlook", extra_filename, '.csv')
@@ -573,14 +574,14 @@ plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NU
 
 cols = c("#B50000", "#E98400", "#0096A1")#, "#EE0074")#, "purple", "grey")
 
-HadGEM_dir = "outputs/outputs_scratch/SoW2526/attribution-HadGEM-test29-fuelcf4/<<region>>/time_series/_16-frac_points_0.5/"
+HadGEM_dir = "outputs/outputs_scratch/SoW2526/attribution-HadGEM-test29-fuelcf4-rerun2/<<region>>/time_series/_16-frac_points_0.5/"
 #ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-4-notree-notreechange/<<region>>/time_series/_15-frac_points_0.5/"
 ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-11-notree-notreechange-noGP/<<region>>/time_series/_15-frac_points_0.5/"
 ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-5-notree-notreechange/<<region>>/time_series/_15-frac_points_0.5/"
 gcms = c("GFDL-ESM4-", "IPSL-CM6A-LR-", "MPI-ESM1-2-HR-", "MRI-ESM2-0-", "UKESM1-0-LL-")
 
 regions = c("Northwest Iberia", "Midwestern Canadian Shield forests", 
-            "Chilean Temperate Forests and Matorral")
+            "Chilean Temperate Forests and Matorral", "Scottish Highlands")
             #, "Scottish_Highlands", "Southeast_South_Korea")
 
 
@@ -588,12 +589,13 @@ ylim2 = list(NULL, NULL, NULL)
 
 ylim1 = list(list(c(0.65, 9E9), c(0.65, 9E9),c(-100, 20)),
              list(c(0.65, 9E9), c(0.8, 1.6), c(-18,5)),
-             list(c(0.65, 9E9), c(0.75, 4.2), c(-52, 5)))
+             list(c(0.65, 9E9), c(0.75, 4.2), c(-52, 5)),
+             list(c(0,9E9), c(0, 9E9), c(-100, 100)))
 #ylim1 = list(list(c(0.48, 9E9), c(0.85, 4.2),c(-200, 200)),
 #             list(c(0.65, 9E9), c(0.65, 9), c(-200,200)),
 #             list(c(0.5, 9E9), c(0.75, 6.5), c(-200, 200)))
-years = list(2025, 2025, 2026)#, 2025, 2025)
-mnths = list(c('08'), c('07', '08'), c('01', '02', '03'))#, c('06', '07'), c('03'))#
+years = list(2025, 2025, 2026, 2025)#, 2025, 2025)
+mnths = list(c('08'), c('07', '08'), c('01', '02', '03'), c('06', '07'))#, c('06', '07'), c('03'))#
 cell_sample = "mean"
 background_BA = FALSE
 BA_varname = "Evaluate"
@@ -602,7 +604,8 @@ mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2)
 #mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)
 ylim1 = list(list(c(0.48, 9E9), c(0, 9E9),c(-100, 20)),
              list(c(0.65, 9E9), c(0.8, 1.8), c(-25,5)),
-             list(c(0.65, 9E9), c(0.75, 4.2), c(-52, 5)))
+             list(c(0.65, 9E9), c(0.75, 4.2), c(-52, 5)),
+             list(c(0,9E9), c(0, 9E9), c(-100, 100)))
 
 cell_sample = "pc-95.0"
 #mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2)
