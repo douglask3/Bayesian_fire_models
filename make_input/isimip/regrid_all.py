@@ -14,6 +14,10 @@ import math
 import glob
 import hashlib
 
+import cartopy.io.shapereader as shpreader
+import shapely.geometry as sgeom
+from shapely.ops import unary_union
+
 import matplotlib.pyplot as plt
 from pdb import set_trace
 
@@ -126,14 +130,17 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
             save_ncdf(mdat, var + '_mean') 
             open(temp_file, 'a').close()   
 
-    def cal_cover(cover_vars, name):
+    def cal_cover(cover_vars, name, minus1 = False, logT = False):
         print(name)
         dat = open_variable(cover_vars[0])
         
         for i in cover_vars[1:]:
             dat.data = dat.data + open_variable(i).data
         dat.rename(name)
-        
+        if minus1:
+            dat.data *= -1
+        if logT:
+            dat.data = np.log(dat.data)
         save_ncdf(dat, name + '_jules-es')
         return dat
     print("\tFinding Montly means for")
@@ -143,7 +150,7 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
     
     print("\tprocessing variables")
     temp_file = generate_temp_fname(temp_out, 'cover')
-    if test_if_process('cover', temp_file):
+    if test_if_process('cover_log', temp_file):
         print("\t\tcover")
         tree_vars = ["bdldcd", "bdlevgtemp", "bdlevgtrop", "ndldcd", "ndlevg", \
                      "shrubdcd", "shrubevg"]
@@ -153,7 +160,9 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
         try:
             cal_cover(tree_vars, 'tree_cover')
             cal_cover(herb_vars, 'nonetree_cover')
-            cal_cover(herb_vars, 'noneveg_cover')
+            cal_cover(soil_vars, 'noneveg_cover')
+            cal_cover(soil_vars, 'veg_cover', minus1 = True)
+            cal_cover(soil_vars, 'veg_cover_log', minus1 = True, logT = True)
             open(temp_file, 'a').close()
         except:
             print("WARNING!: missing natural cover information")
@@ -297,12 +306,13 @@ process_clim = ['vpd', 'tas', 'tas_range', 'pr', 'lightn']
 process_jules =['cover', 'crop', 'pasture', "urban"]
 
 example_cube = None
-grab_old_data = False
+grab_old_data = True
 
 
 
 def process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, years,
                            *args, **kw):
+    return None
     def process(process, dir):
         [make_variables_for_year_range(year, process, dir, *args, **kw) for year in  years]
     process(process_jules, dir_jules)
@@ -311,9 +321,10 @@ def process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, yea
     
 def for_region(subset_functions, subset_function_argss, 
                vcf_region_name, region_name = None, output_dir = '',
-               years = [[2010, 2012], [1901, 1920], [2000, 2019], [2002, 2019]],
+               years = [[2010, 2012], [1901, 1920], [2000, 2019]],
                hist_years = [[1994, 2014]], futr_years = [[2015, 2099]],
-               *args, **kw):   
+               *args, **kw):  
+    years += [[2002, 2019], [2000, 2019]] 
     dataset_name = 'isimp3a/obsclim/GSWP3-W5E5'
     dataset_name_control = dataset_name
     
@@ -411,16 +422,14 @@ def for_region(subset_functions, subset_function_argss,
     
     if region_name is None:
         region_name = subset_function_argss[0][next(iter(subset_function_argss[0]))]
+    
     if vcf_region_name == 'same': vcf_region_name = region_name + '/isimp3a/obsclim/GSWP3-W5E5/period_2002_2019/'
     
     obs_cover_dir = output_dir + vcf_region_name + '/'
-    
+
     output_years = '2002_2019'
-    years = [2002, 2019]
-    
-    files = os.listdir(obs_cover_dir)
-    files = [file for file in files if file[-3:] == '.nc']
-    
+    years = [2002, 2019]  
+
     def open_regrid_output_file(filename):
         
         if '-raw.nc' in filename or "_remasked.nc" in filename: return None
@@ -442,25 +451,37 @@ def for_region(subset_functions, subset_function_argss,
         iris.save(cube, out_fname)
         return cube
     
-    cubes = [open_regrid_output_file(filename) for filename in files]
+    try:
+        files = os.listdir(obs_cover_dir)
+        files = [file for file in files if file[-3:] == '.nc']
+        cubes = [open_regrid_output_file(filename) for filename in files]
+    except:
+        pass
     
-    
-    
-
-    mask_cube = iris.load_cube(output_dir + region_name + "/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019/pr_mean.nc")
+    mask_cube = iris.load_cube(output_dir + region_name + \
+                               "/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019/pr_mean.nc")
 
     def regrid_Burned_area(years):
         subset_function_argss[0]["mask"] = False
-        burned_area = read_variable_from_netcdf("data/data/burned_area_global.nc", 
-                                           subset_function = [sub_year_range]+subset_functions, 
-                                               subset_function_args =  [{'year_range': years}]\
-                                                                + subset_function_argss)
-        #yay = burned_area.copy()
+
+        subset_function = [sub_year_range]
+        subset_function_args = [{'year_range': years}]
+        if subset_functions is not None:
+            subset_function += subset_functions
+            subset_function_args += subset_function_argss
+
+
+        
+        burned_area = read_variable_from_netcdf("data/data/burned_area_global.nc", subset_function = subset_function, subset_function_args =  subset_function_args)
+        
         burned_area = burned_area.regrid(mask_cube[0], iris.analysis.Linear())
         
         #subset_function_argss[0]["mask"] = True
         #burned_area = subset_functions[0](burned_area, **subset_function_argss[0])
         burned_area.data[:, mask_cube[0].data.data > 9E9] = np.nan
+        burned_area = natural_earth_ocean_mask(burned_area)
+        # Apply mask
+        #burned_area.data = np.ma.masked_where(mask, burned_area.data)
         
         out_fname = output_dir + '/' + \
                     region_name + '/' + \
@@ -469,6 +490,7 @@ def for_region(subset_functions, subset_function_argss,
                     '/burned_area.nc'
         
         iris.save(burned_area, out_fname)
+    
     regrid_Burned_area([2002, 2019])
     regrid_Burned_area([2000, 2019])
 
