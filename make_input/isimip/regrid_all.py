@@ -35,8 +35,27 @@ def read_variable_from_netcdf_stack(filenames, example_cube = None,
     except:
     #    try:
         iris.util.equalise_attributes(cubes)
+
+        for cube in cubes:
+            for name in ["time", "latitude", "longitude"]:
+                coord = cube.coord(name)
+                coord.points = coord.points.astype("float32")
+            cube.coord("time").long_name = 'time'
+        
         cubes = cubes.concatenate_cube()
         #except:
+        #    for name in ["latitude", "longitude"]:
+        #        c0 = cubes[0].coord(name)
+        #        c1 = cubes[1].coord(name)
+        #        set_trace()
+        #        print(f"\n{name}")
+        #        print("points equal:", (c0.points == c1.points).all())
+        #        print("points shape:", c0.points.shape, c1.points.shape)
+        #        print("dtype:", c0.points.dtype, c1.points.dtype)
+        #        print("bounds:", c0.bounds, c1.bounds)
+        #        #print("axis:", c0.axis(), c1.axis())
+        #        print("standard_name:", c0.standard_name, c1.standard_name)
+        #        print("long_name:", c0.long_name, c1.long_name)
         #    set_trace()
     if example_cube is not None:
         example_cube = iris.load_cube(example_cube)
@@ -53,7 +72,7 @@ def generate_temp_fname(string1, string2):
 def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
                                   subset_functions, subset_function_argss, region_name, 
                                   output_dir):
-    
+     
     print("\tStarting extraction to make experiment")
     def test_if_process(var, temp_file = None):
         
@@ -69,6 +88,7 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
     print(temp_out)
     def open_variable(varname, MinusYr = False):
         filename = filenames[varname]
+        
         files =  glob.glob(dir + '*')
         if len(files) == 0:
             set_trace()
@@ -103,8 +123,8 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
         out = None
         
         try:
-            out = read_variable_from_netcdf_stack(filename, example_cube, dir,
-                                                  subset_function = sbs_funs, 
+            out = read_variable_from_netcdf_stack(filename, example_cube, dir,  
+                                                  subset_function = sbs_funs,  
                                                   subset_function_args = sbs_args)
         except:
             set_trace()
@@ -132,15 +152,17 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
 
     def cal_cover(cover_vars, name, minus1 = False, logT = False):
         print(name)
+        
         dat = open_variable(cover_vars[0])
         
         for i in cover_vars[1:]:
             dat.data = dat.data + open_variable(i).data
         dat.rename(name)
         if minus1:
-            dat.data *= -1
+            dat.data = 1-dat.data
         if logT:
             dat.data = np.log(dat.data)
+        
         save_ncdf(dat, name + '_jules-es')
         return dat
     print("\tFinding Montly means for")
@@ -149,24 +171,24 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
         standard_Monthly_mean(var, fun) 
     
     print("\tprocessing variables")
-    temp_file = generate_temp_fname(temp_out, 'cover')
-    if test_if_process('cover_log', temp_file):
+    temp_file = generate_temp_fname(temp_out, 'cover_log')
+    
+    if test_if_process('cover', temp_file):
         print("\t\tcover")
         tree_vars = ["bdldcd", "bdlevgtemp", "bdlevgtrop", "ndldcd", "ndlevg", \
                      "shrubdcd", "shrubevg"]
         herb_vars = ["c3crop", "c3grass", "c3pasture", "c4crop", "c4grass", "c4pasture"]
-        soil_vars = ["soil", "urban", "ice"] # water
+        veg_vars = tree_vars + herb_vars#["soil", "urban", "ice"] # water
+        
         cal_cover(tree_vars, 'tree_cover')
-        try:
-            cal_cover(tree_vars, 'tree_cover')
-            cal_cover(herb_vars, 'nonetree_cover')
-            cal_cover(soil_vars, 'noneveg_cover')
-            cal_cover(soil_vars, 'veg_cover', minus1 = True)
-            cal_cover(soil_vars, 'veg_cover_log', minus1 = True, logT = True)
-            open(temp_file, 'a').close()
-        except:
-            print("WARNING!: missing natural cover information")
-    
+        #try:
+        cal_cover(herb_vars, 'nonetree_cover')
+        cal_cover(veg_vars, 'veg_cover')
+        cal_cover(veg_vars, 'veg_cover_log', logT = True)
+        open(temp_file, 'a').close()
+        #except:
+        #    print("WARNING!: missing natural cover information")
+        
         try:
             temp_file = generate_temp_fname(temp_out, 'crop')
             if test_if_process('crop', temp_file)  : 
@@ -312,9 +334,10 @@ grab_old_data = True
 
 def process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, years,
                            *args, **kw):
-    return None
+    
     def process(process, dir):
         [make_variables_for_year_range(year, process, dir, *args, **kw) for year in  years]
+    #return None
     process(process_jules, dir_jules)
     process(process_clim, dir_clim)
     
@@ -426,7 +449,7 @@ def for_region(subset_functions, subset_function_argss,
     if vcf_region_name == 'same': vcf_region_name = region_name + '/isimp3a/obsclim/GSWP3-W5E5/period_2002_2019/'
     
     obs_cover_dir = output_dir + vcf_region_name + '/'
-
+    
     output_years = '2002_2019'
     years = [2002, 2019]  
 
