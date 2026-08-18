@@ -271,7 +271,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
                           Y = None, X = None, lmask = None, scalers = None, 
                           data_store = None, common_noise = False, 
                           *args, **kw):
-    #set_trace()
+    
     """ Runs prediction and evalutation of the sampled model based on previously run trace.
     Arguments:
         trace - pymc traces nc or nc fileiles, probably from a 'train_MaxEnt_model' run
@@ -390,8 +390,10 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
     compare_to_obs_maps(filename_out, dir_outputs, Obs, Sim, lmask, fig_dir = fig_dir,
                         *args, **kw)
     
-    Bayes_benchmark(filename_out, fig_dir, Sim, Obs, lmask)
-
+    try:
+        Bayes_benchmark(filename_out, fig_dir, Sim, Obs, lmask)
+    except:
+        pass
     if run_response_curves: 
         for ct in ["initial", "standard", "potential", "sensitivity"]:
             response_curve(curve_type = ct, x_filen_list = x_filen_list,
