@@ -34,6 +34,7 @@ def plot_BayesModel_maps(Sim, levels = None, cmap = 'gradient_reds', ylab = '', 
                          Nrows = 1, Ncols = 2, plot0 = 0, collapse_dim = 'realization',
                          scale = 1, figure_filename = None, set_traceT = False,
                          *args, **kw):
+    Sim0 = Sim.copy()
     try:
         if collapse_dim != 'time': Obs = Obs.collapsed('time', iris.analysis.MEAN) 
         
@@ -73,12 +74,12 @@ def plot_BayesModel_maps(Sim, levels = None, cmap = 'gradient_reds', ylab = '', 
         #SoW_cmap['diverging_TealOrange'], 
         #plot_map_sow(cube, plot_name,  cmap = SoW_cmap[cmap], levels=levels, ax=ax, cbar_label = "", **kw, **kw2)
         #set_trace()
-        try:
-            plot_annual_mean(cube, levels, cmap, plot_name = plot_name, scale = scale,      
+        #try:
+        plot_annual_mean(cube, levels, cmap, plot_name = plot_name, scale = scale,      
                              Nrows = Nrows, Ncols = Ncols, plot_n = plot_n + plot0, 
                              *args, **kw, **kw2)
-        except:
-            set_trace()
+        #except:
+        #    set_trace()
         if plot_n == 1:
             plt.gca().text(-0.1, 0.5, ylab, fontsize=12, rotation=90, va='center', ha='right',
                            transform=plt.gca().transAxes)
@@ -94,9 +95,9 @@ def plot_BayesModel_maps(Sim, levels = None, cmap = 'gradient_reds', ylab = '', 
         plot_map(Obs, "Observations", 1, figure_filename = set_fig_fname('obs'))
         plot_n = 2
     
+    
     plot_map(Sim[0,:], "Simulation -  5%", plot_n, figure_filename = set_fig_fname('-sim05pc'))
     plot_map(Sim[1,:], "Simulation - 95%", plot_n+1, figure_filename = set_fig_fname('-sim95pc'))
-   
     #plot_map(Sim[2,:], "Simulation - 95%", plot_n+2, figure_filename = set_fig_fname('-sim95pc'))
     
     return levels
@@ -494,7 +495,7 @@ def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, extent = None, figsize = No
         An example cube used to determine the spatial extent of the maps.
     size_scale : float, optional (default=5)
         Scaling factor for figure size; adjusts the base width of each subplot.
-    figsize : tuple of float, optional
+    figsize : tuple or float, optional
         Manual override for figure size (width, height in inches). If not provided,
         it is automatically calculated based on extent and scaling.
 
@@ -512,21 +513,28 @@ def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, extent = None, figsize = No
     - Automatically adjusts figure size based on aspect ratio of the geographic extent.
     - Intended for plotting multiple maps side-by-side with shared spatial context.
     """
+    
     if extent is None:
         extent = get_cube_extent(eg_cube)
         if extent[0] < -175.0 and extent[1] > 175.0:
             extent[0] = -180.0
+            extent[1] = 180.0
+        
         extent[0] -= (extent[1] - extent[0])*0.1
         extent[1] += (extent[1] - extent[0])*0.1
         extent[2] -= (extent[3] - extent[2])*0.1
         extent[3] += (extent[3] - extent[2])*0.1
-
+        
+    if extent[0] < -180: extent[0] = -180
+    if extent[1] >  180: extent[1] = 180
+    if extent[2] < -90 : extent[2] = -90
+    if extent[3] >  90 : extent[3] = 90
     if figsize is None:
         ratio = (extent[3] - extent[2])/(extent[1] - extent[0])*1.1
         figsize = (n_cols*size_scale, n_rows * size_scale * ratio)
         print("Automated figure size: " + str(figsize))
         
-    
+    #set_trace()
     if oma is not None:
         figsize = (figsize[0] + oma[1] + oma[3], figsize[1] + oma[0] + oma[2])
         
@@ -535,7 +543,7 @@ def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, extent = None, figsize = No
                              subplot_kw={'projection': ccrs.PlateCarree()}, 
                              #constrained_layout=True,
                              *args, **kw)
-
+    
     fig_w, fig_h = figsize
     if oma is not None:
         fig.subplots_adjust(left = oma[1] / fig_w,
@@ -546,6 +554,7 @@ def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, extent = None, figsize = No
                             hspace=0.2)
     
     if transpose: axes = np.transpose(axes)
+    #set_trace()
     try:
         for ax in axes.flat:
             ax.set_extent(extent, crs=ccrs.PlateCarree())
@@ -668,6 +677,30 @@ for i in range(len(levels)-1):
 ax = plt.gca()
 ax.legend(handles=handles, title="Range") 
 '''
+def create_discrete_cmap_norm(cmap_name, levels, extend="neither"):
+    """
+    Creates a discrete colormap and matching BoundaryNorm based on input levels.
+    """
+    # 1. Convert levels to a numpy array just in case
+    levels = np.asarray(levels)
+    core_bins = len(levels) - 1
+
+    # 2. Dynamically calculate the precise number of colors needed
+    if extend == "neither":
+        n_colors = core_bins
+    elif extend in ("min", "max"):
+        n_colors = core_bins + 1
+    elif extend == "both":
+        n_colors = core_bins + 2
+    else:
+        raise ValueError("extend must be 'neither', 'min', 'max', or 'both'")
+
+    # 3. Build the custom discrete colormap
+    base_cmap = plt.colormaps[cmap_name]
+    color_samples = np.linspace(0.1, 0.9, n_colors)  # Avoid clips at pure white/black
+    discrete_colors = base_cmap(color_samples)
+    return mcolors.ListedColormap(discrete_colors)
+
 def plot_map_sow(cube, title='', contour_obs=None, scatter_obs = None, 
                  cmap=SoW_cmap['diverging_BlueRed'], 
                  levels = None, extend = 'both', ax=None,
@@ -747,6 +780,10 @@ def plot_map_sow(cube, title='', contour_obs=None, scatter_obs = None,
             extend = 'max'
         else:
             extend = 'both'
+    
+    
+    if isinstance(cmap, str): 
+        cmap = create_discrete_cmap_norm(cmap, levels, extend)
     if is_catigorical:
         norm = BoundaryNorm(boundaries=np.array(levels) + 0.5, ncolors=cmap.N)
     elif levels is not None:   
