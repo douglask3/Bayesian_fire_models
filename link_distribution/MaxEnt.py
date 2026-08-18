@@ -118,16 +118,16 @@ class MaxEnt(object):
         else:
             prob = Y*tt.log(fx) + (1.0-Y)*tt.log((1-fx))
 
-        mean_fx = tt.mean(fx)
-        mean_y = tt.mean(Y)
-        k = Ncells/2.0 # 1.0/tt.var(Y)#
-        epsilon = 0.000000000001
-        alpha = mean_y * k + epsilon
-        beta = (1 - mean_y) * k + epsilon
-        logp_global = ((alpha - 1) * tt.log(mean_fx)+ (beta - 1) * tt.log(1 - mean_fx) \
-                       - (gammaln(alpha) + gammaln(beta) - gammaln(alpha + beta)))
+        #mean_fx = tt.mean(fx)
+        #mean_y = tt.mean(Y)
+        #k = Ncells/2.0 # 1.0/tt.var(Y)#
+        #epsilon = 0.000000000001
+        #alpha = mean_y * k + epsilon
+        #beta = (1 - mean_y) * k + epsilon
+        #logp_global = ((alpha - 1) * tt.log(mean_fx)+ (beta - 1) * tt.log(1 - mean_fx) \
+        #               - (gammaln(alpha) + gammaln(beta) - gammaln(alpha + beta)))
         #logp_global = mean_y * tt.log(mean_fx) + (1 - mean_y) * tt.log(1 - mean_fx)
-        return prob + logp_global/Ncells #tt.sum(prob)
+        return prob #+ logp_global/Ncells #tt.sum(prob)
 
 
     def deterministic_lognormal_array(self, i, mu, sigma):
@@ -153,7 +153,7 @@ class MaxEnt(object):
                 qSpread = mu
             else:
                 if inference:
-                    qSpread = pm.LogNormal("qSpread", mu = mu, sigma = sigma)
+                    qSpread = pm.LogNormal("qSpread", mu = mu, sigma = sigma, shape = size)
                 else:
                     if self.common_noise:
                         qSpread = self.deterministic_lognormal_array(self.ensemble_member, 
@@ -189,7 +189,7 @@ class MaxEnt(object):
     def obs_given_(self, fx, Y, CA = None, params = None):
         if params is not None:
             param_names = [param.name[5:] for param in params]
-            qSpread = self.define_qSpread_param(params, param_names)
+            qSpread = self.define_qSpread_param(params, param_names, size = len(Y))
             detection_epslion = self.define_detection_efficency_param(params, param_names)
             
             #mean_pred = tt.mean(fx)
@@ -225,10 +225,9 @@ class MaxEnt(object):
             
            # Y = overlap_pred(Y, qSpread)
         
+        #set_trace()
         if CA is None:
-            error = pm.DensityDist("error", fx, len(Y), qSpread, detection_epslion,
-                                   logp = self.DensityDistFun, 
-                                   observed = Y)
+            error = pm.DensityDist("error", fx, len(Y), qSpread, detection_epslion,  logp = self.DensityDistFun,   observed = Y)
         else:  
             error = pm.DensityDist("error", fx, len(Y), qSpread, detection_epslion, CA,
                                    logp = self.DensityDistFun, 
