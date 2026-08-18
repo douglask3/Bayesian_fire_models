@@ -87,9 +87,11 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
     temp_out = dir  + dataset_name + output_year + region_name
     print(temp_out)
     def open_variable(varname, MinusYr = False):
+        
         filename = filenames[varname]
         
         files =  glob.glob(dir + '*')
+        #set_trace()
         if len(files) == 0:
             set_trace()
          
@@ -122,13 +124,12 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
         
         out = None
         
-        try:
-            out = read_variable_from_netcdf_stack(filename, example_cube, dir,  
-                                                  subset_function = sbs_funs,  
-                                                  subset_function_args = sbs_args)
-        except:
-            set_trace()
+        out = read_variable_from_netcdf_stack(filename, example_cube, dir,  
+                                              subset_function = sbs_funs,  
+                                              subset_function_args = sbs_args)
+        
         return out
+
 
     def monthly_mean(cube, fun = iris.analysis.MEAN):
         return cube.aggregated_by(['year', 'month'], fun)
@@ -222,10 +223,14 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
         or  test_if_process('lightn', temp_file_lightn):
         print("\t\ttas")
         tas = open_variable('tas')
-        tas_range = open_variable('tas_range')
-        
-        tas_max = tas.copy()
-        tas_max.data  = tas_max.data + 0.5 * tas_range.data
+        try:
+            tas_range = open_variable('tas_range')
+            tas_max = tas.copy()
+            tas_max.data  = tas_max.data + 0.5 * tas_range.data
+        except:
+            tas_max = open_variable('tasmax')
+            tas_min = open_variable('tasmin')
+            tas_range = tas_max - tas_min
 
         if test_if_process('vpd', temp_file_vpd):
             print("\t\tvpd")
@@ -394,14 +399,16 @@ def for_region(subset_functions, subset_function_argss,
                            dataset_name, filenames, subset_functions, subset_function_argss,
                            region_name, output_dir,*args, **kw)  
     
-    filenames = {"tas": "tasAdjust_global_daily_",
-                 "tas_range": "tas_rangeAdjust_global_daily_",
-                 "pr": "prAdjust_global_daily_",
-                 "prsn": "psAdjust_global_daily_",
-                 "hurs": "hursAdjust_global_daily_",
-                 "huss": "hussAdjust_global_daily_",
-                 "sfcwind": "sfcwindAdjust_global_daily_",
-                 "ps": "psAdjust_global_daily_",
+    filenames = {"tas": "tas_global_daily_",
+                 "tas_range": "tas_range_global_daily_",
+                 "tasmax": "tasmax_global_daily_",
+                 "tasmin": "tasmin_global_daily_",
+                 "pr": "pr_global_daily_",
+                 "prsn": "ps_global_daily_",
+                 "hurs": "hurs_global_daily_",
+                 "huss": "huss_global_daily_",
+                 "sfcwind": "sfcwind_global_daily_",
+                 "ps": "ps_global_daily_",
                  "bdldcd": "bdldcd_global_annual_",
                  "bdlevgtemp": "bdlevgtemp_global_annual_",
                  "bdlevgtrop": "bdlevgtrop_global_annual_",
@@ -421,20 +428,22 @@ def for_region(subset_functions, subset_function_argss,
                  "soil": "soil_global_annual_",
                  "total":  "total_global_annual_"}
     
-    yearss = [hist_years,futr_years, futr_years, futr_years]
+    yearss = [hist_years,futr_years, futr_years, futr_years][0:2]
     ismip3b_models = ['GFDL-ESM4', 'IPSL-CM6A-LR', 'MPI-ESM1-2-HR', 'MRI-ESM2-0', 'UKESM1-0-LL']
     codes = ['r1i1p1f1', 'r1i1p1f1', 'r1i1p1f1', 'r1i1p1f1', 'r1i1p1f2']
-    experiments = ['historical', 'ssp126', 'ssp370', 'ssp585']
-    socs = ['histsoc', '2015soc-from-histsoc', '2015soc-from-histsoc', '2015soc-from-histsoc']
+    experiments = ['historical', 'ssp126', 'ssp370', 'ssp585'][0:2]
+    socs = ['histsoc', '2015soc-from-histsoc', '2015soc-from-histsoc', '2015soc-from-histsoc'][0:2]
     print("Processing isimip3b")
     
     for experiment, soc, years in zip(experiments, socs, yearss):
         for model, code in zip(ismip3b_models, codes):
             print(model + '\t' + experiment + '\t' + str(years[0][0]) + '-' + str(years[0][1]))
-            dir_clim = '/data/scratch/douglas.kelley/isimip3/isimip3b/InputData/climate/atmosphere/' + \
-                            experiment + '/'+  model + '/' + model.lower() + '_' + \
+            dir_clim = '/data/scratch/douglas.kelley/isimip3/isimip3b/InputData/' + \
+                            model.lower() + '_' + \
                             code + '_w5e5_' + \
                             experiment + '_'  
+            #climate/atmosphere/' + \
+            #experiment + '/'+  model + '/' + 
             dir_jules = dir_jules0 + 'jules-es-vn6p3_' + model.lower() + \
                     '_w5e5_' + experiment +'_' + soc + '_default_pft-' 
             dataset_name = 'isimp3b/' +  experiment + '/' + model + '/'
