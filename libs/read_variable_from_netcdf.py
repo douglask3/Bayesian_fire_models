@@ -169,10 +169,11 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
         print("Check directory (''" + dir0 + "''), filename (''" + filename + \
               "'') or file format")
         print("==============")
-        set_trace()
+        
     if find_no_files: return dataset
      
     coord_names = [coord.name() for coord in dataset.coords()]
+    
     if time_points is not None:     
         if 'time' in coord_names:
             dataset = interpolate_time(dataset, time_points)
