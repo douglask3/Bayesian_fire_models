@@ -411,7 +411,7 @@ def run_ConFire(namelist):
             dir_projecting = run_info['dir_projecting'].replace('<<region>>', region)
         else:
             dir_projecting = dir_training
-        trace, scalers, training_namelist = \
+        trace, scalers, training_namelist, region_namelist = \
                         train_MaxEnt_model_from_namelist(namelist, model_title = model_title,
                                                          dir_training = dir_training,
                                                          subset_function_args = subset_function_args)
@@ -420,31 +420,42 @@ def run_ConFire(namelist):
         output_file = params['filename_out']
         fig_dir = output_dir + '/figs/' + output_file + '/'
         os.makedirs(fig_dir, exist_ok=True)
-        def find_replace_period_model(exp_list):
+        def find_replace_period_model(exp_list, experiments, periods):
+            
             exp_list_all = [item.replace('<<region>>', region) for item in exp_list \
                             if "<<experiment>>" not in item and "<<model>>" not in item]
             looped_items = [item for item in exp_list \
                             if "<<experiment>>" in item and "<<model>>" in item]
+            
             if periods is None and periods is None: 
                 return exp_list_all
+            nperiods = len(periods)
+            nexperiments = len(experiments)
+            
+            if  nperiods!= nexperiments:
+                periods = periods * nexperiments
+                experiments = experiments * nperiods
+                experiments.sort()
+            
             for experiment, period in zip(experiments, periods):
                 for model in models:
                     dirs = [item.replace("<<period>>", period) for item in looped_items]    
                     dirs = [item.replace("<<model>>", model) for item in dirs]   
                     dirs = [item.replace("<<experiment>>", experiment) for item in dirs] 
-                    dirs = [item.replace('<<region>>', region) for item in dirs] 
+                    dirs = [item.replace('<<region>>', region) for item in dirs]                
                     exp_list_all += dirs
-             
+            
             return exp_list_all
         
         y_filen = [run_info['y_filen']]
         names_all = ['baseline']
         exp_type = ['single']        
         dirs_all = [params['dir']]
+        
         common_noises = [True]
         limitation_types = select_from_info('limitation_types')
         max_no_ensembles =  select_from_info('max_no_ensembles')
-        try:
+        if 1 == 1:
             y_filen1 = [select_from_info('y_filen_eval', run_info['x_filen_list'][0])]
             experiment_dirs  = select_from_info('experiment_dir')
             experiment_names = select_from_info('experiment_names')
@@ -453,8 +464,13 @@ def run_ConFire(namelist):
             models = select_from_info('experiment_model')
             controls_to_plot = select_from_info('controls_to_plot', 
                                                  range(len(control_direction)))
-            experiment_dirs = find_replace_period_model(experiment_dirs)
-            experiment_names = find_replace_period_model(experiment_names)
+            experiment_dirs = find_replace_period_model(experiment_dirs, experiments, periods)
+            experiment_names = find_replace_period_model(experiment_names, experiments, periods)
+            dir_filter = np.array([[dir, name] for dir, name in \
+                                  zip(experiment_dirs, experiment_names) if os.path.isdir(dir)])
+            
+            experiment_dirs = [str(i) for i in dir_filter[:,0]]
+            experiment_names = [str(i) for i in dir_filter[:,1]]
             exp_type = exp_type + \
                 select_from_info('experiment_type', ['single'] * len(experiment_names))
             names_all = names_all + experiment_names
@@ -463,11 +479,11 @@ def run_ConFire(namelist):
             common_noises = common_noises + \
                 select_from_info('experiment_common_noise',[True] * len(experiment_names))
             
-        except:
-            pass   
+        #except:
+        #    pass   
         
         args_list = [dict(training_namelist=training_namelist,
-                          namelist=namelist,
+                          namelist=region_namelist,
                           control_direction=control_direction,
                           control_names=control_names,
                           control_colours=control_colours,
@@ -491,8 +507,9 @@ def run_ConFire(namelist):
                     for name, dir, expt, yfile, common_noise \
                         in zip(names_all, dirs_all, exp_type, y_filen, common_noises)
                 ]
-        args_list.reverse()
-
+        
+        #args_list.reverse()
+        
         
         if len(args_list) > 1 and select_from_info('parallelize', True): 
             try:
