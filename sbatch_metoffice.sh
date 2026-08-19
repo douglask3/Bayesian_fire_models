@@ -1,10 +1,10 @@
 #!/bin/bash -l
 
-#SBATCH --mem=200000M
-#SBATCH --ntasks=10                     # Number of nodes
+#SBATCH --mem=100000M
+#SBATCH --ntasks=5                     # Number of nodes
 #SBATCH --output=outputs/ConFLAME_output_%j.txt         # Output file (%j expands to job ID)
 #SBATCH --error=outputs/ConFLAME_error_%j.txt           # Error file (%j expands to job ID)
-#SBATCH --time=72:00:00  
+#SBATCH --time=24:00:00  
 #SBATCH --partition=cpu-long
 
 
