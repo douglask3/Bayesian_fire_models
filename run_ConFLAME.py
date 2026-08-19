@@ -80,7 +80,7 @@ def Potential_limitation(training_namelist, namelist,
                      *args, **kws)
 
     def for_realization(r):
-        ens_no = Control.coord('realization').points[r]
+        ens_no = Control[0].coord('realization').points[r]
         filename = info['dir_outputs'] + '/samples/' + \
                    info['filename_out'] + '/' + name + \
                    '/Potential_' + str(controlID) + '/'
@@ -93,7 +93,7 @@ def Potential_limitation(training_namelist, namelist,
         iris.save(out, filename)
         return out
     
-    outs = [for_realization(r) for r in range(Control.shape[0])]
+    outs = [for_realization(r) for r in range(Control[0].shape[0])]
     outs = iris.cube.CubeList(outs).merge_cube()
     
     return  [outs]
@@ -445,7 +445,7 @@ def run_ConFire(namelist):
                     for name, dir, expt, yfile, common_noise \
                         in zip(names_all, dirs_all, exp_type, y_filen, common_noises)
                 ]
-        #args_list.reverse()
+        
         
         if len(args_list) > 1 and select_from_info('parallelize', True): 
             try:
