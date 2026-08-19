@@ -2,6 +2,8 @@ import multiprocessing as mp
 #mp.set_start_method('forkserver')
 mp.set_start_method("spawn", force=True)
 
+from warnings import warn
+
 import sys
 sys.path.append('fire_model/')
 sys.path.append('libs/')
@@ -91,7 +93,7 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None,
     Returns:
         pymc traces, returned and saved to [out_dir]/[filneame]-[metadata].nc
     """
-
+    
     trace_callback = None
     try:
         if "SLURM_JOB_ID" in os.environ:
@@ -114,10 +116,13 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None,
     
     with pm.Model() as max_ent_model:
         priors, link_priors = set_priors(priors, X)
-        preds = prior_predictive_check(model_class, X, Y, priors, n_samples=200)
-        plot_prior_predictive(preds, Y)
-        plt.savefig(dir_outputs + 'figs/prior_predictive.png')
-        plt.clf()
+        try:
+            preds = prior_predictive_check(model_class, X, Y, priors, n_samples=200)
+            plot_prior_predictive(preds, Y)
+            plt.savefig(dir_outputs + 'figs/prior_predictive.png')
+            plt.clf()
+        except:
+            warn("prior predctive failed")
         ## run model
         
         model = model_class(priors, inference = True)
