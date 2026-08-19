@@ -4,7 +4,7 @@ sys.path.append('plotting/')
 sys.path.append('src/')
 sys.path.append('src/attribution/')
 sys.path.append('make_input/burnt_area/')
-from plot_effect_rr import *
+#from plot_effect_rr import *
 from attribution_where import *
 from plot_BA_climateology import *
 from plot_change_in_burned_area import *
