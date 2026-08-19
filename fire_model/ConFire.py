@@ -35,6 +35,8 @@ class ConFire(object):
                                                    [False] * len(self.control_Direction))
         self.betas = select_param_or_default('betas', [[0]], stack = False)
         self.powers = select_param_or_default('powers', None, stack = False)
+        self.gammas = select_param_or_default('gammas', None, stack = False)
+        self.weakers = select_param_or_default('weakers', None, stack=False)
         self.driver_Direction = self.params['driver_Direction']
         self.Fmax = select_param_or_default('Fmax', None, stack = False)
         self.lin_correct = select_param_or_default('lin_correct', None, stack = False)
@@ -44,24 +46,28 @@ class ConFire(object):
         def cal_control(cid = 0):
             
             ids = self.controlID[cid]
+            X_i = X[:,ids].copy()
             betas =  self.betas[cid] * self.driver_Direction[cid]
             
-            X_i = X[:,ids]
             if self.powers is not None:
-                powers_i = self.powers[cid]
-                
-                X_i = self.numPCK.power(powers_i, X_i)  
-                #mask = self.numPCK.where(self.powers[cid] < 1)
-                #X_i[:,mask] = 2-X_i[:,mask]
-                if self.inference:
-                    mask = self.numPCK.lt(powers_i, 1)                # shape (N,)
-                    mask = mask.dimshuffle('x', 0)         # shape (1, N)
-                    X_i = self.numPCK.switch(mask, 2 - X_i, X_i)
-                else: 
-                    mask = powers_i < 1 
-                    X_i[:, mask] = 2 - X_i[:, mask]
-             
+                powers_i = self.powers[cid]                
+                X_i = self.numPCK.power(1.0+powers_i, X_i)  
+                #if self.inference:
+                #    mask = self.numPCK.lt(powers_i, 1)                # shape (N,)
+                #    mask = mask.dimshuffle('x', 0)         # shape (1, N)
+                #    X_i = self.numPCK.switch(mask, 2 - X_i, X_i)
+                #else: 
+                #    mask = powers_i < 1 
+                #    X_i[:, mask] = 2 - X_i[:, mask]
             out = self.numPCK.sum(X_i * betas[None, ...], axis=-1)
+
+            X_i = X[:,ids].copy()
+            if self.gammas is not None:
+                betas =  self.gammas[cid] * self.driver_Direction[cid]
+                if self.weakers is not None:
+                    powers_i = self.weakers[cid]      
+                    X_i = self.numPCK.power(1.0+self.numPCK.exp(-powers_i), X_i) 
+                out += self.numPCK.sum(X_i * betas[None, ...], axis=-1) 
             
             if self.log_control[cid]:
                 out = self.numPCK.log(out)
