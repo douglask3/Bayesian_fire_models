@@ -8,7 +8,7 @@ from  pathlib import Path
 from  attribution_where import *
 from plot_BA_climateology import *
 from plot_maps import *
-
+from constrain_cubes_standard import *
 import numpy as np
 
 def ratio_levels(ratios, n_levels = 9, *args, **kw):
@@ -118,13 +118,196 @@ def find_levels(summery, ii, n_levels = 7, FUN = auto_pretty_levels, fullYrOnly 
         set_trace()
     return out
 
+
 def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_file = None,
-                               out_dir = "figs/", percentiles = [5, 95], 
+                               out_dir = "figs/", percentiles = [5, 95], year = None, 
+                               mnths = None, 
                                counterfactual_name = 'counterfactual', plot_att_only = False,
                                fullYrOnly = False, axes = None, out_figname_extra = ''):
-    #if obs_file is not None:
-    #    #filename = "data/data/driving_data_base/" + region +"/burnt_area.nc"
-    #    anomaly, climatology = open_netcdf_and_find_clim(obs_file)
+
+
+    def open_cube(filename):
+        cube = iris.load_cube(filename)
+        cube0 = cube.copy()
+        cube = sub_year_range(cube, [year])
+        cube = sub_year_months(cube, mnths)
+        
+        if len(mnths) > 1: 
+            try:
+                cube = cube.collapsed('time', iris.analysis.MEAN)
+            except:
+                set_trace()
+        return cube
+    obs = open_cube(obs_file)
+
+    dir = dir1 + region + dir2 + '/'
+    
+    experiments = [d for d in Path(dir).iterdir() if d.is_dir()]
+    
+    factuals = [dir for dir in experiments if dir.name[0:7] == 'factual']
+    counterfactuals = [dir for dir in experiments if counterfactual_name in dir.name]
+
+    
+
+    def plot_for_f_cf(factual, counterfactual, obs):
+        nc_files = list((factual / run_name).rglob('*pred*.nc'))
+        #set_trace()
+        def amplifcation_from_file(file, obs):
+            
+            out_dir = factual / ('month' + '_'.join([str(mnth) for mnth in mnths]))
+                
+            out_file = out_dir / file.name
+            print(out_file)
+            if out_file.is_file():
+                f_cube = iris.load_cube(out_file)
+            else:
+                out_dir.mkdir(parents=True, exist_ok=True)
+                f_cube = open_cube(factual / run_name / file.name)
+                iris.save(f_cube, out_file)
+            obs = obs  
+
+            out_dir = Path(str(counterfactual).replace('/month', '/prob'))
+            out_file = out_dir / file.name
+            if out_file.is_file():
+                prob =  iris.load_cube(out_file)
+            else:
+                prob = f_cube.copy()
+                prob.data = np.exp(obs.data*np.log(f_cube.data) + \
+                                   (1.0-obs.data)*np.log((1-f_cube.data)))
+                
+                out_dir.mkdir(parents=True, exist_ok=True)
+                iris.save(prob, out_file)
+            #set_trace()
+            out_dir = Path(str(counterfactual).replace('counterfactual', 'cf_minus_f'))
+            out_dir = out_dir / ('month' + '_'.join([str(mnth) for mnth in mnths]))
+                
+            out_file = out_dir / file.name
+            print(out_file)
+            if out_file.is_file():
+                cf_cube = iris.load_cube(out_file)
+            else:
+                out_dir.mkdir(parents=True, exist_ok=True)
+                
+                cf_cube = open_cube(counterfactual / run_name / file.name)
+                
+                cf_cube = f_cube / cf_cube
+                iris.save(cf_cube, out_file)
+             
+            direction = cf_cube.copy()
+            direction.data = direction.data > 1 
+            direction.data = direction.data.astype('float32')  
+
+            out = [prob, f_cube, cf_cube, direction]
+            return out
+
+        def merge_realization(i):
+            return iris.cube.CubeList(out[:,i]).merge_cube()
+
+        def weighted_mean(i):
+            out = out_merge[i][0].copy()
+            out.data = np.quantile(a=out_merge[i].data, q=0.5, axis=0,
+                                   weights=out_merge[0].data, method="inverted_cdf")
+            return out
+        
+        def save_cubes(cube, fname):
+            iris.save(cube, 'outputs/' + fname + '-2.nc')
+        def load_cubes(fname):
+            return iris.load_cube( 'outputs/' + fname + '-2.nc')
+
+        try:
+            obs_c = load_cubes(region + '-fire_mask')
+            pval  = load_cubes(region + '-Likelihood')
+            waf   = load_cubes(region + '-AF')
+        except:
+            
+            set_trace()
+            out = np.array([amplifcation_from_file(file, obs) for file in nc_files])
+            out_merge = [merge_realization(i) for i in range(out.shape[1])]
+        
+        
+            wfact = weighted_mean(1)
+            waf = weighted_mean(2)
+            pval = weighted_mean(3)*100
+            waf.data[obs.data == 0] = out_merge[2].collapsed('realization', 
+                                                             iris.analysis.PERCENTILE, 
+                                                             percent =50).data[obs.data == 0]
+        
+            pval.data[obs.data == 0] = \
+                    out_merge[3].collapsed('realization', 
+                                           iris.analysis.MEAN).data[obs.data == 0]
+
+            obs_c = obs.copy()
+            ba95 = np.sort(obs.data.data[obs.data.data <100])#
+            ba95 = ba95[np.where(ba95.cumsum()>(0.05*ba95.sum()))[0][0]]
+            
+            obs_c.data[:] = obs_c.data> ba95
+            save_cubes(obs_c,  region + '-fire_mask')
+            save_cubes(pval*100, region + '-Likelihood')
+            save_cubes(waf,  region + '-AF')
+        
+        fig, axes = set_up_sow_plot_windows(1, 2, obs,  
+                                            size_scale = 2 + obs.shape[1]/obs.shape[0],
+                                            oma = [0.6, 0.1, 0.25, 0.25])
+        
+        #plot_map_sow(obs * 100, "Burned area (%)", add_cbar = True, extend = 'max',
+        #             cmap=SoW_cmap["gradient_red"], use_pcolmesh = True, ax = axes[0],
+        #             cbar_orientation = 'horizontal',
+        #             cbar_lab_rotate = 45, cbar_top_and_bottom = True)
+
+        levels = [0, 1/5, 1/2, 1/1.5, 1/1.1, 1, 1.1, 1.5, 2, 5, 9E9]
+        tick_labels = ['0', '1/5', '1/2', '1/1.5', '1/1.1', 'no\nchange', 
+                       '1.1', '1.5', '2', '5', '★']
+        levels = [0, 1, 1.1, 1.5, 2, 5]
+        tick_labels = ['0', 'no\nchange', 
+                       '1.1', '1.5', '2', '5']
+        
+        plot_map_sow(waf, "Amplification factor", 
+                     scatter_obs = obs_c,
+                     add_cbar = True, extend = 'max',
+                     levels = levels, tick_labels = tick_labels,
+                     cmap=SoW_cmap["gradient_red"], use_pcolmesh = True, ax = axes[0],
+                     cbar_orientation = 'horizontal', 
+                     cbar_lab_rotate = 45, cbar_top_and_bottom = True)
+        
+        levels = [0, 1, 10, 33, 66, 90, 99, 100]
+        range_edges = np.arange(8)*100/7
+        top_tick_pos = range_edges[1:].copy() - 100/14
+
+        top_tick_labels = ["Extremely\nUnlikely", "Very\nUnlikely", "Unlikely", 
+                          "As likely\nas not","Likely", "Very\nLikely", 
+                                                 "Virtually\nCertain"]
+        
+        img = plot_map_sow(pval, "Likelihood",scatter_obs = obs_c,
+                        cmap=SoW_cmap['confidence_hues'], 
+                        levels = levels,
+                        extend = 'neither', cbar_label = "",
+                        add_cbar = False, use_pcolmesh = True,
+                        ax = axes[1], cbar_orientation = 'horizontal', 
+                        cbar_lab_rotate = 45, cbar_top_and_bottom = True)
+
+        add_attribubtion_map_cbar(img, axes[1], levels, 
+                                  top_tick_labels= top_tick_labels, 
+                                  range_edges = range_edges, top_tick_pos = top_tick_pos,
+                                  cbar_label = '')
+         
+        #add_attribubtion_map_cbar(img, axes[2]) 
+            
+        out_name = 'figs/attribtuion_map' + region + 'summery-2.png' 
+        #set_trace()
+        #+ factual + counterfactual + '.png'
+        plt.savefig(out_name, dpi = 300)
+    for fact in factuals:
+        for counter in counterfactuals:
+            plot_for_f_cf(fact, counter, obs)
+
+def plot_change_in_burned_area_all(dir1, dir2, region, run_name = 'Evaluate', obs_file = None,
+                               out_dir = "figs/", percentiles = [5, 95], mnths = None, 
+                               counterfactual_name = 'counterfactual', plot_att_only = False,
+                               fullYrOnly = False, axes = None, out_figname_extra = ''):
+    set_trace()
+    if obs_file is not None:
+        #filename = "data/data/driving_data_base/" + region +"/burnt_area.nc"
+        anomaly, climatology = open_netcdf_and_find_clim(obs_file)
     set_trace()
     dir = dir1 + region + dir2 + '/'
     
@@ -163,7 +346,7 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_fi
                 out_dir2.mkdir(parents=True, exist_ok=True)
             
                 cf_cube = iris.load_cube(dir / run_name / file.name)
-            
+                set_trace()
                 out1 = f_cube / cf_cube
                 out2 = f_a_cube / cf_cube.collapsed('time', iris.analysis.MEAN)
                 iris.save(out1, out_file1)
@@ -185,7 +368,7 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_fi
     out_merge = [[merge_realization(i, j) for j in range(out.shape[2])]\
                      for i in range(out.shape[1])]
     out_merge = np.array(out_merge)
-    
+    set_trace()
     summery = [[cube.collapsed('realization', iris.analysis.PERCENTILE, percent = percentiles) \
                 for cube in cubes] for cubes in out_merge]
     
@@ -211,7 +394,8 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_fi
     levels = np.append(0, levels)
     
     if axes is None:    
-        fig, axes = set_up_sow_plot_windows(nrows, ncols, eg_cube[0],  size_scale = 3)
+        fig, axes = set_up_sow_plot_windows(nrows, ncols, eg_cube[0],  size_scale = 3,
+                                            oma = [1.0, 0.1, 0.25, 0.25])
         outplot = True
     else:
         outplot = False
@@ -231,6 +415,7 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_fi
         return out
 
     npc = len(percentiles)
+    
     if not fullYrOnly:
         for mnthi, mnth in zip(range(len(mnths)), mnths):
             month_idx = calendar.month_name[mnth]
@@ -256,7 +441,7 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_fi
                     img1 = plot_map_fun(cf[fi], dlevels1, 'diverging_BlueRed', 'both', axi, 
                                  title = title)
                     axi += 1
-    
+            set_trace()
     if not plot_att_only:                
         for fi in range(npc):
             if len(summery[0][1].shape) == 2:
@@ -298,6 +483,7 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_fi
             add_cbar(axi, len(axes)-2, fig, img1, axes, 0.05, ratio = True)
             add_cbar(axi+2, axi+2, fig, img2, axes, 0.05, ratio = True)
     elif len(summery) == 1:
+        
         add_cbar(axi-npc*2, axi-1, fig, img, axes, ratio = True)
     else:
         add_cbar(axi-npc*2, axi-1, fig, img2, axes, ratio = True)

@@ -6,8 +6,8 @@
 #SBATCH --time=24:00:00  
 #SBATCH --partition=cpu-long
 
-python plot_trend_maps.py
 
+python plot_trend_maps.py
 #python make_input/isimip/sow2526.py
 #python make_input/isimip/global.py
 #python make_input/nrt/SoW2526.py

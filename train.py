@@ -23,6 +23,7 @@ from prior_posterior_predictive import *
 from plot_multimaps import *
 
 import os
+import shutil
 from   io     import StringIO
 import numpy  as np
 import pandas as pd
@@ -212,7 +213,7 @@ def train_MaxEnt_model_from_namelist(namelist = None, **kwargs):
     if 'dir' not in variables and 'dir_training' in variables:
         variables['dir'] = variables['dir_training']
         
-    return train_MaxEnt_model(**variables)
+    return train_MaxEnt_model(**variables, namelist = namelist)
 
 
 
@@ -225,7 +226,7 @@ def train_MaxEnt_model(y_filen, x_filen_list, CA_filen = None, model_class = FLA
                        niterations = 100, cores = 4, model_title = 'no_name',
                        subfolder = '', 
                        grab_old_trace = False, inference_step_type = None, 
-                       plot_drivers = False, **kws):
+                       plot_drivers = False, namelist = None, **kws):
                        
     ''' Opens up training data and trains and saves Bayesian Inference optimization of model. 
         see 'fit_MaxEnt_probs_to_data' for details how.
@@ -258,10 +259,14 @@ def train_MaxEnt_model(y_filen, x_filen_list, CA_filen = None, model_class = FLA
         pymc traces, returned and saved to [out_dir]/[filneame]-[metadata].nc and the scalers
         used on independant data to normalise it, useful for predicting model
     '''
-    dir_outputs = combine_path_and_make_dir(dir_outputs, model_title)
+    dir_outputs = combine_path_and_make_dir(dir_outputs, model_title) 
+    
     dir_outputs = combine_path_and_make_dir(dir_outputs, subfolder)
+    
+    namelist_path = dir_outputs + 'namelist-' + filename_out + '-' + namelist.split('/')[-1]
+    shutil.copy(namelist, namelist_path)
     dir_outputs_figs = combine_path_and_make_dir(dir_outputs, 'figs')
-
+    
     if plot_drivers:
         plot_netcdf_files([y_filen] + x_filen_list, dir, 
                           dir_outputs_figs + '/drivers_mask.png', False, True)
@@ -376,7 +381,7 @@ def train_MaxEnt_model(y_filen, x_filen_list, CA_filen = None, model_class = FLA
     print("\nscalers filename:\n\t" + scale_file)
     print("\nall information writen to namelist:\n\t" + variable_info_file)
  
-    return trace, scalers, variable_info_file
+    return trace, scalers, variable_info_file, namelist_path
 
 
 if __name__=="__main__":

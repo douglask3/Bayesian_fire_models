@@ -56,6 +56,8 @@ def make_veg_cover(file, out_dir, experiment):
     Path(out_dir).mkdir(parents=True, exist_ok=True)
     
     iris.save(tree, out_dir + 'tree.nc')
+    iris.save(shrub, out_dir + 'shrub.nc')
+    iris.save(grass, out_dir + 'grass.nc')
     iris.save(wood, out_dir + 'wood.nc')
     iris.save(veg, out_dir + 'veg_abs.nc')
     iris.save(veg_log, out_dir + 'veg_log.nc')

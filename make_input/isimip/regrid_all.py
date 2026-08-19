@@ -14,6 +14,10 @@ import math
 import glob
 import hashlib
 
+import cartopy.io.shapereader as shpreader
+import shapely.geometry as sgeom
+from shapely.ops import unary_union
+
 import matplotlib.pyplot as plt
 from pdb import set_trace
 
@@ -31,8 +35,27 @@ def read_variable_from_netcdf_stack(filenames, example_cube = None,
     except:
     #    try:
         iris.util.equalise_attributes(cubes)
+
+        for cube in cubes:
+            for name in ["time", "latitude", "longitude"]:
+                coord = cube.coord(name)
+                coord.points = coord.points.astype("float32")
+            cube.coord("time").long_name = 'time'
+        
         cubes = cubes.concatenate_cube()
         #except:
+        #    for name in ["latitude", "longitude"]:
+        #        c0 = cubes[0].coord(name)
+        #        c1 = cubes[1].coord(name)
+        #        set_trace()
+        #        print(f"\n{name}")
+        #        print("points equal:", (c0.points == c1.points).all())
+        #        print("points shape:", c0.points.shape, c1.points.shape)
+        #        print("dtype:", c0.points.dtype, c1.points.dtype)
+        #        print("bounds:", c0.bounds, c1.bounds)
+        #        #print("axis:", c0.axis(), c1.axis())
+        #        print("standard_name:", c0.standard_name, c1.standard_name)
+        #        print("long_name:", c0.long_name, c1.long_name)
         #    set_trace()
     if example_cube is not None:
         example_cube = iris.load_cube(example_cube)
@@ -49,7 +72,7 @@ def generate_temp_fname(string1, string2):
 def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
                                   subset_functions, subset_function_argss, region_name, 
                                   output_dir):
-    
+     
     print("\tStarting extraction to make experiment")
     def test_if_process(var, temp_file = None):
         
@@ -64,8 +87,11 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
     temp_out = dir  + dataset_name + output_year + region_name
     print(temp_out)
     def open_variable(varname, MinusYr = False):
+        
         filename = filenames[varname]
+        
         files =  glob.glob(dir + '*')
+        #set_trace()
         if len(files) == 0:
             set_trace()
          
@@ -90,18 +116,20 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
         #set_trace()
         filename = [filename + ext + '.nc' for ext in overlapping_years]
         
-        sbs_funs = [sub_year_range] + subset_functions 
-        sbs_args = [{'year_range': yeari}] + subset_function_argss
+        sbs_funs = [sub_year_range]
+        sbs_args = [{'year_range': yeari}]
+        if subset_functions is not None:
+            sbs_funs += subset_functions 
+            sbs_args += subset_function_argss
         
         out = None
         
-        try:
-            out = read_variable_from_netcdf_stack(filename, example_cube, dir,
-                                                  subset_function = sbs_funs, 
-                                                  subset_function_args = sbs_args)
-        except:
-            set_trace()
+        out = read_variable_from_netcdf_stack(filename, example_cube, dir,  
+                                              subset_function = sbs_funs,  
+                                              subset_function_args = sbs_args)
+        
         return out
+
 
     def monthly_mean(cube, fun = iris.analysis.MEAN):
         return cube.aggregated_by(['year', 'month'], fun)
@@ -123,13 +151,18 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
             save_ncdf(mdat, var + '_mean') 
             open(temp_file, 'a').close()   
 
-    def cal_cover(cover_vars, name):
+    def cal_cover(cover_vars, name, minus1 = False, logT = False):
         print(name)
+        
         dat = open_variable(cover_vars[0])
         
         for i in cover_vars[1:]:
             dat.data = dat.data + open_variable(i).data
         dat.rename(name)
+        if minus1:
+            dat.data = 1-dat.data
+        if logT:
+            dat.data = np.log(dat.data)
         
         save_ncdf(dat, name + '_jules-es')
         return dat
@@ -139,22 +172,24 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
         standard_Monthly_mean(var, fun) 
     
     print("\tprocessing variables")
-    temp_file = generate_temp_fname(temp_out, 'cover')
+    temp_file = generate_temp_fname(temp_out, 'cover_log')
+    
     if test_if_process('cover', temp_file):
         print("\t\tcover")
         tree_vars = ["bdldcd", "bdlevgtemp", "bdlevgtrop", "ndldcd", "ndlevg", \
                      "shrubdcd", "shrubevg"]
         herb_vars = ["c3crop", "c3grass", "c3pasture", "c4crop", "c4grass", "c4pasture"]
-        soil_vars = ["soil", "urban", "ice"] # water
+        veg_vars = tree_vars + herb_vars#["soil", "urban", "ice"] # water
+        
         cal_cover(tree_vars, 'tree_cover')
-        try:
-            cal_cover(tree_vars, 'tree_cover')
-            cal_cover(herb_vars, 'nonetree_cover')
-            cal_cover(herb_vars, 'noneveg_cover')
-            open(temp_file, 'a').close()
-        except:
-            print("WARNING!: missing natural cover information")
-    
+        #try:
+        cal_cover(herb_vars, 'nonetree_cover')
+        cal_cover(veg_vars, 'veg_cover')
+        cal_cover(veg_vars, 'veg_cover_log', logT = True)
+        open(temp_file, 'a').close()
+        #except:
+        #    print("WARNING!: missing natural cover information")
+        
         try:
             temp_file = generate_temp_fname(temp_out, 'crop')
             if test_if_process('crop', temp_file)  : 
@@ -188,10 +223,14 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
         or  test_if_process('lightn', temp_file_lightn):
         print("\t\ttas")
         tas = open_variable('tas')
-        tas_range = open_variable('tas_range')
-        
-        tas_max = tas.copy()
-        tas_max.data  = tas_max.data + 0.5 * tas_range.data
+        try:
+            tas_range = open_variable('tas_range')
+            tas_max = tas.copy()
+            tas_max.data  = tas_max.data + 0.5 * tas_range.data
+        except:
+            tas_max = open_variable('tasmax')
+            tas_min = open_variable('tasmin')
+            tas_range = tas_max - tas_min
 
         if test_if_process('vpd', temp_file_vpd):
             print("\t\tvpd")
@@ -294,24 +333,29 @@ process_clim = ['vpd', 'tas', 'tas_range', 'pr', 'lightn']
 process_jules =['cover', 'crop', 'pasture', "urban"]
 
 example_cube = None
-grab_old_data = False
+grab_old_data = True
 
 
 
 def process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, years,
                            *args, **kw):
+    
     def process(process, dir):
         [make_variables_for_year_range(year, process, dir, *args, **kw) for year in  years]
-    #process(process_jules, dir_jules)
+    #return None
+    process(process_jules, dir_jules)
     process(process_clim, dir_clim)
     
     
 def for_region(subset_functions, subset_function_argss, 
-               vcf_region_name, region_name = None, output_dir = '', *args, **kw):   
-    years = [[2010, 2012], [1901, 1920], [2000, 2019], [2002, 2019]]
+               vcf_region_name, region_name = None, output_dir = '',
+               years = [[2010, 2012], [1901, 1920], [2000, 2019]],
+               hist_years = [[1994, 2014]], futr_years = [[2015, 2099]],
+               *args, **kw):  
+    years += [[2002, 2019], [2000, 2019]] 
     dataset_name = 'isimp3a/obsclim/GSWP3-W5E5'
     dataset_name_control = dataset_name
-
+    
     filenames = {"tas": "tas_global_daily_",
              "tas_range": "tas_range_global_daily_",
              "pr": "pr_global_daily_",
@@ -343,26 +387,28 @@ def for_region(subset_functions, subset_function_argss,
     
     dir_jules0 = "/data/scratch/douglas.kelley/Bayesian_fire_models/temp/isimip/"
     dir_jules = dir_jules0 + "jules-es-vn6p3_gswp3-w5e5_obsclim_histsoc_default_pft-"  
-    #process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, years,
-    #                       dataset_name, filenames, subset_functions, subset_function_argss, 
-    #                       region_name, output_dir, *args, **kw)  
+    process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, years,
+                           dataset_name, filenames, subset_functions, subset_function_argss, 
+                           region_name, output_dir, *args, **kw)  
     
     dir_clim = "/data/users/douglas.kelley/isimip3a_driving/climate/atmosphere/counterclim/GSWP3-W5E5/gswp3-w5e5_counterclim_"
     dir_jules = dir_jules0 + "jules-es-vn6p3_gswp3-w5e5_counterclim_histsoc_default_pft-"  
     dataset_name = 'isimp3a/counterclim/GSWP3-W5E5'
     print("Processing isimip3a")
-    #process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, years,
-    #                       dataset_name, filenames, subset_functions, subset_function_argss,
-    #                       region_name, output_dir,*args, **kw)  
+    process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, years,
+                           dataset_name, filenames, subset_functions, subset_function_argss,
+                           region_name, output_dir,*args, **kw)  
     
-    filenames = {"tas": "tasAdjust_global_daily_",
-                 "tas_range": "tas_rangeAdjust_global_daily_",
-                 "pr": "prAdjust_global_daily_",
-                 "prsn": "psAdjust_global_daily_",
-                 "hurs": "hursAdjust_global_daily_",
-                 "huss": "hussAdjust_global_daily_",
-                 "sfcwind": "sfcwindAdjust_global_daily_",
-                 "ps": "psAdjust_global_daily_",
+    filenames = {"tas": "tas_global_daily_",
+                 "tas_range": "tas_range_global_daily_",
+                 "tasmax": "tasmax_global_daily_",
+                 "tasmin": "tasmin_global_daily_",
+                 "pr": "pr_global_daily_",
+                 "prsn": "ps_global_daily_",
+                 "hurs": "hurs_global_daily_",
+                 "huss": "huss_global_daily_",
+                 "sfcwind": "sfcwind_global_daily_",
+                 "ps": "ps_global_daily_",
                  "bdldcd": "bdldcd_global_annual_",
                  "bdlevgtemp": "bdlevgtemp_global_annual_",
                  "bdlevgtrop": "bdlevgtrop_global_annual_",
@@ -382,21 +428,22 @@ def for_region(subset_functions, subset_function_argss,
                  "soil": "soil_global_annual_",
                  "total":  "total_global_annual_"}
     
-    futr_years = [[2015, 2099]]
-    yearss = [[[1994, 2014]],futr_years, futr_years, futr_years]
+    yearss = [hist_years,futr_years, futr_years, futr_years][0:2]
     ismip3b_models = ['GFDL-ESM4', 'IPSL-CM6A-LR', 'MPI-ESM1-2-HR', 'MRI-ESM2-0', 'UKESM1-0-LL']
     codes = ['r1i1p1f1', 'r1i1p1f1', 'r1i1p1f1', 'r1i1p1f1', 'r1i1p1f2']
-    experiments = ['historical', 'ssp126', 'ssp370', 'ssp585']
-    socs = ['histsoc', '2015soc-from-histsoc', '2015soc-from-histsoc', '2015soc-from-histsoc']
+    experiments = ['historical', 'ssp126', 'ssp370', 'ssp585'][0:2]
+    socs = ['histsoc', '2015soc-from-histsoc', '2015soc-from-histsoc', '2015soc-from-histsoc'][0:2]
     print("Processing isimip3b")
-    '''
+    
     for experiment, soc, years in zip(experiments, socs, yearss):
         for model, code in zip(ismip3b_models, codes):
             print(model + '\t' + experiment + '\t' + str(years[0][0]) + '-' + str(years[0][1]))
-            dir_clim = '/data/scratch/douglas.kelley/isimip3/isimip3b/InputData/climate/atmosphere/' + \
-                            experiment + '/'+  model + '/' + model.lower() + '_' + \
+            dir_clim = '/data/scratch/douglas.kelley/isimip3/isimip3b/InputData/' + \
+                            model.lower() + '_' + \
                             code + '_w5e5_' + \
                             experiment + '_'  
+            #climate/atmosphere/' + \
+            #experiment + '/'+  model + '/' + 
             dir_jules = dir_jules0 + 'jules-es-vn6p3_' + model.lower() + \
                     '_w5e5_' + experiment +'_' + soc + '_default_pft-' 
             dataset_name = 'isimp3b/' +  experiment + '/' + model + '/'
@@ -404,19 +451,17 @@ def for_region(subset_functions, subset_function_argss,
             process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, years,
                            dataset_name, filenames, subset_functions, subset_function_argss,
                            region_name, output_dir, *args, **kw)
-    '''
+    
     if region_name is None:
         region_name = subset_function_argss[0][next(iter(subset_function_argss[0]))]
+    
     if vcf_region_name == 'same': vcf_region_name = region_name + '/isimp3a/obsclim/GSWP3-W5E5/period_2002_2019/'
     
     obs_cover_dir = output_dir + vcf_region_name + '/'
     
     output_years = '2002_2019'
-    years = [2002, 2019]
-    
-    files = os.listdir(obs_cover_dir)
-    files = [file for file in files if file[-3:] == '.nc']
-    
+    years = [2002, 2019]  
+
     def open_regrid_output_file(filename):
         
         if '-raw.nc' in filename or "_remasked.nc" in filename: return None
@@ -438,25 +483,37 @@ def for_region(subset_functions, subset_function_argss,
         iris.save(cube, out_fname)
         return cube
     
-    cubes = [open_regrid_output_file(filename) for filename in files]
+    try:
+        files = os.listdir(obs_cover_dir)
+        files = [file for file in files if file[-3:] == '.nc']
+        cubes = [open_regrid_output_file(filename) for filename in files]
+    except:
+        pass
     
-    
-    
-
-    mask_cube = iris.load_cube(output_dir + region_name + "/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019/pr_mean.nc")
+    mask_cube = iris.load_cube(output_dir + region_name + \
+                               "/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019/pr_mean.nc")
 
     def regrid_Burned_area(years):
         subset_function_argss[0]["mask"] = False
-        burned_area = read_variable_from_netcdf("data/data/burned_area_global.nc", 
-                                           subset_function = [sub_year_range]+subset_functions, 
-                                               subset_function_args =  [{'year_range': years}]\
-                                                                + subset_function_argss)
-        #yay = burned_area.copy()
+
+        subset_function = [sub_year_range]
+        subset_function_args = [{'year_range': years}]
+        if subset_functions is not None:
+            subset_function += subset_functions
+            subset_function_args += subset_function_argss
+
+
+        
+        burned_area = read_variable_from_netcdf("data/data/burned_area_global.nc", subset_function = subset_function, subset_function_args =  subset_function_args)
+        
         burned_area = burned_area.regrid(mask_cube[0], iris.analysis.Linear())
         
         #subset_function_argss[0]["mask"] = True
         #burned_area = subset_functions[0](burned_area, **subset_function_argss[0])
         burned_area.data[:, mask_cube[0].data.data > 9E9] = np.nan
+        burned_area = natural_earth_ocean_mask(burned_area)
+        # Apply mask
+        #burned_area.data = np.ma.masked_where(mask, burned_area.data)
         
         out_fname = output_dir + '/' + \
                     region_name + '/' + \
@@ -465,8 +522,25 @@ def for_region(subset_functions, subset_function_argss,
                     '/burned_area.nc'
         
         iris.save(burned_area, out_fname)
+    
     regrid_Burned_area([2002, 2019])
     regrid_Burned_area([2000, 2019])
+
+
+def run_for_report(region_names, output_dir, shp_filename = None, *args, **kw):
+    if shp_filename is None:
+        subset_functions_main = None
+    else:
+        subset_functions_main = [contrain_to_sow_shapefile]
+    vcf_dir = "same"
+    
+    for region_name in region_names:
+        subset_function_argss_main = [{'shp_filename': shp_filename, 
+                                       'name': region_name}]
+        for_region(subset_functions_main, subset_function_argss_main, 
+                   vcf_dir, region_name = region_name.replace(' ', '_'), 
+                   output_dir = output_dir, *args, **kw)
+    run_LULCC_for_all_regions(region_names, output_dir)
 
 if __name__=="__main__":
     output_dir = "data/data/driving_data/"

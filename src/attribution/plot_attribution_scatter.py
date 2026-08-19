@@ -37,7 +37,8 @@ def flatten(xss):
     """
     return [x for xs in xss for x in xs]
 
-def plot_kde(x, y, xlab, ylab, cmap_name = "gradient_hues_extended", ax = None, *args, **kw): 
+def plot_kde(x, y, xlab, ylab, cmap_name = "gradient_hues_extended", ax = None, AF_axis = True,
+             *args, **kw): 
     """
     Creates a filled 2D kernel density estimate (KDE) plot for two input variables.
 
@@ -71,7 +72,7 @@ def plot_kde(x, y, xlab, ylab, cmap_name = "gradient_hues_extended", ax = None, 
     
     sns.kdeplot(data=df, x=xlab, y=ylab, fill=True, 
                 cmap=SoW_cmap[cmap_name], ax = ax, *args, **kw)
-    scale2upper1_axis(ax)
+    if AF_axis: scale2upper1_axis(ax)
 
 def plot_fact_vs_counter(factual_flat, counterfactual_flat, obs, plot_name = '', ax = False,
                          *args, **kw): 
@@ -116,18 +117,27 @@ def plot_fact_vs_counter(factual_flat, counterfactual_flat, obs, plot_name = '',
         factual_rs = np.append(factual_rs, frs)
         counterfactual_rs = np.append(counterfactual_rs, crs)
         
- 
+    #factual_rs = factual_flat + 1e-10
+    #counterfactual_rs = counterfactual_flat + 1e-10
     x = np.linspace(0, 1, 20)
     log_levels = x**(8)  # try 3, 5, 7 for increasingly strong bias
-    plot_kde(factual_rs, counterfactual_rs, "factual", "counterfactual",levels=log_levels, log_scale = True, thresh=1e-4, ax = ax)
+    plot_kde(factual_rs + 1e-11, counterfactual_rs + 1e-11, "factual", "counterfactual",levels=log_levels,  #
+             log_scale = True, thresh=1e-4, ax = ax, AF_axis = False)
     
-    plt.plot([0.0000000001, 100], [0.0000000001, 100], 'k--', label='1:1 Line')
+    xmin, xmax = ax.get_xlim()
+    ymin, ymax = ax.get_ylim()
+    start = min(xmin, ymin)
+    end = max(xmax, ymax)
+    ax.plot([start, end], [start, end], color='black', linestyle='--', zorder=1)
+    
     plt.ylabel("Counterfactual Burned Area")
     plt.xlabel("Factual Burned Area")
     plt.title("Factual vs Counterfactual Burned Area")
-    set_trace()
-    plt.axvline(obs, color='red', linestyle='--', label='Observed Burned Area')
     
+    #ax.axvline(obs.min(), color='red', linestyle='--', label='Observed Burned Area')
+    ax.axvline(obs.max(), color='red', linestyle='--', label='Observed Burned Area')
+    print(np.percentile((factual_rs+1e-10)/(counterfactual_rs+1e-10), [5, 25, 50, 75, 95]))
+    set_trace() 
     plt.grid(True)
 
 def fit_gpd_tail(data, threshold_quantile=0.90):
@@ -407,6 +417,7 @@ def open_burned_area_observation_time_series(file,
     if os.path.isfile(file):
         obs = pd.read_csv(file)
     else:
+        set_trace()
         cube = iris.load_cube(file[:-3] + 'nc')
         try:
             cube.coord('latitude').guess_bounds()
@@ -463,7 +474,7 @@ def plot_for_region(region, metric, plot_FUN,
                           "/members/absolute/Evaluate.csv")
     counterfactual = pd.read_csv(dir + counterfactual_name + "/" + metric + \
                                  "/members/absolute/Evaluate.csv")
-    
+    ()
     obs = open_burned_area_observation_time_series(obs_dir + '/' + region + '/' + obs_file)
     obs = obs[['time', metric + '_burned_area']]
     # Extra years and flatten the arrays to 1D
@@ -471,12 +482,12 @@ def plot_for_region(region, metric, plot_FUN,
         mod_years = None
     else:
         mod_years = years
-
+    
     factual_flat, mod_years = extract_years(factual, mod_years, mnths, flatten = flatten)
     set_trace()
     counterfactual_flat = extract_years(counterfactual, mod_years, mnths, flatten = flatten)[0]
     obs0 = obs.copy()
-    obs = extract_years(obs.set_index('time').T, mod_years, mnths, '-15', transpose = True)[0]
+    obs = extract_years(obs.set_index('time').T, mod_years, mnths, '-15')[0]
     
     if metric == 'mean':
         plot_name = region

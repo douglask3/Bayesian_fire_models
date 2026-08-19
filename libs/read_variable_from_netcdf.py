@@ -33,18 +33,20 @@ def read_variable_from_netcdf_from_dir(dir, filename, find_no_files = False, ens
     
     if filename[0] == '~' or filename[0] == '/' or filename[0] == '.': 
         dir = ''
-     
+    
     if find_no_files or ens_no is not None:
         files = glob.glob(dir + '**', recursive = True)
         files = [file for file in files if filename in file]
-        if find_no_files:
+        files = [file for file in files if file[-3:] == '.nc']
+        
+        if find_no_files: 
             return(len(files))
 
     if filename[-3:] != '.nc': 
         filename = filename + '.nc'
     
     try:
-        if ens_no is not None and len(files) > 1:
+        if ens_no is not None and len(files) > 0:
             try:    
                 dataset = iris.load_cube(files[ens_no], callback=sort_time)
             except:
@@ -65,6 +67,7 @@ def read_variable_from_netcdf_from_dir(dir, filename, find_no_files = False, ens
                 
             except:
                 dataset = None
+    
     return dataset
 
 def convert_time_to_standard(time_coord, calendar = 'proleptic_gregorian'):
@@ -102,12 +105,25 @@ def interpolate_time(dataset, time_points):
     
     # Now you can safely interpolate 
     try:
-        dataset_interp = dataset.interpolate([('time', target_time.points)], 
-                                         iris.analysis.Linear())
+        dataset_interp = dataset.interpolate([('time', target_time.points)], iris.analysis.Linear())
     except:
-        set_trace()
+        dataset.remove_coord('month')
+        dataset_interp = dataset.interpolate([('time', target_time.points)], iris.analysis.Linear())
 
     return dataset_interp
+
+def same_grid(cube1, cube2):
+    for coord_name in ['latitude', 'longitude']:
+        c1 = cube1.coord(coord_name)
+        c2 = cube2.coord(coord_name)
+        
+        if c1.shape != c2.shape:
+            return False
+        if not (c1.points == c2.points).all():
+            return False
+    
+    return True
+
 
 def read_variable_from_netcdf(filename, dir = '', subset_function = None, 
                               make_flat = False, units = None, 
@@ -144,18 +160,20 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
     
     while i < len(dir) and dataset is None:
         dataset = read_variable_from_netcdf_from_dir(dir[i], filename, find_no_files,
-                                                     ens_no = ens_no)
+                                                     ens_no = ens_no) 
         i += 1
-    
+        
     if dataset is None:
         print("==============\nERROR!")
         print("can't open data.")
         print("Check directory (''" + dir0 + "''), filename (''" + filename + \
               "'') or file format")
         print("==============")
-        set_trace()
+        
     if find_no_files: return dataset
+     
     coord_names = [coord.name() for coord in dataset.coords()]
+    
     if time_points is not None:     
         if 'time' in coord_names:
             dataset = interpolate_time(dataset, time_points)
@@ -177,7 +195,9 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
             dataset_time = [addTime(time_point) for time_point in time_points.points]
             dataset = iris.cube.CubeList(dataset_time).merge_cube()
     dataset0 = dataset.copy()
-    if extent is not None:
+    if extent is not None and  not same_grid(dataset0, extent):
+        #dataset.data.mask[:] = False
+        #extent.data.mask[:] = False
         dataset = dataset.regrid(extent, iris.analysis.Linear())
     
     if units is not None: dataset.units = units
@@ -258,7 +278,7 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None,
     
     Y, time_points, extent = read_variable_from_netcdf(y_filename, make_flat = True, *args, 
                                     return_time_points = True, return_extent = True, **kw)
-     
+    
     if CA_filename is not None:
         CA = read_variable_from_netcdf(CA_filename, make_flat = True, 
                                        time_points = time_points, extent = extent, *args, **kw)
@@ -307,7 +327,7 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None,
                     cells_we_want = np.all(cells_we_want, axis = 0)
                     
                     cells_we_want = np.tile(cells_we_want, time_points.shape[0])
-                    
+                   
             Y = Y[cells_we_want]
             X = X[cells_we_want, :]
             
@@ -359,7 +379,7 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None,
     if x_find_mode == 'ensemble-single':
         nfs = [read_variable_from_netcdf(filename, find_no_files = True, *args, **kw)    
                for  filename in x_filename_list]
-          
+         
         nfs = np.array(nfs)
         nfs = np.unique(nfs[nfs >1])
         if len(nfs) == 0:

@@ -1,0 +1,89 @@
+## model info
+regions:: ['Chilean_Temperate_Forests_and_Matorral']
+model_title::  'SoW2526/attribution-HadGEM-test3/mini/<<region>>'
+
+## input data paths and filenames
+dir_training:: "data/data/driving_data2526/<<region>>/nrt/factual/"
+y_filen:: "burned_area.nc"
+CA_filen:: None
+
+# Fuel load
+x_filen_list:: "veg_HYDE31" #0
+x_filen_list:: "wood_HYDE31" #1
+x_filen_list:: "tree_HYDE31" #2
+
+# Fuel moisture
+x_filen_list:: "pr" #3
+x_filen_list:: "dry_days" #4
+x_filen_list:: "cumm_dry_days_max" #5
+x_filen_list:: "tasmax" #6
+x_filen_list:: "hursmin" #7
+x_filen_list:: "gust1_max.nc" #8
+
+# Nat ignitions
+x_filen_list:: "LI.nc" #9
+
+# Human
+x_filen_list:: "cropland_regridded_to_era5" #10
+x_filen_list:: "pasture_regridded_to_era5" #11
+x_filen_list:: "rural_population_regridded_to_era5"#12
+x_filen_list:: "total_irrigated_regridded_to_era5" #13
+x_filen_list:: "urban_area_regridded_to_era5" #14
+x_filen_list:: "urban_population_regridded_to_era5" #15
+
+Y_scale:: 1
+
+## Model info
+model_class:: ConFire
+priors:: {'pname': "controlID", 'value': [[0, 1, 2], [2, 3, 4, 5, 6, 7, 8], [9, 10, 11, 12]]}
+priors:: {'pname': "driver_Direction", 'value': [[1, 1, 1], [-1, -1, 1, 1, 1, -1, 1], [1, 1, 1, 1], ]}
+priors:: {'pname': "control_Direction", 'value': [1, 1, 1, 1]}
+priors:: {'pname': "x0",'np': 3, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
+priors:: {'pname': "betas",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas",'np': 7, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 3, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 7, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers",'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+
+priors:: {'pname': "link-qSpread_mu",'np': 1, 'dist': 'Normal', 'mu': 1.0, 'sigma': 0.5}
+priors:: {'pname': "link-qSpread_sigma",'np': 1, 'dist': 'HalfNormal', 'sigma': 0.5}
+#priors:: {'pname': "link-qSpread",'np': 1, 'dist': 'LogNormal', 'mu': 2.0, 'sigma': 1.0}
+
+### optimization info
+inference_step_type:: "metropolis"
+link_func_class:: MaxEnt
+niterations:: 1000
+cores:: 10
+fraction_data_for_sample:: 0.1
+min_data_points_for_sample:: 1000
+subset_function:: sub_year_range
+subset_function_args:: {'year_range': [2019, 2026]}
+grab_old_trace::  True # set to True till you get the code running. 
+                      # Then set to False when you start adding in new response curves
+### output info
+dir_outputs:: 'outputs/outputs_scratch/'
+
+## evaluation info
+y_filen_eval:: 'burned_area.nc'
+subset_function_eval:: [sub_year_range]
+subset_function_args_eval:: [{'year_range': [2019, 2026]}]
+
+sample_for_plot:: 20
+
+control_names:: ['Fuel', 'Moisture', 'Weather', 'Ignition', 'Suppression']
+levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
+dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
+cmap:: 'gradient_red' 
+dcmap:: 'diverging_TealOrange'
+parallelize:: True
+
+## experiment info
+limitation_types:: ['standard']
+controls_to_plot:: [0, 1, 2, 3, 4]
+experiment_dir:: "data/data/driving_data2526/<<region>>/nrt/factual/"
+experiment_dir:: "data/data/driving_data2526/<<region>>/nrt/countfactual/||data/data/driving_data2526/<<region>>/nrt/factual/"
+
+experiment_names:: ["factual", "counterfactual"]
+experiment_type:: ['single', 'ensemble-single']
+time_series_percentiles:: [0.0, 95.0]

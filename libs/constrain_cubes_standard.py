@@ -8,6 +8,7 @@ import iris
 from iris.analysis import geometry
 import iris.coord_categorisation as icc
 import cartopy.io.shapereader as shpreader
+from shapely.ops import unary_union
 
 import shapely.geometry as sgeom
 import shapely.ops as ops
@@ -190,7 +191,11 @@ def sub_year_months(cube, months_of_year):
         months_of_year = np.array(months_of_year)+1
     season = iris.Constraint(month_number = lambda cell, mnths = months_of_year: \
                              np.any(np.abs(mnths - cell[0])<0.5))
-    return cube.extract(season)
+    if len(np.unique(cube.coord('month_number').points)) == 1:
+        return cube
+    else:
+        return cube.extract(season)
+    return out
 
 def constrain_to_time(cube, years, months_of_year):
     cube = sub_year_range(cube, years)
@@ -386,6 +391,34 @@ def constrain_natural_earth(cube, Country = None, Continent = None, shpfilename 
         geom = countries[countries['NAME'].isin(Country)].geometry.unary_union
 
     return contrain_to_shape(cube, geom, constrain)
+
+def natural_earth_ocean_mask(cube):
+    
+    land_shp = shpreader.natural_earth(resolution='110m',
+                                       category='physical',
+                                       name='land')
+     
+    reader = shpreader.Reader(land_shp)
+    geoms = list(reader.geometries())
+        
+    # Combine into one geometry (faster for testing points)
+    land_geom = unary_union(geoms)
+
+    # Get lat/lon from your cube
+    lats = cube.coord('latitude').points
+    lons = cube.coord('longitude').points
+    
+    mask = np.zeros((len(lats), len(lons)), dtype=bool)
+    for i, lat in enumerate(lats):
+        for j, lon in enumerate(lons):
+            point = sgeom.Point(lon, lat)
+            mask[i, j] = not land_geom.contains(point)  # True = ocean
+    
+    mask[lats<-60,:] = True
+    if cube.ndim == 3:
+        mask = np.broadcast_to(mask[None, :, :], cube.data.shape)
+    cube.data = np.ma.masked_where(mask, cube.data)
+    return cube
     
 def mask_data_with_geometry(cube, geometry):
     """Masks the cube data based on whether points fall within the given geometry."""

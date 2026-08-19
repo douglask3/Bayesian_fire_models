@@ -43,16 +43,16 @@ def attribution_analysis(dir1, dir2, obs_dir, obs_file_nc = "burned_area.nc",
                          obs_file_csv = 'burned_area.csv', region = "", *args, **kw):
 
      
-    plot_all_attribution_scatter(dir1, '/time_series/' +dir2, region, obs_dir, obs_file_csv,
-                                 *args, **kw)
-    plot_confidence_in_attribution(dir1, '/samples/' +  dir2, region, *args, **kw)
+    #plot_all_attribution_scatter(dir1, '/time_series/' +dir2, region, obs_dir, obs_file_csv,*args, **kw)
+    
+    #plot_confidence_in_attribution(dir1, '/samples/' +  dir2, region, *args, **kw)
     
     plot_change_in_burned_area(dir1, '/samples/' +  dir2, region, 
                                obs_file = obs_dir + '/' + region + '/' + obs_file_nc, 
-                               counterfactual_name = 'counterfactual-extraNoise-',
+                               counterfactual_name = 'counterfactual-',
                                percentiles = [50], plot_att_only = True, 
                                out_figname_extra = 'season-', *args, **kw)
-    #set_trace()
+    return None
     for percentiles in [[50], [5, 95]]:
         try:
             plot_change_in_burned_area(dir1, '/samples/' +  dir2, region, 
@@ -63,23 +63,27 @@ def attribution_analysis(dir1, dir2, obs_dir, obs_file_nc = "burned_area.nc",
                                        obs_file = obs_dir + '/' + obs_file_nc, 
                                        percentiles = percentiles, *args, **kw)
 
-    #plot_attribution_time_series(dir1, '/samples/' +  dir2, region, *args, **kw)
+    plot_attribution_time_series(dir1, '/samples/' +  dir2, region, *args, **kw)
     
 
 if __name__=="__main__":
-    dir1 = "outputs/outputs_scratch/attribution-base-localBA-data-NEW4/"
-    dir1 = "outputs/outputs_scratch/Pantanal-Maria-full-3-all-year/"
-    #dir1 = "outputs/outputs_scratch/Amazon-Maria-full-3-all-year-masked/"
+
+    dir1 = "outputs/outputs_scratch/SoW2526/attribution-HadGEM-test29/"
+    dir1 = "outputs/outputs_scratch/SoW2526/attribution-HadGEM-test29-fuelcf4/"
+    dir1 = "outputs/outputs_scratch/SoW2526/attribution-HadGEM-test29-fuelcf4-rerun2/"
     dir2 = "/_16-frac_points_0.5/" 
-    #dir2 = "/_15-frac_points_0.2/" 
 
-    region = "Pantanal"
-    #region = "Amazon"
+    regions = ["Scottish Highlands", "Northwest Iberia", "Midwestern Canadian Shield forests", "Chilean Temperate Forests and Matorral"]
+    #regions = "Northwest_Iberia"
+    mnthss = [[2, 3, 4, 5,6, 7], [7], [6, 7], [0,1]]#, c('06', '07'), c('03'))
+    years = [2025, 2025, 2025, 2026]#, 2025, 2025)
 
-    obs_dir = 'data/data/driving_data_base//'
-    obs_file = 'burned_area_data.csv'  
-
-    attribution_analysis(dir1, dir2, obs_dir, region = region, obs_file_nc = "burned_area.nc",
-                         obs_file_csv = 'burned_area_data.csv')
+    obs_dir = 'data/data/driving_data2526/'
+    obs_file_nc = 'nrt24/factual/burned_area.nc' 
+    obs_file_csv = 'nrt24/factual/burned_area.csv'  
+    
+    for region, mnths, year in zip(regions, mnthss, years):
+        attribution_analysis(dir1, dir2, obs_dir, region = region.replace(' ', '_'), year = year, mnths = mnths,
+                             obs_file_nc = obs_file_nc, obs_file_csv = obs_file_csv)
      
     

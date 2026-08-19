@@ -137,7 +137,6 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
             
             prob = make_into_cube(prob, file_prob) 
         
-        
         if hyper:
             if sample_error:
                 out = func_class.random_sample_given_(out, link_param_in) 

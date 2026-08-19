@@ -1,5 +1,6 @@
 import iris
 import numpy as np
+import numpy.ma as ma
 import cartopy.crs as ccrs
 
 import iris.analysis
@@ -33,6 +34,7 @@ def plot_BayesModel_maps(Sim, levels = None, cmap = 'gradient_reds', ylab = '', 
                          Nrows = 1, Ncols = 2, plot0 = 0, collapse_dim = 'realization',
                          scale = 1, figure_filename = None, set_traceT = False,
                          *args, **kw):
+    Sim0 = Sim.copy()
     try:
         if collapse_dim != 'time': Obs = Obs.collapsed('time', iris.analysis.MEAN) 
         
@@ -72,12 +74,12 @@ def plot_BayesModel_maps(Sim, levels = None, cmap = 'gradient_reds', ylab = '', 
         #SoW_cmap['diverging_TealOrange'], 
         #plot_map_sow(cube, plot_name,  cmap = SoW_cmap[cmap], levels=levels, ax=ax, cbar_label = "", **kw, **kw2)
         #set_trace()
-        try:
-            plot_annual_mean(cube, levels, cmap, plot_name = plot_name, scale = scale,      
+        #try:
+        plot_annual_mean(cube, levels, cmap, plot_name = plot_name, scale = scale,      
                              Nrows = Nrows, Ncols = Ncols, plot_n = plot_n + plot0, 
                              *args, **kw, **kw2)
-        except:
-            set_trace()
+        #except:
+        #    set_trace()
         if plot_n == 1:
             plt.gca().text(-0.1, 0.5, ylab, fontsize=12, rotation=90, va='center', ha='right',
                            transform=plt.gca().transAxes)
@@ -93,9 +95,9 @@ def plot_BayesModel_maps(Sim, levels = None, cmap = 'gradient_reds', ylab = '', 
         plot_map(Obs, "Observations", 1, figure_filename = set_fig_fname('obs'))
         plot_n = 2
     
+    
     plot_map(Sim[0,:], "Simulation -  5%", plot_n, figure_filename = set_fig_fname('-sim05pc'))
     plot_map(Sim[1,:], "Simulation - 95%", plot_n+1, figure_filename = set_fig_fname('-sim95pc'))
-   
     #plot_map(Sim[2,:], "Simulation - 95%", plot_n+2, figure_filename = set_fig_fname('-sim95pc'))
     
     return levels
@@ -480,6 +482,7 @@ def get_cube_extent(cube):
 
 def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, extent = None, figsize = None, 
                             size_scale = 4, flatten = True, transpose = False,
+                            oma = [0.5, 0.1, 0.25, 0.1],
                             *args, **kw):
     """
     Creates a grid of Cartopy map subplots with a consistent geographic extent.
@@ -494,7 +497,7 @@ def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, extent = None, figsize = No
         An example cube used to determine the spatial extent of the maps.
     size_scale : float, optional (default=5)
         Scaling factor for figure size; adjusts the base width of each subplot.
-    figsize : tuple of float, optional
+    figsize : tuple or float, optional
         Manual override for figure size (width, height in inches). If not provided,
         it is automatically calculated based on extent and scaling.
 
@@ -512,27 +515,48 @@ def set_up_sow_plot_windows(n_rows, n_cols, eg_cube, extent = None, figsize = No
     - Automatically adjusts figure size based on aspect ratio of the geographic extent.
     - Intended for plotting multiple maps side-by-side with shared spatial context.
     """
+    
     if extent is None:
         extent = get_cube_extent(eg_cube)
         if extent[0] < -175.0 and extent[1] > 175.0:
             extent[0] = -180.0
+            extent[1] = 180.0
+        
         extent[0] -= (extent[1] - extent[0])*0.1
         extent[1] += (extent[1] - extent[0])*0.1
         extent[2] -= (extent[3] - extent[2])*0.1
         extent[3] += (extent[3] - extent[2])*0.1
-
+        
+    if extent[0] < -180: extent[0] = -180
+    if extent[1] >  180: extent[1] = 180
+    if extent[2] < -90 : extent[2] = -90
+    if extent[3] >  90 : extent[3] = 90
     if figsize is None:
         ratio = (extent[3] - extent[2])/(extent[1] - extent[0])*1.1
         figsize = (n_cols*size_scale, n_rows * size_scale * ratio)
         print("Automated figure size: " + str(figsize))
+    
+    if oma is not None:
+        figsize = (figsize[0] + oma[1] + oma[3], figsize[1] + oma[0] + oma[2])
         
-    #if transpose:
-    #    n_rows, n_cols = n_cols, n_rows
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize,
+        
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize, 
                              subplot_kw={'projection': ccrs.PlateCarree()}, 
-                             *args, **kw) 
-    if transpose:
-        axes = np.transpose(axes)
+                             #constrained_layout=True,
+                             *args, **kw)
+    
+    fig_w, fig_h = figsize
+    if oma is not None:
+        fig.subplots_adjust(left = oma[1] / fig_w,
+                            right = 1 - (oma[3] / fig_w),
+                            bottom = oma[0] / fig_h,
+                            top = 1 - (oma[2] / fig_h),
+                            wspace=0.2,
+                            hspace=0.2)
+    
+    if transpose: axes = np.transpose(axes)
+    #set_trace()
+
     try:
         for ax in axes.flat:
             ax.set_extent(extent, crs=ccrs.PlateCarree())
@@ -631,15 +655,64 @@ def add_confidence(cube_pvs, ax):
     conf_lat = lat2d[mask]
 
     # Plot dots
-    ax.plot(conf_lon, conf_lat, 'k.', markersize=2.5, transform=ccrs.PlateCarree(), zorder=10)   
+    ax.plot(conf_lon, conf_lat, 'k.', markersize=2.5, transform=ccrs.PlateCarree(), zorder=10)  
+'''
+def point_based_legend():
 
-def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_BlueRed'], 
-             levels = None, extend = 'both', ax=None,
-             cbar_label = '', cbar_orientation = 'vertical',
-             overlay_value = None, overlay_cube = None,
-             overlay_col = "#cfe9ff", overlay_size = 1,
-             cube_pvs = None, add_cbar = True, figure_filename = None, use_pcolmesh = True, 
-             *args, **kw):
+# Create labels like "A to B"
+labels = [f"{levels[i]} to {levels[i+1]}" for i in range(len(levels)-1)]
+
+# Create legend handles
+handles = []
+for i in range(len(levels)-1):
+    color = cmap(norm((levels[i] + levels[i+1]) / 2))
+    handles.append(
+        Line2D([0], [0],
+               marker='o',
+               color='none',
+               markerfacecolor=color,
+               markersize=8,
+               label=labels[i])
+    )
+
+# Add legend
+ax = plt.gca()
+ax.legend(handles=handles, title="Range") 
+'''
+def create_discrete_cmap_norm(cmap_name, levels, extend="neither"):
+    """
+    Creates a discrete colormap and matching BoundaryNorm based on input levels.
+    """
+    # 1. Convert levels to a numpy array just in case
+    levels = np.asarray(levels)
+    core_bins = len(levels) - 1
+
+    # 2. Dynamically calculate the precise number of colors needed
+    if extend == "neither":
+        n_colors = core_bins
+    elif extend in ("min", "max"):
+        n_colors = core_bins + 1
+    elif extend == "both":
+        n_colors = core_bins + 2
+    else:
+        raise ValueError("extend must be 'neither', 'min', 'max', or 'both'")
+
+    # 3. Build the custom discrete colormap
+    base_cmap = plt.colormaps[cmap_name]
+    color_samples = np.linspace(0.1, 0.9, n_colors)  # Avoid clips at pure white/black
+    discrete_colors = base_cmap(color_samples)
+    return mcolors.ListedColormap(discrete_colors)
+
+def plot_map_sow(cube, title='', contour_obs=None, scatter_obs = None, 
+                 cmap=SoW_cmap['diverging_BlueRed'], 
+                 levels = None, extend = 'both', ax=None,
+                 cbar_label = '', cbar_orientation = 'vertical',
+                 tick_labels = None,
+                 overlay_value = None, overlay_cube = None,
+                 overlay_col = "#cfe9ff", overlay_size = 1,
+                 cube_pvs = None, add_cbar = True, figure_filename = None, use_pcolmesh = True,
+                 cbar_lab_rotate = None, cbar_top_and_bottom = False,
+                 *args, **kw):
     """
     Plot a SoW-style map of fire (or climate) data with optional overlays and confidence markers.
 
@@ -709,6 +782,10 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
             extend = 'max'
         else:
             extend = 'both'
+    
+    
+    if isinstance(cmap, str): 
+        cmap = create_discrete_cmap_norm(cmap, levels, extend)
     if is_catigorical:
         norm = BoundaryNorm(boundaries=np.array(levels) + 0.5, ncolors=cmap.N)
     elif levels is not None:   
@@ -733,7 +810,7 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
     ## Plot boundary where mask changes
     #ax.contour(cube.coord('longitude').points, cube.coord('latitude').points, nan_mask,
     #    levels=[0.5], colors='black', linewidths=1)
-    #set_trace()
+    
     if overlay_cube is not None:
         add_overlay_cube(overlay_cube, overlay_value, overlay_col, overlay_size, ax)
     elif overlay_value is not None:
@@ -744,17 +821,73 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
         if is_catigorical:
             tick_positions = np.array(levels) + 0.5
             tick_labels = [str(level) for level in levels]
-            cbar = plt.colorbar(img, ax=ax, orientation=cbar_orientation,
+            cbar = plt.colorbar(img, ax=ax, 
+                                orientation=cbar_orientation,
                                 ticks=tick_positions,
                                 fraction=0.046,  # width of colorbar relative to figure
                                 pad=0.05)
             cbar.ax.set_yticklabels(tick_labels) 
         else:
-            cbar = plt.colorbar(img, ax=ax, ticks=levels, orientation=cbar_orientation,
-                                fraction=0.05,  # width of colorbar relative to figure
-                                pad=-0.05, shrink=.76, aspect=40)
+
+            divider = make_axes_locatable(ax)
+            side = "right" if cbar_orientation == "vertical" else "bottom"
+            cax = divider.append_axes(side, size=0.08, pad=0.32, axes_class=plt.Axes)
+
+            cbar = plt.colorbar(
+                img, cax=cax,
+                orientation = cbar_orientation,
+                ticks=levels
+            )
+            
+            #cbar = plt.colorbar(img, ax=ax, ticks=levels, orientation=cbar_orientation,
+            #                    fraction=0.05, # width of colorbar relative to figure
+            #                    pad=0.15, shrink=1.0, aspect=40)
+            
+            if tick_labels is not None: cbar.set_ticklabels(tick_labels)
+
         cbar.set_label(cbar_label, labelpad=10, loc='center')
         cbar.ax.xaxis.set_label_position('top')
+        if cbar_lab_rotate != 0:
+            cbar.ax.set_xticklabels(cbar.ax.get_xticklabels(), rotation=cbar_lab_rotate)
+        if cbar_top_and_bottom:
+            # --- Get ticks dynamically ---
+            if cbar_orientation == 'horizontal':
+                ticks = cbar.ax.get_xticks()
+                axis = cbar.ax.xaxis
+                transform = cbar.ax.get_xaxis_transform()
+                is_horizontal = True
+            else:
+                ticks = cbar.ax.get_yticks()
+                axis = cbar.ax.yaxis
+                transform = cbar.ax.get_yaxis_transform()
+                is_horizontal = False
+            
+            # Remove default tick labels
+            axis.set_ticklabels([])
+            
+            # --- Add alternating labels ---
+            for i, t in enumerate(ticks):
+                offset = 1.4 if i % 2 == 0 else -0.4  # above / below (or left/right)
+                va = 'bottom' if i % 2 == 0 else 'top'
+                ha = 'center'
+            
+                if is_horizontal:
+                    x, y = t, offset
+                else:
+                    x, y = offset, t
+                    ha = 'left' if i % 2 == 0 else 'right'
+                    va = 'center'
+                
+                if tick_labels is None:
+                    lab = f"{t:g}"
+                else:
+                    lab = tick_labels[i]
+                cbar.ax.text(
+                    x, y, lab,   # nice formatting
+                    transform=transform,
+                    ha=ha, va=va,
+                    rotation=cbar_lab_rotate
+                )
          
     # Add boundaries
     ax.add_feature(cfeature.COASTLINE, linewidth=0.5)
@@ -764,7 +897,28 @@ def plot_map_sow(cube, title='', contour_obs=None, cmap=SoW_cmap['diverging_Blue
 
     # Optional observed burned area anomaly contour
     if contour_obs is not None:
-        qplt.contour(contour_obs, levels=[0], colors='#8a3b00', linewidths=1, axes=ax)
+        qplt.contour(contour_obs, levels=[0], colors='#999999', linewidths=1, axes=ax)
+        #masked = ma.masked_where(contour_obs.data != 1, contour_obs.data)
+        #set_trace()
+        #qplt.scatter(masked, c='#724B49', s=10, marker='o')
+        
+    if scatter_obs is not None:
+        # Find where values == 1
+        mask = scatter_obs.data == 1
+        
+        # Get coordinates (adjust names if needed)
+        lons = cube.coord('longitude').points
+        lats = cube.coord('latitude').points
+
+        # Create 2D grids if needed
+        lon2d, lat2d = np.meshgrid(lons, lats)
+
+        # Plot only the points where value == 1
+        
+        ax.scatter(lon2d[mask], lat2d[mask],
+                s=2000/(scatter_obs.shape[1]**2), 
+                c='#000000', marker='o', transform=ccrs.PlateCarree())
+        
 
     print(title)
     ax.set_title(title, fontsize = 12)

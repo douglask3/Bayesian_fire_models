@@ -32,7 +32,10 @@ def open_netcdf_and_find_clim(filename):
     
     
     # Add month categorisation to time
-    icat.add_month(cube, "time", name="month")
+    try:
+        icat.add_month(cube, "time", name="month")
+    except:
+        pass
     
     # Extract last 12 months of data    
     constraint = iris.Constraint(
