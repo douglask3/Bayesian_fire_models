@@ -1,6 +1,6 @@
 
 
-dir = "outputs/outputs_scratch/UK/isimip/test-ukSPECIFIC9/time_series/_14-frac_points_1e-24/"
+dir = "outputs/outputs_scratch/UK/isimip/test-ukSPECIFIC9-UK/time_series/_14-frac_points_1e-24/"
 
 base = "historical"
 ssps = c("ssp126", "ssp370", "ssp585")
@@ -12,7 +12,7 @@ models = c("IPSL-CM6A-LR", "MPI-ESM1-2-HR", "MRI-ESM2-0", "UKESM1-0-LL")#, "GFDL
 years = seq(2000, 2090, by = 10)
 targeMnths = c('06', '07', '08')
 
-annual_average <- function(dat, datF, datM, datH, fun = max) {
+annual_average <- function(dat, datF, datM, datH, fun = mean) {
 
     #xindex = apply(dat[,1:240],1 ,mean)>0.001 & apply(dat[,1:240],1 ,mean)<0.1
     datF = apply(datF, 1 ,mean)
@@ -25,11 +25,11 @@ annual_average <- function(dat, datF, datM, datH, fun = max) {
     #prob[dat0>0.1] = 0
     set.seed(123458)
     
-    samples = sample(1:nrow(dat), 5000, TRUE, prob)
+    samples = sample(1:nrow(dat), 200, TRUE, prob)
     decade <- function(year) {
         selectYr <- function(yr) which(substr(colnames(dat), 2, 5) == yr)
         index = unlist(lapply(year:(year+9), selectYr))  
-        
+        #browser()
         return(apply(dat[samples,index], 1, fun))
     }   
     out = lapply(years,decade)
@@ -70,12 +70,22 @@ af_tscale <- function(x) {
 }
 
 
+mit_tscale <- function(x) {
+    return(af_tscale((x/100) +1))
+    x = x /100
+    y= x
+    y[x>=0]= 1-0.5/(x[x>=0]+1)
+    y[x<0]= 1-(1-0.5/(-x[x<0]+1))
+    return(y)
+}
+
 add_ssp <- function(dat, name, col, offset, 
-                    width = 1, tplot = TRUE, transform = TRUE, lab_bottom = T) {
+                    width = 1, tplot = TRUE, transform = af_tscale, lab_bottom = T) {
+    if (all(is.na(dat))) return(NULL)
     for_year <- function(i, year) {
         x = year + offset
         ys = quantile(dat[,i], c(0.05, 0.25, 0.5, 0.75, 0.95), na.rm = TRUE)
-        if (transform) ys = af_tscale(ys)
+        if (!is.null(transform)) ys = transform(ys)
         if (!tplot) return(ys)
         for_line <- function(j, wd = width, ...) {
             lines(x + c(-wd, wd),c(ys[j], ys[j]),  ...)
@@ -99,16 +109,16 @@ add_ssp <- function(dat, name, col, offset,
 }
 
 add_legend <- function() {
-    plot(c(10, 20), c(0, 1), xlab = '', ylab = '', type = 'n', axes = FALSE)
+    plot(c(10, 100), c(0, 1), xlab = '', ylab = '', type = 'n', axes = FALSE)
     
     mat = matrix(runif(2000, 0.1, 0.99), ncol = 2)
     #polygon(c(10, 10, 20, 20), c(-0.2, 1, 1, -0.2), col = 'white', border = NA, xpd = NA)
-    add_ssp(mat, ssps[1], '#008787', 2.5, transform = F)
-    add_ssp(mat, ssps[2], '#E27226', 5, transform = F, lab_bottom = F)
-    add_ssp(mat, ssps[3], '#C7403D', 7.5, transform = F)
+    add_ssp(mat, ssps[1], '#008787', 2.5, transform = NULL)
+    add_ssp(mat, ssps[2], '#E27226', 5, transform = NULL, lab_bottom = F)
+    add_ssp(mat, ssps[3], '#C7403D', 7.5, transform = NULL)
 }
 
-add_yaxis <- function() {
+af_axis <- function() {
     labels = af_tscale(c(0, 1/128, 1/64, 1/32, 1/16, 1/8, 1/4, 1/2, 2/3, 1, 
                1.5, 2, 4, 8, 16, 32, 64, 128, 1000000))
     labels_txt = c('0', '', '', '', '', '1/8', '1/4', '1/2', '2/3', 'no\nchange', '3/2',
@@ -126,27 +136,33 @@ add_yaxis <- function() {
     #browser()
 }
 
-plot_output <- function(filename = "Evaluate.csv", pname = "Burned Area") {
-    dats = lapply(ssps, open_ssp, filename = filename)
+mit_axis <- function() {
+    labels = c(-100, -50, -25, -10, -5, 0, 5, 10, 25, 50, 100)
+    ylim=par("usr")[3:4]
+    if ( sum((mit_tscale(labels) > ylim[1]) & (mit_tscale(labels) < ylim[2]))<5) 
+        labels = labels/2
+    at = mit_tscale(labels)
+    axis(2, at = at, labels = labels)
+    lapply(at, function(y) lines( c(-9E9, 9E9), c(y, y),  col = 'grey', lty = 3))
+}
+
+af_plot <- function(dats, pname, fun = af_tscale, axis_fun = af_axis) {
     
-    normalise_dat <- function(dat) apply(dat, 2, function(i) (i)/(dat[,1]))
-    
-    dats = lapply(dats, normalise_dat)
-    yrange = sapply(dats, quantile, c(0.0, 1.0), na.rm = TRUE)
-    
-    
-    yrange = mapply(add_ssp, dats, '', cols, c(3, 5, 7), tplot = FALSE)
+    yrange = mapply(add_ssp, dats, '', cols, c(3, 5, 7), 
+                    MoreArgs = list(tplot = FALSE, transform = fun))
+
     yrange = as.vector(yrange)
+    
     yrange = range(yrange)
     if (yrange[1] < 0) yrange[1] = 0
     yrange = yrange + c(-1, 1) * diff(yrange) * 0.04
 
     if (yrange[1] < 0) yrange[1] = 0
     if (yrange[2] > 1) yrange[2] = 1
-    #yrange[2] = min(yrange[2], 4)
-    #yrange = c(0,1)
     plot(range(years) + c(10, 5), yrange, xlab = '', ylab = '', type = 'n', xaxt = 'n', yaxt = 'n', yaxs = 'i')
-    add_yaxis()
+    axis_fun()
+
+    
     mtext(side = 3, adj = 0.1, pname, font = 2)
     axis(1, at = seq(2015,2095, 10), labels = paste(seq(2010,2090, 10), 's'))
     
@@ -156,15 +172,28 @@ plot_output <- function(filename = "Evaluate.csv", pname = "Burned Area") {
     
     lines( c(-9E9, 9E9), c(1, 1),  col = '#333333', lty = 1)
     
-    mapply(add_ssp, dats, '', cols, c(3, 5, 7))
-    #add_ssp(dats[[1]], '', '#008787', 3)
-    #add_ssp(dats[[2]], '', '#E27226', 5)
-    #add_ssp(dats[[3]], '', '#C7403D', 7)
+    mapply(add_ssp, dats, '', cols, c(3, 5, 7), MoreArgs = list(transform = fun))
+}
+
+mit_plot <- function(dats) {
+    dats[[1]] = -100*((dats[[2]]/dats[[1]])-1)
+    dats[[2]] = -100*((dats[[3]]/dats[[2]])-1)
+    dats[[3]][] = NaN
+    af_plot(dats, rep('', 3), fun = mit_tscale, axis_fun = mit_axis)
+}
+
+
+plot_output <- function(filename = "Evaluate.csv", pname = "Burned Area") {
+    dats = lapply(ssps, open_ssp, filename = filename)
+    normalise_dat <- function(dat) apply(dat, 2, function(i) (i)/(dat[,1]))
+    dats = lapply(dats, normalise_dat)
+    af_plot(dats, pname) 
+    mit_plot(dats)
 }
 graphics.off()
 png("figs/UK_proj_ts.png", height = 10, width = 7.2, res = 300, units = 'in')
 
-    layout(rbind(1, 2, 3, c(0,4,0)),widths = c(0.4, 0.2, 0.4), heights = c(1,1, 1, 0.5))
+    layout(rbind(1:2, 3:4, 5:6, c(7,0)), heights = c(1,1, 1, 0.5))
     par(mar = c(2.5, 3, 1.5, 1))
     plot_output()
     plot_output("standard-Moisture.csv", "Dryness")
