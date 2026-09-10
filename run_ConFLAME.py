@@ -422,7 +422,8 @@ def run_ConFire(namelist):
         os.makedirs(fig_dir, exist_ok=True)
         def find_replace_period_model(exp_list, experiments, periods):
             
-            exp_list_all = [item.replace('<<region>>', region) for item in exp_list \
+            if region is not None:
+                exp_list_all = [item.replace('<<region>>', region) for item in exp_list \
                             if "<<experiment>>" not in item and "<<model>>" not in item]
             looped_items = [item for item in exp_list \
                             if "<<experiment>>" in item and "<<model>>" in item]
@@ -442,7 +443,8 @@ def run_ConFire(namelist):
                     dirs = [item.replace("<<period>>", period) for item in looped_items]    
                     dirs = [item.replace("<<model>>", model) for item in dirs]   
                     dirs = [item.replace("<<experiment>>", experiment) for item in dirs] 
-                    dirs = [item.replace('<<region>>', region) for item in dirs]                
+                    if region is not None:
+                        dirs = [item.replace('<<region>>', region) for item in dirs]
                     exp_list_all += dirs
             
             return exp_list_all
@@ -508,7 +510,7 @@ def run_ConFire(namelist):
                         in zip(names_all, dirs_all, exp_type, y_filen, common_noises)
                 ]
         
-        #args_list.reverse()
+        args_list.reverse()
         
         
         if len(args_list) > 1 and select_from_info('parallelize', True): 
