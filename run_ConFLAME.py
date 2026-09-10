@@ -420,8 +420,7 @@ def run_ConFire(namelist):
         output_file = params['filename_out']
         fig_dir = output_dir + '/figs/' + output_file + '/'
         os.makedirs(fig_dir, exist_ok=True)
-        def find_replace_period_model(exp_list, experiments, periods):
-            
+        def find_replace_period_model(exp_list, experiments, periods, region):
             exp_list_all = [item.replace('<<region>>', region) for item in exp_list \
                             if "<<experiment>>" not in item and "<<model>>" not in item]
             looped_items = [item for item in exp_list \
@@ -442,7 +441,7 @@ def run_ConFire(namelist):
                     dirs = [item.replace("<<period>>", period) for item in looped_items]    
                     dirs = [item.replace("<<model>>", model) for item in dirs]   
                     dirs = [item.replace("<<experiment>>", experiment) for item in dirs] 
-                    dirs = [item.replace('<<region>>', region) for item in dirs]                
+                    dirs = [item.replace('<<region>>', region) for item in dirs]
                     exp_list_all += dirs
             
             return exp_list_all
@@ -455,7 +454,7 @@ def run_ConFire(namelist):
         common_noises = [True]
         limitation_types = select_from_info('limitation_types')
         max_no_ensembles =  select_from_info('max_no_ensembles')
-        if 1 == 1:
+        try:
             y_filen1 = [select_from_info('y_filen_eval', run_info['x_filen_list'][0])]
             experiment_dirs  = select_from_info('experiment_dir')
             experiment_names = select_from_info('experiment_names')
@@ -464,8 +463,10 @@ def run_ConFire(namelist):
             models = select_from_info('experiment_model')
             controls_to_plot = select_from_info('controls_to_plot', 
                                                  range(len(control_direction)))
-            experiment_dirs = find_replace_period_model(experiment_dirs, experiments, periods)
-            experiment_names = find_replace_period_model(experiment_names, experiments, periods)
+            experiment_dirs = find_replace_period_model(experiment_dirs, experiments, 
+                                                        periods, region)
+            experiment_names = find_replace_period_model(experiment_names, experiments, 
+                                                         periods, region)
             dir_filter = np.array([[dir, name] for dir, name in \
                                   zip(experiment_dirs, experiment_names) if os.path.isdir(dir)])
             
@@ -479,8 +480,8 @@ def run_ConFire(namelist):
             common_noises = common_noises + \
                 select_from_info('experiment_common_noise',[True] * len(experiment_names))
             
-        #except:
-        #    pass   
+        except:
+            pass   
         
         args_list = [dict(training_namelist=training_namelist,
                           namelist=region_namelist,
