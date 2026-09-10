@@ -389,7 +389,8 @@ def constrain_natural_earth(cube, Country = None, Continent = None, shpfilename 
     else:
         if not isinstance(Country, list): Country = [Country]
         geom = countries[countries['NAME'].isin(Country)].geometry.unary_union
-
+    
+    
     return contrain_to_shape(cube, geom, constrain)
 
 def natural_earth_ocean_mask(cube):
