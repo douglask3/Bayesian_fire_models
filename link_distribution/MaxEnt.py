@@ -142,9 +142,9 @@ class MaxEnt(object):
     
         return out
     
-    def define_qSpread_param(self, params, param_names, inference = True, sigma = None,
+    def define_qSpread_param(self, params, param_names, 
+                             inference = True, sigma = None,
                              size = 1):
-        
         if any_in(param_names, 'qSpread_mu'):
             mu = element_ref(params, param_names, 'qSpread_mu')[0]
             if sigma is None:
@@ -252,7 +252,7 @@ class MaxEnt(object):
         params = params.values()
         qSpread = self.define_qSpread_param(params, param_names, False, size = len(mod))
         detection_epslion = self.define_detection_efficency_param(params, param_names, False)
-        
+        #set_trace() 
         return overlap_inverse(mod, qSpread)
     
     def sample_given_(self, Y, X, *args, **kw):
