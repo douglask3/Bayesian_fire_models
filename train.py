@@ -1,7 +1,18 @@
 import multiprocessing as mp
 #mp.set_start_method('forkserver')
 mp.set_start_method("spawn", force=True)
+try:
 
+    job_id = os.environ.get("SLURM_JOB_ID", "interactive")
+    pytensor_dir = os.path.join(
+        os.environ["TMPDIR"], "pytensor"
+    )
+    
+    os.makedirs(pytensor_dir, exist_ok=True)
+    
+    os.environ["PYTENSOR_FLAGS"] = f"compiledir={pytensor_dir}"
+except:
+    pass
 from warnings import warn
 
 import sys
@@ -136,7 +147,7 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None,
 
         ## define error measurement
         if CA is not None: CA = CA.data
-        
+         
         error = link_func_class().obs_given_(prediction, Y, CA, [*link_priors.values()])
               
         ## sample model
