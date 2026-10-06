@@ -1,5 +1,5 @@
 ## model info
-model_title::  'model_test_baseline__MO_test'
+model_title::  'test16'
 dir_training:: "data/data/driving_data_40year_gs/"
 dir_projecting:: "data/data/driving_data_40year_gs/" 
 y_filen::"fapar_mask.nc"
@@ -18,9 +18,11 @@ x_filen_list::  "logsoc_mask.nc" #8 - soil oraganic carbon - soil condtion
 ## Model info
 model_class:: ConFire
 
-priors:: {'pname': "link-sigma",'np': 1, 'dist': 'HalfNormal', 'sigma': 0.5}
-priors:: {'pname': "link-p0",'np': 1, 'dist': 'Uniform', 'lower': 0.0, 'upper': 1.0}
-priors:: {'pname': "link-p1",'np': 1, 'dist': 'LogNormal', 'mu': -1.0, 'sigma': 1.0}
+#priors:: {'pname': "link-sigma",'np': 1, 'dist': 'HalfNormal', 'sigma': 0.5}
+#priors:: {'pname': "link-p0",'np': 1, 'dist': 'Uniform', 'lower': 0.0, 'upper': 1.0}
+#priors:: {'pname': "link-p1",'np': 1, 'dist': 'LogNormal', 'mu': -1.0, 'sigma': 1.0}
+priors:: {'pname': "link-qSpread_mu",'np': 1, 'dist': 'Normal', 'mu': 1.0, 'sigma': 0.5}
+priors:: {'pname': "link-qSpread_sigma",'np': 1, 'dist': 'HalfNormal', 'sigma': 0.5}
 
 control_names:: ['Moisture','CO2','Energy', 'Carbon', 'Soil condition']
 
@@ -40,30 +42,47 @@ priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.
 priors:: {'pname': "powers",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
 priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
 priors:: {'pname': "powers",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "gammas",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "gammas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "gammas",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "gammas",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "gammas",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "weakers",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "weakers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "weakers",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "weakers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "weakers",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
 
 ### optimization info
 inference_step_type:: "metropolis"
 link_func_class:: MaxEnt
 niterations:: 1000
 cores:: 5
-fraction_data_for_sample:: 0.00001
-#subset_function:: sub_year_range
-subset_function:: [sub_year_range, constrain_natural_earth]
-#subset_function_args:: {'year_range': [2000, 2001]}
+fraction_data_for_sample:: 0.00000000000001
+min_data_points_for_sample:: 1000
+subset_function:: sub_year_range
+subset_function:: constrain_natural_earth
+subset_function_args:: {'year_range': [2000, 2015]}
+subset_function_args:: {'Continent':['South America']}
+subset_function_eval:: sub_year_range
+subset_function_eval:: constrain_natural_earth
+subset_function_args_eval:: {'year_range': [2000, 2015]}
+subset_function_args_eval:: {'Continent':['South America']}
 #subset_function_args_eval:: [{'year_range': [2000, 2001]}, {'Continent':['South America','Oceania','Europe','Afria','North America','Asia']}]
-subset_function_args:: [{'year_range': [2000, 2001]}, {'Continent':['South America']}]
+#subset_function_args:: [{'year_range': [2000, 2005]}]#, {'Continent':['South America']}]
 
 
 grab_old_trace:: True
 ### output info
-dir_outputs:: 'outputs/outputs/'
+dir_outputs:: 'outputs/outputs/fapar_model/'
 
 ## evaluation info
-sample_for_plot:: 3
+sample_for_plot:: 10
+limitation_types:: ['standard']
 levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
 dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
-cmap:: 'OrRd'
-dcmap:: 'RdBu_r'
+cmap:: 'gradient_red' 
+dcmap:: 'diverging_TealOrange'
 make_time_series:: False
 
 
