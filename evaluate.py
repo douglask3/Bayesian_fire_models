@@ -357,7 +357,7 @@ def evaluate_MaxEnt_model(trace_file, y_filen, x_filen_list, scale_file,
     #paramter_map(trace, x_filen_list, fig_dir) 
     
     common_args = {
-        'class_object': model_class,
+        'model_class': model_class,
         'link_func_class': link_func_class,
         'hyper': hyper,
         'test_eg_cube': test_eg_cube,

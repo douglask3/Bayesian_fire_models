@@ -61,7 +61,7 @@ def contruct_param_comb(i, params, params_names, extra_params):
 
 def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name, 
                       dir_samples, grab_old_trace, extra_params = None,
-                      class_object = FLAME, method = 'burnt_area',
+                      model_class = FLAME, model_output_fun = 'burnt_area',
                       link_func_class = MaxEnt, hyper = True, sample_error = True,
                       test_eg_cube = False, out_index = None, 
                       data_store = None, common_noise = False,
@@ -114,17 +114,19 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
         link_param_in = {key: value for key, value in param_in.items() \
                        if key.startswith('link-')}
         
-        obj = class_object(param_in)
+        
+        model = model_class(param_in)
         if isinstance(X, list):
             Xi = random.choice(X)
         else:
             Xi = X
         if isinstance(Xi, str) and Xi[-4:] == '.npy':
             Xi = np.load(Xi)
+         
         
-        out = getattr(obj, method)(Xi, *args, **kw)
-        
-    
+        out = getattr(model, model_output_fun)(Xi, *args, **kw)
+         
+         
         if out_index is not None: out = out[:, out_index]
         
         func_class = link_func_class(data_store = data_store, 
@@ -133,7 +135,7 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
                                      eg_cube = eg_cube, lmask = lmask)
         if test_eg_cube:
             prob = func_class.sample_given_(eg_cube.data.flatten()[lmask], out, 
-                                                   [*link_param_in])
+                                                   link_param_in)
             
             prob = make_into_cube(prob, file_prob) 
         
