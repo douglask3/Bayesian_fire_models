@@ -46,8 +46,10 @@ def attribution_analysis(dir1, dir2, obs_dir, obs_file_nc = "burned_area.nc",
     #plot_all_attribution_scatter(dir1, '/time_series/' +dir2, region, obs_dir, obs_file_csv,*args, **kw)
     
     #plot_confidence_in_attribution(dir1, '/samples/' +  dir2, region, *args, **kw)
+    if dir2 is not None:
+        dir2 = '/samples/' +  dir2
     
-    plot_change_in_burned_area(dir1, '/samples/' +  dir2, region, 
+    plot_change_in_burned_area(dir1, dir2, region, 
                                obs_file = obs_dir + '/' + region + '/' + obs_file_nc, 
                                counterfactual_name = 'counterfactual-',
                                percentiles = [50], plot_att_only = True, 
@@ -55,15 +57,15 @@ def attribution_analysis(dir1, dir2, obs_dir, obs_file_nc = "burned_area.nc",
     return None
     for percentiles in [[50], [5, 95]]:
         try:
-            plot_change_in_burned_area(dir1, '/samples/' +  dir2, region, 
+            plot_change_in_burned_area(dir1, dir2, region, 
                                        obs_file = obs_dir + '/' + region + '/' + obs_file_nc, 
                                        percentiles = percentiles, *args, **kw)
         except:
-            plot_change_in_burned_area(dir1, '/samples/' +  dir2, region, 
+            plot_change_in_burned_area(dir1, dir2, region, 
                                        obs_file = obs_dir + '/' + obs_file_nc, 
                                        percentiles = percentiles, *args, **kw)
 
-    plot_attribution_time_series(dir1, '/samples/' +  dir2, region, *args, **kw)
+    plot_attribution_time_series(dir1, dir2, region, *args, **kw)
     
 
 if __name__=="__main__":
@@ -71,12 +73,15 @@ if __name__=="__main__":
     dir1 = "outputs/outputs_scratch/SoW2526/attribution-HadGEM-test29/"
     dir1 = "outputs/outputs_scratch/SoW2526/attribution-HadGEM-test29-fuelcf4/"
     dir1 = "outputs/outputs_scratch/SoW2526/attribution-HadGEM-test29-fuelcf4-rerun2/"
-    dir2 = "/_16-frac_points_0.5/" 
+    dir2 = "/_16-frac_points_0.5/"
 
-    regions = ["Northwest Iberia", "Midwestern Canadian Shield forests", "Chilean Temperate Forests and Matorral"]
+    dir1 = "outputs/outputs_scratch/SoW2526/Final2/<<region>>/hadgem3/samples/_16-frac_points_1e-08/"
+    dir2 = None
+
+    regions = ["Northwest Iberia", "Midwestern Canadian Shield forests", "Chilean Temperate Forests and Matorral"] #"Scottish Highlands", 
     #regions = "Northwest_Iberia"
-    mnthss = [[7], [6, 7], [0,1]]#, c('06', '07'), c('03'))
-    years = [2025, 2025, 2026]#, 2025, 2025)
+    mnthss = [[2, 3, 4, 5,6, 7], [7], [6, 7], [0,1]]#, c('06', '07'), c('03'))
+    years = [2025, 2025, 2025, 2026]#, 2025, 2025)
 
     obs_dir = 'data/data/driving_data2526/'
     obs_file_nc = 'nrt/factual/burned_area.nc' 
