@@ -10,7 +10,9 @@ output_path = 'data/data/driving_data2526/'
 newproj = "+proj=longlat +datum=WGS84"
 example_file = 'data/wwf_terr_ecos_0p5.nc'
 
-# for global set to NULL
+#################
+## SOW 25/26   ##
+#################
 shape_file = "data/data/driving_data2526/Focal_regions/SoW2526_Focal_MASTER_20260218.shp"
 shape_names = list("Northwest Iberia",
                    "Midwestern Canadian Shield forests",
@@ -31,6 +33,22 @@ hvs = list(cbind(c(17, 4), c(18, 4),
            cbind(c(17, 2), c(18, 3)),
            cbind(c(27, 5), c(28, 5)))
 
+#################
+## Global      ##
+#################
+shape_file = NULL
+shape_names = list("Global")
+hvs = NULL
+
+#################
+## UK         ##
+#################
+shape_file = NULL
+shape_names = list("UK")
+hvs = list(cbind(c(17, 2), c(17, 3), c(17, 4), c(18, 2), c(18, 3), c(18, 4)))
+
+
+
 variables = c("tree" = 1, "nontree" = 2, "nonveg" = 3)
 correct_tov6 = FALSE
 
@@ -39,11 +57,12 @@ if (is.null(shape_file)) shp = NULL  else shp = vect(shape_file)
 eg_raster = rast(example_file)
 eg_raster[!is.na(eg_raster)] = 1
 
-forRegion <- function(shape_name, hv) {
+forRegion <- function(shape_name = NULL, hv = NULL) {
+    
     area_name = gsub(' ', '_', shape_name, fixed = TRUE)
     if (is.null(shp)) {
         shp_rgn = NULL
-        extend = c(-180, 180, -90, 90)
+        extent = c(-180, 180, -90, 90)
     } else {
         shp_rgn = shp[grep(shape_name, shp$name, ignore.case = TRUE), ]  
         extent = ext(shp_rgn)
@@ -64,16 +83,19 @@ forRegion <- function(shape_name, hv) {
     temp_path = paste0(temp_path, '/', area_name, '-VCF/') 
     dir.create(temp_path, recursive = TRUE) 
     files = list.files(path, full.name = TRUE, recursive = TRUE)
+    
     files = files[substr(files, nchar(files) - 3, nchar(files)) == '.hdf']
 
-    files_hv = sapply(files, function(file) tail(strsplit(file, '.h')[[1]], 2)[1])
-    files_h = sapply(files_hv, function(file) strsplit(file, 'v')[[1]][1])
-    files_v = sapply(files_hv, function(file) strsplit(file, 'v')[[1]][2])
-    files_v = sapply(files_v, function(file) strsplit(file, '.', fixed = TRUE)[[1]][1])
-    files_test = sapply(as.numeric(files_h), function(h) any(h == hv[1,])) & 
-                 sapply(as.numeric(files_v), function(v) any(v == hv[2,]))
-    
-    files = files[files_test]
+    if (!is.null(hv)) {
+        files_hv = sapply(files, function(file) tail(strsplit(file, '.h')[[1]], 2)[1])
+        files_h = sapply(files_hv, function(file) strsplit(file, 'v')[[1]][1])
+        files_v = sapply(files_hv, function(file) strsplit(file, 'v')[[1]][2])
+        files_v = sapply(files_v, function(file) strsplit(file, '.', fixed = TRUE)[[1]][1])
+        files_test = sapply(as.numeric(files_h), function(h) any(h == hv[1,])) & 
+                     sapply(as.numeric(files_v), function(v) any(v == hv[2,]))
+        
+        files = files[files_test]
+    }
     
     years = sapply(files, function(file) substr(strsplit(file, 'MOD44B.A')[[1]][2], 1, 4))
     mn = 3
@@ -96,7 +118,7 @@ forRegion <- function(shape_name, hv) {
         }
     
         dat = rast(file, band)
-        
+        print("loaded")
         if (!all(extent == c(-180, 180, -90, 90))) {
             test = project(aggregate(dat, 100), newproj)
             overlap = test_if_overlap(test, eg_raster)
@@ -110,9 +132,9 @@ forRegion <- function(shape_name, hv) {
         }
         
         dat = terra::project(dat, newproj)
-    
+        print("projeced")
         out_raster = crop(eg_raster, ext(dat) + 0.5)#+ c(-0.5, 0.5, -0.5, 0.5))
-    
+        print("cropped")
         find_area <- function(dat, ...) {
             #dat = aggregate(dat, 4)
             #dat = aggregate(dat, 0.5/rev(res(dat)), ...)
@@ -145,7 +167,7 @@ forRegion <- function(shape_name, hv) {
         print(area_name)
         output_path = paste0(output_path, area_name, 
                              '/isimp3a/obsclim/GSWP3-W5E5/period_2002_2019/')
-        dir.create(output_path, recursive = TRUE) 
+        dir.create(output_path, recursive = TRUE, showWarnings = FALSE) 
         output_fname = paste0(output_path, '/', name, '_raw.nc')
         temp_fname = paste0(temp_path, '/', name, '/')
         dir.create(temp_fname, recursive = TRUE) 
