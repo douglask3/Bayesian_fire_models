@@ -2,6 +2,19 @@ import multiprocessing as mp
 #mp.set_start_method('forkserver')
 mp.set_start_method("spawn", force=True)
 
+import os
+
+job_id = os.environ.get("SLURM_JOB_ID", "interactive")
+pytensor_dir = os.path.join(
+    os.environ["TMPDIR"], "pytensor"
+)
+
+os.makedirs(pytensor_dir, exist_ok=True)
+
+os.environ["PYTENSOR_FLAGS"] = f"compiledir={pytensor_dir}"
+
+import pickle
+
 import sys
 sys.path.append('fire_model/')
 sys.path.append('libs/')
@@ -31,6 +44,8 @@ import numbers
 import pymc  as pm
 import pytensor
 import pytensor.tensor as tt
+
+
 import arviz as az
 
 def set_priors(priors, X):
@@ -145,9 +160,15 @@ def fit_MaxEnt_probs_to_data(Y, X, CA = None,
             graph.render(dir_outputs + "/model_graph", format="png")  # Saves and opens
         except:
             print("Error generating model graph")
+
+        #set_trace()
+        #pickle.dumps(max_ent_model)
+        #print("PyMC model pickle OK")
+        
         trace = pm.sample(niterations, step = step_method(), return_inferencedata = True, 
                           callback = trace_callback,#  init="jitter+adapt_diag",
                           *arg, **kw)
+        
         try:
             ppc = pm.sample_posterior_predictive(trace, var_names=["fx_pred"])
             posterior_predictive_plot(ppc, Y, dir_outputs)

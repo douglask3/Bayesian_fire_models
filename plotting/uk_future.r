@@ -1,15 +1,15 @@
 graphics.off()
 
 dir = "outputs/outputs_scratch/UK/isimip/test-ukSPECIFIC9-<<REGION>>/time_series/_14-frac_points_1e-24/"
+dir = "outputs/outputs_scratch/UK/isimip/final_run-<<REGION>>/time_series/_14-frac_points_1e-24/"
 
 base = "historical"
 ssps = c("ssp126", "ssp370", "ssp585")
-
 cols = c('#008787', '#E27226', '#C7403D')
 
 models = models0 = c("IPSL-CM6A-LR", "MPI-ESM1-2-HR", "MRI-ESM2-0", "UKESM1-0-LL")#, "GFDL-ESM4")
 
-years = seq(2000, 2090, by = 10)
+years = years0 = seq(2010, 2090, by = 10)
 
 allMonths <- function(dat) 
     return(dat)
@@ -20,7 +20,7 @@ sample_aggregate <- function(dat, datF, datM, datH, aggFun = mean) {
     #xindex = apply(dat[,1:240],1 ,mean)>0.001 & apply(dat[,1:240],1 ,mean)<0.1
     datF = apply(datF, 1 ,mean)
     datM = apply(datM, 1 ,mean)
-    
+    #browser()
     dat0 = apply(datH[,121:240], 1, mean)
     prob = ((1-exp(-1+datM))*(1-exp(-1+datF)))^(1/2)
     BA = 0.00017
@@ -86,7 +86,7 @@ add_ssp <- function(dat, name, col, offset,
         x = year + offset
         ys = quantile(dat[,i], c(0.05, 0.25, 0.5, 0.75, 0.95), na.rm = TRUE)
         if (!is.null(transform)) ys = transform(ys)
-        if (!tplot) return(ys)
+        if (!tplot) return(c(ys, 100*mean(dat[,i]>1, na.rm = TRUE)))
         for_line <- function(j, wd = width, ...) {
             lines(x + c(-wd, wd),c(ys[j], ys[j]),  ...)
         }
@@ -104,7 +104,7 @@ add_ssp <- function(dat, name, col, offset,
             text(x = x, y = tail(ys, 1), name, adj = c(0.5, -0.5), xpd = NA)
     }
     
-    mapply(for_year, 2:length(years), years[-1])
+    mapply(for_year, 2:length(years), years[-1], SIMPLIFY = FALSE)
     
 }
 
@@ -146,12 +146,32 @@ mit_axis <- function() {
     lapply(at, function(y) lines( c(-9E9, 9E9), c(y, y),  col = 'grey', lty = 3))
 }
 
-af_plot <- function(dats, pname, fun = af_tscale, axis_fun = af_axis) {
+af_plot <- function(dats, pname, fun = af_tscale, axis_fun = af_axis, inv_likihood = FALSE) {
     
-    yrange = mapply(add_ssp, dats, '', cols, c(3, 5, 7), 
-                    MoreArgs = list(tplot = FALSE, transform = fun))
-
-    yrange = as.vector(yrange)
+    afs = mapply(add_ssp, dats, '', cols, c(3, 5, 7), 
+                    MoreArgs = list(tplot = FALSE, transform = NULL), SIMPLIFY = FALSE)
+    
+    isnotnull = !sapply(afs, is.null)
+    afs = do.call(cbind, afs[isnotnull])
+    makeLine <- function(af)
+        paste0(sapply(af, function(i) round(i[3], 2)), ' (', sapply(af, function(i) round(i[1], 2)), '-', sapply(af, function(i) round(i[5], 2)), ')')
+    
+    tab_out0 = t(apply(afs, 1, makeLine))
+    if (inv_likihood) 
+        lfun <- function(x) round(100-x[6])
+    else
+        lfun <- function(x) round(x[6])
+        
+    sign = t(apply(afs, 1, function(af) sapply(af, lfun)))
+    tab_out = c()
+    for (i in 1:nrow(tab_out0)) 
+        tab_out = rbind(tab_out, tab_out0[i,], sign[i,])
+    
+    
+    rownames(tab_out) =  paste(rep(years[-1], each = 2), c('af', 'liki'))
+    colnames(tab_out) = ssps[isnotnull]
+    
+    yrange = fun(unlist(afs))
     
     yrange = range(yrange)
     if (yrange[1] < 0) yrange[1] = 0
@@ -159,7 +179,8 @@ af_plot <- function(dats, pname, fun = af_tscale, axis_fun = af_axis) {
 
     if (yrange[1] < 0) yrange[1] = 0
     if (yrange[2] > 1) yrange[2] = 1
-    plot(range(years) + c(10, 5), yrange, xlab = '', ylab = '', type = 'n', xaxt = 'n', yaxt = 'n', yaxs = 'i')
+    plot(range(years) + c(10, 5), yrange, xlab = '', ylab = '', type = 'n', 
+         xaxt = 'n', yaxt = 'n', yaxs = 'i')
     axis_fun()
 
     
@@ -173,13 +194,14 @@ af_plot <- function(dats, pname, fun = af_tscale, axis_fun = af_axis) {
     lines( c(-9E9, 9E9), c(1, 1),  col = '#333333', lty = 1)
     
     mapply(add_ssp, dats, '', cols, c(3, 5, 7), MoreArgs = list(transform = fun))
+    return(tab_out)
 }
 
 mit_plot <- function(dats) {
     dats[[1]] = -100*((dats[[2]]/dats[[1]])-1)
     dats[[2]] = -100*((dats[[3]]/dats[[2]])-1)
     dats[[3]][] = NaN
-    af_plot(dats, rep('', 3), fun = mit_tscale, axis_fun = mit_axis)
+    af_plot(dats, rep('', 3), fun = mit_tscale, axis_fun = mit_axis, inv_likihood = TRUE)
 }
 
 
@@ -199,7 +221,7 @@ calc_extreme <- function(dat, ssp, region) {
     out_img = out
     out_img[out_img>3] = 3
     image(out_img, axes = FALSE, zlim = c(0, 3.0001))
-    axis(1, at = seq(0, 1, 0.11), paste0(years,'s'))
+    axis(1, at = seq(0, 1, length.out = length(years)), paste0(years,'s'))
     axis(4, at = seq(0, 1, length.out = length(in_x_years)), 
          labels = paste0("-in-", in_x_years, "-years"), las = 2)
      for (i in 1:nrow(out)) for (j in 1:ncol(out))
@@ -211,27 +233,36 @@ calc_extreme <- function(dat, ssp, region) {
 }
 
 
-plot_output <- function(dir, filename = "Evaluate.csv", pname = "Burned Area", plot_return_time = FALSE, region = '', ...) {
+plot_output <- function(dir, filename = "Evaluate.csv", pname = "Burned Area", 
+                        plot_return_time = FALSE, region = '', tabname = "", ...) {
     dats = lapply(ssps, open_ssp, dir = dir, filename = filename, ...)
-    if (plot_return_time) return(mapply(calc_extreme, dats, ssps, region = region))
     
+    if (plot_return_time) return(mapply(calc_extreme, dats, ssps, region = region))
     normalise_dat <- function(dat) apply(dat, 2, function(i) (i)/(dat[,1]))
     dats = lapply(dats, normalise_dat)
-    af_plot(dats, pname) 
-    mit_plot(dats)
+    out_AF = af_plot(dats, pname) 
+    out_MI = mit_plot(dats)
+    out_names = paste("figs/", strsplit(dir, '/', fixed = T)[[1]][5], region, pname, tabname, 
+                      c('AF', 'MIT'), '.csv', sep = '-')
+    write.csv(out_AF, out_names[1])
+    write.csv(out_MI, out_names[2])
+
+    return(list(out_AF, out_MI))
 }
 
 plot_for_region_AF <- function(region, name) {
     dir = gsub('<<REGION>>', region, dir)
     plot_type <- function(type, ...) {
-        png(paste0("figs/", region, "_", name, type, "_proj_ts.png"),
+        png(paste0("figs/", region, "_", name, type, "_proj_ts-2.png"),
             height = 10, width = 7.2, res = 300, units = 'in')
         
             layout(rbind(1:2, 3:4, 5:6, c(7,0)), heights = c(1,1, 1, 0.5))
             par(mar = c(2.5, 3, 1.5, 1))
-            plot_output(dir, ...)
-            plot_output(dir, "standard-Moisture.csv", "Dryness", ...)
-            plot_output(dir, "standard-Fuel.csv", "Fuel", ...)
+            plot_output(dir, tabname = paste(name,type, sep ='-'), ...)
+            plot_output(dir, "standard-Moisture.csv", "Dryness", 
+                        tabname = paste(name,type, sep ='-'),...)
+            plot_output(dir, "standard-Fuel.csv", "Fuel", 
+                        tabname = paste(name,type, sep ='-'), ...)
             #par(mar = c(0, 1, 1,0))
             
             add_legend()
@@ -247,7 +278,7 @@ plot_for_region_RR <- function(region) {
 }
 
 plot_RR <- function(name) {
-    png(paste0("figs/RR_", name, "_return_time.png"),
+    png(paste0("figs/RR_", name, "_return_time-2.png"),
         height = 8, width = 7.2, res = 300, units = 'in')
         par(mfrow = c(length(regions), 3), mar = c(2, 1, 1, 5.5), oma = c(1.5, 1.5, 1.5, 1.5))
         lapply(regions, plot_for_region_RR)
@@ -256,7 +287,7 @@ plot_RR <- function(name) {
 
 regions = c("UK", "Scotland", "Wales", "England", "NI")
 
-plot_RR("all_models")
+#plot_RR("all_models")
 lapply(regions, plot_for_region_AF, "allModels")
 
 for (model in models0) {

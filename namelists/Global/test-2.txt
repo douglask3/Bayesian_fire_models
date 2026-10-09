@@ -1,8 +1,8 @@
 ## model info
-model_title::  'UK/isimip/final_run2-UK'
+model_title::  'Global/isimip/test-SPECIFIC10-small2/'
 
 ## input data paths and filenames
-dir_training:: "data/data/driving_data2526/UK/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019/"
+dir_training:: "data/data/driving_data2526/Global/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019/"
 y_filen:: "burned_area.nc"
 CA_filen:: None
 x_filen_list:: "consec_dry_mean.nc"                     #0
@@ -55,7 +55,7 @@ link_func_class:: MaxEnt
 niterations:: 1000
 cores:: 10
 fraction_data_for_sample:: 0.000000000000000000000001
-min_data_points_for_sample:: 5000
+min_data_points_for_sample:: 100
 
 grab_old_trace::  True # set to True till you get the code running. 
                       # Then set to False when you start adding in new response curves
@@ -66,21 +66,21 @@ dir_outputs:: 'outputs/outputs_scratch/'
 
 ## evaluation info
 #subset_function:: sub_year_range
-subset_function ::constrain_natural_earth
+#subset_function ::constrain_natural_earth
 #subset_function_args:: {'year_range': [2015, 2017]}
-subset_function_args:: {'Country': 'United Kingdom'}
+#subset_function_args:: {'Country': 'United Kingdom'}
 #subset_function_eval:: sub_year_range
-subset_function_eval::constrain_natural_earth
+#subset_function_eval::constrain_natural_earth
 #subset_function_args_eval:: {'year_range': [2015, 2017]}
-subset_function_args_eval:: {'Country': 'United Kingdom'}
-sample_for_plot:: 50
+#subset_function_args_eval:: {'Country': 'United Kingdom'}
+sample_for_plot:: 10
 controls_to_plot:: [0, 1, 2, 3]
 control_names:: ['Fuel', 'Moisture', 'Ignition', 'Fragmentation', 'Suppression']
 levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
 dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
 cmap:: 'gradient_red' 
 dcmap:: 'diverging_TealOrange'
-dir_projecting:: "data/data/driving_data2526/UK/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019//"
+dir_projecting:: "data/data/driving_data2526/Global/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019//"
 
 
 ## experiment info
@@ -99,8 +99,8 @@ experiment_period:: "period_2070_2079"
 experiment_period:: "period_2080_2089"
 experiment_period:: "period_2090_2099"
 
-experiment_dir:: "data/data/driving_data2526/UK/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019/"
-experiment_dir:: "data/data/driving_data2526/UK/isimp3a/counterclim/GSWP3-W5E5/period_2000_2019/"
-experiment_dir:: "data/data/driving_data2526/UK/isimp3b/<<experiment>>/<<model>>/<<period>>/"
+experiment_dir:: "data/data/driving_data2526/Global/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019/"
+experiment_dir:: "data/data/driving_data2526/Global/isimp3a/counterclim/GSWP3-W5E5/period_2000_2019/"
+experiment_dir:: "data/data/driving_data2526/Global/isimp3b/<<experiment>>/<<model>>/<<period>>/"
 experiment_names:: ["factual", "counterfactual", "early_industrial", "<<experiment>>/<<model>>/<<period>>"]
 time_series_percentiles:: [0.0, 95.0]
