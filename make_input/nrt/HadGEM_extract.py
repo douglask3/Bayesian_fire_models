@@ -43,7 +43,7 @@ def print_diffs(cube1, cube2):
     print([coord.name() for coord in cube2.aux_coords])
 
 
-def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, temp_dir, 
+def HadGEM_extract_variable(experiment, variable, start_year, dir, sub_dir, out_dir, temp_dir,
                      region_names = None, shapefile_path = None, region_in_shapefile = True):
     
     var_dir = dir  + '/' + experiment[0] + '/' + variable + '/' + sub_dir + '/'
@@ -130,7 +130,7 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
             missing = np.setdiff1d(np.arange(1, 361), days)
             if len(missing) > 0 and year < 2025:
                 txt = experiment[1] + ', ' +  variable + ', ' + member  + ', ' + str(year) + ', '
-                for dy in missing: txt = txt + ' ' + dy
+                for dy in missing: txt = txt + ' ' + str(dy)
                 print(txt)
 
         [test_year(year) for year in np.unique(cyrs)]
@@ -169,17 +169,17 @@ def process_variable(experiment, variable, start_year, dir, sub_dir, out_dir, te
             pass 
     [process_memember_try(member) for member in ensembles]
 
-def process_variables(experiments, variables, *args, **kw):
+def HadGEM_extract_variables(experiments, variables, *args, **kw):
     for experiment in experiments:
         print(experiment)
         for variable in variables:
-            process_variable(experiment, variable, *args, **kw)
+            HadGEM_extract_variable(experiment, variable, *args, **kw)
 
 
 
 dir = "/data/users/opatt/HadGEM3-A-N216/"
 sub_dir = '/day/'  
-start_years = [2019, 2023]
+start_years = [2020, 2023]
 
 variables = ['pr', 'tasmax','hursmin', 'tas','sfcWind', 'uas', 'vas',  'mrros']
 #variables = ['tas','sfcWind', 'uas', 'vas',  'mrros']
@@ -201,7 +201,7 @@ if __name__=="__main__":
 
 
     for start_year in start_years:
-        process_variables(experiments, variables, start_year, dir, sub_dir,
+        HadGEM_extract_variables(experiments, variables, start_year, dir, sub_dir,
                           out_dir, 
                           temp_dir,
                           region_names = region_names,
