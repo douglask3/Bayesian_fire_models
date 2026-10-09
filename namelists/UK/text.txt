@@ -1,5 +1,5 @@
 ## model info
-model_title::  'UK/isimip/test-ukSPECIFIC4/'
+model_title::  'UK/isimip/final_run2-UK'
 
 ## input data paths and filenames
 dir_training:: "data/data/driving_data2526/UK/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019/"
@@ -15,8 +15,8 @@ x_filen_list:: "dry_days.nc"                            #6
 x_filen_list:: "vpd_max.nc"                             #7      
 x_filen_list:: "vpd_mean.nc"                            #8
 x_filen_list:: "lightning.nc"                           #9
-x_filen_list:: "pasture_jules-es.nc"                    #10
-x_filen_list:: "crop_jules-es.nc"                       #11
+x_filen_list:: "pasture_jules-es_base.nc"               #10
+x_filen_list:: "crop_jules-es_base.nc"                  #11
 x_filen_list:: "urban_jules-es.nc"                      #12
 x_filen_list:: "tree_cover_jules-es.nc"                 #13
 
@@ -28,13 +28,22 @@ priors:: {'pname': "driver_Direction", 'value': [[1, 1, 1], [1,  1, -1, 1], [1, 
 #priors:: {'pname': "Fmax",'np': 1, 'dist': 'Normal', 'mu': 0.0, 'sigma': 1.0}
 #priors:: {'pname': 'lin_correct', 'np': 1, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 4.0}
 priors:: {'pname': "x0",'np': 4, 'dist': 'Normal', 'mu': 0.0, 'sigma': 10.0}
-priors:: {'pname': "betas",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
-priors:: {'pname': "betas",'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
-priors:: {'pname': "betas",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
-priors:: {'pname': "betas",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
-#priors:: {'pname': "powers",'np': 3, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
-#priors:: {'pname': "powers",'np': 3, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
-#priors:: {'pname': "powers",'np': 3, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "betas"  ,'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas"  ,'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas"  ,'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas"  ,'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "gammas" ,'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "gammas" ,'np': 4, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "gammas" ,'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "gammas" ,'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "powers" ,'np': 3, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers" ,'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers" ,'np': 3, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "powers" ,'np': 3, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "weakers",'np': 3, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "weakers",'np': 4, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "weakers",'np': 3, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
+priors:: {'pname': "weakers",'np': 3, 'dist': 'LogNormal', 'mu': 1.0, 'sigma': 2.0}
 
 priors:: {'pname': "link-qSpread_mu",'np': 1, 'dist': 'Normal', 'mu': 1.0, 'sigma': 0.5}
 priors:: {'pname': "link-qSpread_sigma",'np': 1, 'dist': 'HalfNormal', 'sigma': 0.5}
@@ -65,7 +74,7 @@ subset_function_eval::constrain_natural_earth
 #subset_function_args_eval:: {'year_range': [2015, 2017]}
 subset_function_args_eval:: {'Country': 'United Kingdom'}
 sample_for_plot:: 50
-controls_to_plot:: [0, 1]
+controls_to_plot:: [0, 1, 2, 3]
 control_names:: ['Fuel', 'Moisture', 'Ignition', 'Fragmentation', 'Suppression']
 levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0] 
 dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
