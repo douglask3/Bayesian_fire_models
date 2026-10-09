@@ -205,9 +205,9 @@ plot_af <- function(af, xpos = 1, col = 'red', name = '', bar = TRUE,
 att_af_calc <- function(dir, region,factual_name, cfactual_name, exp, mnths, years,
                         BA = NULL, xp, xoffset, samples = NULL, ...) {
     
-    fact = openDat(dir, region, factual_name, exp, cell_sample, mnths, years)
-    cfact = openDat(dir, region, cfactual_name, exp, cell_sample, mnths, years)
-
+    fact = fact0 = openDat(dir, region, factual_name, exp, cell_sample, mnths, years)
+    cfact = cfact0 = openDat(dir, region, cfactual_name, exp, cell_sample, mnths, years)
+    
     if (is.null(samples)) {
         if (is.null(BA))
             if (background_BA)
@@ -219,9 +219,11 @@ att_af_calc <- function(dir, region,factual_name, cfactual_name, exp, mnths, yea
             samples = sample(1:length(fact), 1000, TRUE)
         } else {
             prob = exp(BA*log(fact) + (1.0-BA)*log((1-fact)))
+            prob[fact < BA*0.0001] = 0.0
             samples = sample(1:length(prob), 1000, TRUE, prob)
         }
     } else {
+        samples0 = samples
         samples = samples[[1]]
         BA = samples[[2]]
     }
@@ -230,9 +232,11 @@ att_af_calc <- function(dir, region,factual_name, cfactual_name, exp, mnths, yea
         fact = sort(fact) + 0.0000001
         cfact = sort(cfact) + 0.0000001
     } else {
-        fact = fact[samples]
-        cfact = cfact[samples] 
+        fact = (fact[samples])
+        cfact = (cfact[samples] )
+        #browser()
     }
+    #browser()
     plot_af(fact/cfact, xp + xoffset, ...)
     return(list(samples, BA))
 }
@@ -544,15 +548,15 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
 }
 
 plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NULL, reduced = TRUE) {
-    if (region == regions[2]) return()
+    if (region == regions[4]) return()
     extra_filename = paste(cell_sample, c('', 'reduced')[reduced+1], 
                  c('event', 'background')[background_BA+1], region, sep = '-')
     csv_out = paste0("outputs/SoW_att_outlook", extra_filename, '.csv')
     file.create(csv_out)
     
-    fout = paste("figs/att_outlook", extra_filename, '-7.png', sep = '-')
+    fout = paste("figs/att_outlook", extra_filename, '-7.pdf', sep = '-')
     
-    png(fout, width = 14 - 7*reduced, height = 7*2.75/3, units = 'in', res = 300)
+    pdf(fout, width = 14 - 7*reduced, height = 7*2.75/3)#, units = 'in')#, res = 300)
     if (reduced)
         widths = c(0.15, 0.05, 0.4)
     else
@@ -562,25 +566,28 @@ plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NU
         plot_region(region,  HadGEM_dir, ISIMIP_dir, mnths, years, 
                     reduced = reduced, 
                      ylim = ylim1, csv_out = csv_out, mitigate = TRUE)
-    #    plot_region(region,  HadGEM_dir, ISIMIP_dir, mnths, years, 
-    #                empty_plot = new_empty_plot_rr,
-    #                att_FUN = att_rr_calc, futr_FUN = futr_rr_calc, ylim = ylim2, 
-    #                reduced = reduced, csv_out = csv_out)
-    #browser()
+    
+    dev.off()
+
+        plot_region(region,  HadGEM_dir, ISIMIP_dir, mnths, years, 
+                    empty_plot = new_empty_plot_rr,
+                    att_FUN = att_rr_calc, futr_FUN = futr_rr_calc, ylim = ylim2, 
+                    reduced = reduced, csv_out = csv_out)
     dev.off()
 }
 
 
 cols = c("#B50000", "#E98400", "#0096A1")#, "#EE0074")#, "purple", "grey")
 
-HadGEM_dir = "outputs/outputs_scratch/SoW2526/attribution-HadGEM-test29-fuelcf4/<<region>>/time_series/_16-frac_points_0.5/"
+HadGEM_dir = "outputs/outputs_scratch/SoW2526/Zenodo/<<region>>/hadgem3/time_series/_16-frac_points_0.5/"
+HadGEM_dir = "outputs/outputs_scratch/SoW2526/Final2/<<region>>/hadgem3/time_series/_16-frac_points_1e-08/"
 #ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-4-notree-notreechange/<<region>>/time_series/_15-frac_points_0.5/"
-ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-11-notree-notreechange-noGP/<<region>>/time_series/_15-frac_points_0.5/"
-ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-5-notree-notreechange/<<region>>/time_series/_15-frac_points_0.5/"
+ISIMIP_dir = "outputs/outputs_scratch/SoW2526/Zenodo/<<region>>/isimip/time_series/_15-frac_points_0.5/"
+#ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-5-notree-notreechange/<<region>>/time_series/_15-frac_points_0.5/"
 gcms = c("GFDL-ESM4-", "IPSL-CM6A-LR-", "MPI-ESM1-2-HR-", "MRI-ESM2-0-", "UKESM1-0-LL-")
 
 regions = c("Northwest Iberia", "Midwestern Canadian Shield forests", 
-            "Chilean Temperate Forests and Matorral")
+            "Chilean Temperate Forests and Matorral", "Scottish Highlands")
             #, "Scottish_Highlands", "Southeast_South_Korea")
 
 
@@ -588,12 +595,13 @@ ylim2 = list(NULL, NULL, NULL)
 
 ylim1 = list(list(c(0.65, 9E9), c(0.65, 9E9),c(-100, 20)),
              list(c(0.65, 9E9), c(0.8, 1.6), c(-18,5)),
-             list(c(0.65, 9E9), c(0.75, 4.2), c(-52, 5)))
+             list(c(0.65, 9E9), c(0.75, 4.2), c(-52, 5)),
+             list(c(0,9E9), c(0, 9E9), c(-100, 100)))
 #ylim1 = list(list(c(0.48, 9E9), c(0.85, 4.2),c(-200, 200)),
 #             list(c(0.65, 9E9), c(0.65, 9), c(-200,200)),
 #             list(c(0.5, 9E9), c(0.75, 6.5), c(-200, 200)))
-years = list(2025, 2025, 2026)#, 2025, 2025)
-mnths = list(c('08'), c('07', '08'), c('01', '02', '03'))#, c('06', '07'), c('03'))#
+years = list(2025, 2025, 2026, 2025)#, 2025, 2025)
+mnths = list(c('08'), c('07', '08'), c('01', '02', '03'), c('06', '07'))#, c('06', '07'), c('03'))#
 cell_sample = "mean"
 background_BA = FALSE
 BA_varname = "Evaluate"
@@ -602,10 +610,11 @@ mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2)
 #mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)
 ylim1 = list(list(c(0.48, 9E9), c(0, 9E9),c(-100, 20)),
              list(c(0.65, 9E9), c(0.8, 1.8), c(-25,5)),
-             list(c(0.65, 9E9), c(0.75, 4.2), c(-52, 5)))
+             list(c(0.65, 9E9), c(0.75, 4.2), c(-52, 5)),
+             list(c(0,9E9), c(0, 9E9), c(-100, 100)))
 
 cell_sample = "pc-95.0"
-#mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2)
+mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2)
 #mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)
 
 mnths = c(paste0('0', 1:9), 10:12)
