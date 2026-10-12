@@ -185,7 +185,7 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_fi
     
     summery = [[cube.collapsed('realization', iris.analysis.PERCENTILE, percent = percentiles) \
                 for cube in cubes] for cubes in out_merge]
-    
+      
     summery = np.array(summery)
     eg_cube = out_merge[0][0]
     if len(summery) == 2 and plot_att_only:
@@ -212,6 +212,7 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_fi
     axi = 0
 
     def plot_map_fun(cube, levels, cmap, extend, axi, title = '', *args, **kw):
+        set_trace()
         return plot_map_sow(cube, title, levels = levels, add_cbar = False, 
                             cmap=SoW_cmap[cmap], extend = extend, ax = axes[axi], 
                             *args, **kw)
