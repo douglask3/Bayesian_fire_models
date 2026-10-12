@@ -67,13 +67,16 @@ def attribution_analysis(dir1, dir2, obs_dir, obs_file_nc = "burnt_area.nc",
 
 if __name__=="__main__":
     dir1 = "outputs/outputs_scratch/attribution-base-localBA-data-NEW4/"
-    dir1 = "outputs/outputs_scratch/Pantanal-Maria-full-3-all-year/"
     #dir1 = "outputs/outputs_scratch/Amazon-Maria-full-3-all-year-masked/"
-    dir2 = "/_16-frac_points_0.5/" 
-    #dir2 = "/_15-frac_points_0.2/" 
+    dir1 = "outputs/outputs_scratch/Amazon-Maria-full-3-all-year-masked-RERUN/"
+    dir2 = "/_15-frac_points_0.2/" 
+    region = "Amazon"
 
+    #dir1 = "outputs/outputs_scratch/Pantanal-Maria-full-3-all-year/"
+    dir1 = "outputs/outputs_scratch/Pantanal-Maria-full-5-all-year_masked-RERUN-Unmasked/"
+    dir2 = "/_16-frac_points_0.5/" 
     region = "Pantanal"
-    #region = "Amazon"
+
 
     obs_dir = 'data/data/driving_data_base//'
     obs_file = 'burnt_area_data.csv'  
