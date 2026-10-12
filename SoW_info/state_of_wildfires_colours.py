@@ -40,6 +40,8 @@ SoW_cmap = {
 
     "gradient_red": ["#fff7ec", "#fee8c8", "#fdd49e", "#fdbb84", "#fc8d59", "#ef6548", "#d7301f", "#b30000", "#7f0000"],
 
+    "gradient_orange": ["#fff5eb", "#fee6ce", "#fdd0a2", "#fdae6b", "#fd8d3c", "#f16913", "#d94801", "#a63603", "#7f2704"], #["#FFF5DA", "#F4D8A6", "#F0C98E", "#EEA492", "#EDB976", "#EAA960", "#E7974B", "#E58538", "#E27226"],
+
     "gradient_purple": ["#fbf2ff", "#f4d6f8", "#edb8f9", "#da92df", "#c770cf", "#9f4bad", "#78308f", "#5b2477", "#431a63"],
 
     "gradient_hotpink": ["#f3e7f2", "#edc9ef", "#e9a6e9", "#e081dd", "#d554c8", "#c32bab", "#b3198f", "#940d66", "#730943"],
@@ -62,6 +64,9 @@ SoW_cmap = {
         "#ffffff",  # neutral midpoint
         "#fde0ef", "#de77ae", "#c51b7d", "#8e0152"
     ],
+    "diverging_PinkGreen": [  # Diverging color scale from green to pink
+        "#8e0152", "#c51b7d", "#de77ae", "#fde0ef", "#ffffff", 
+        "#e6f5d0", "#b8e186", "#7fbc41", "#276419"],
 
     "diverging_TealPurple": [  # Diverging from teal to purple
         "#004c4b", "#008786", "#6bbbaf", "#b6e0db",
@@ -86,4 +91,4 @@ SoW_cmap = {
 # This allows smooth interpolation between the defined colors in plots
 for item in SoW_cmap.keys():
     SoW_cmap[item] = LinearSegmentedColormap.from_list(item, SoW_cmap[item])
-
+    

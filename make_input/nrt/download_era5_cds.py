@@ -212,12 +212,12 @@ def download_era5(variables, years = [1940], months = range(13),
 
 yr_now = DT.now().year
 yearss = [range(2002, yr_now + 1)] #range(2020, yr_now + 1), range(yr_now-2, yr_now + 1),  range(2010, yr_now + 1),range(2024, yr_now + 1),  
-mnth_now = DT.now().month - 2
+mnth_now = DT.now().month - 3
 
 area = [90, -180, -60, 180]
 dataset = "derived-era5-single-levels-daily-statistics"
 
-variables = [["total_precipitation", "daily_mean", "pr"], 
+variables = [#["total_precipitation", "daily_mean", "pr"], 
              ["2m_temperature", "daily_maximum", "tasmax"],
              ["2m_temperature", "daily_mean", "tas"],
              ["2m_dewpoint_temperature", "daily_minimum", "tasdew"],
