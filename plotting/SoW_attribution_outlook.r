@@ -361,6 +361,13 @@ futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
     plot_af(afs, xp/3 + xoffset, 
             name = paste(cfactual_name[2], min(years[[2]]), name), csv_out_name = 'AF-futr',
             col = col, bwidth = 0.025, ...)
+    dirs = paste0(gsub('<<region>>', gsub(' ', '_', region), dir), '/futureAFs/')
+    dir.create(dirs)
+    fname = paste(dirs, region, cell_sample, c('normal', 'background_BA')[background_BA+1],
+                  name, paste0(range(years[[2]]), collapse = '_'), 
+                  cfactual_name[2], '.Rd', sep = '--')
+    fname = gsub(' ', '_', fname)
+    save(outs, file = fname)
     return(outs)
 }
 
@@ -554,9 +561,9 @@ plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NU
     csv_out = paste0("outputs/SoW_att_outlook", extra_filename, '.csv')
     file.create(csv_out)
     
-    fout = paste("figs/att_outlook", extra_filename, '-7.pdf', sep = '-')
+    fout = paste("figs/att_outlook", extra_filename, '-8.png', sep = '-')
     
-    pdf(fout, width = 14 - 7*reduced, height = 7*2.75/3)#, units = 'in')#, res = 300)
+    png(fout, width = 14 - 7*reduced, height = 7*2.75/3, units = 'in', res = 300)
     if (reduced)
         widths = c(0.15, 0.05, 0.4)
     else
