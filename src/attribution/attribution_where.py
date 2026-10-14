@@ -69,7 +69,8 @@ def map_attribution_for_region(dir1, dir2, region,
             except:
                 set_trace()
         
-        
+        mask = count_map.data.copy()
+        mask[:] = 0.0
         for f_file, c_file in zip(fact_files, cfact_files):
             print(f_file)
             fact_data = load_file_month(f_file)
@@ -78,10 +79,12 @@ def map_attribution_for_region(dir1, dir2, region,
             
             # Compare and count
             count_map.data += (fact_data >= cfact_data)
-            count_map.data[np.isnan(fact_data)] = np.nan
-            count_map.data[np.isnan(cfact_data)] = np.nan
-        count_map.data = count_map.data * 100.0/(len(fact_files)-1)
-        
+            #count_map.data[np.isnan(fact_data)] = np.nan
+            #count_map.data[np.isnan(cfact_data)] = np.nan
+            mask += ~(np.isnan(fact_data) | np.isnan(cfact_data))
+        #count_map.data = count_map.data * 100.0/(len(fact_files)-1)
+        count_map.data /= mask
+        count_map.data *= 99.3
         iris.save(  count_map,   temp_file)
     if ax is None: plt.figure(figsize=(10*0.7, 6*0.7))
     
