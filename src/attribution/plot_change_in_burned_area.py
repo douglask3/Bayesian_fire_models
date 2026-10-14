@@ -123,6 +123,10 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_fi
     #    #filename = "data/data/driving_data_base/" + region +"/burnt_area.nc"
     #    anomaly, climatology = open_netcdf_and_find_clim(obs_file)
 
+    temp_file = dir1 + 'data_store/attribute_howmuch/' + dir2.replace('samples', '') +  \
+                    '-' + out_figname_extra + run_name + '-' + \
+                    counterfactual_name + str(plot_att_only)
+
     dir = dir1 + region + dir2 + '/'
     
     # Returns a list of Path objects for directories only
@@ -212,7 +216,12 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_fi
     axi = 0
 
     def plot_map_fun(cube, levels, cmap, extend, axi, title = '', *args, **kw):
-        set_trace()
+        fout = temp_file + '---' + title + '.nc'
+        try:
+            os.makedirs(os.path.dirname(fout))
+        except:
+            pass
+        iris.save(cube, fout)
         return plot_map_sow(cube, title, levels = levels, add_cbar = False, 
                             cmap=SoW_cmap[cmap], extend = extend, ax = axes[axi], 
                             *args, **kw)
@@ -229,9 +238,9 @@ def plot_change_in_burned_area(dir1, dir2, region, run_name = 'Evaluate', obs_fi
         for mnthi, mnth in zip(range(len(mnths)), mnths):
             month_idx = calendar.month_name[mnth]
             fact = select_month(summery[0][0], mnthi)
-            
             if not plot_att_only:
                 for fi in range(npc):
+                    
                     plot_map_fun(fact[fi], levels, 'gradient_red', 'max', axi)
                         
                     if fi == 0:
