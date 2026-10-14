@@ -369,7 +369,7 @@ def read_all_data_from_netcdf(y_filename, x_filename_list, CA_filename = None,
                 if not os.path.isfile(out_file) or i == nfs_index[0]:
                     output = open_ensemble_member(i, Y, scalers, frac_random_sample,
                                                   cells_we_want = cells_we_want, CA = CA)
-                    if i == 0: cells_we_want = output[2]
+                    if cells_we_want is None: cells_we_want = output[2]
                     np.save(out_file, output[1])
                 
                 xOut = xOut + [out_file]
