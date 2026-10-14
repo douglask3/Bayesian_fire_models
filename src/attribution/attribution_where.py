@@ -84,7 +84,7 @@ def map_attribution_for_region(dir1, dir2, region,
             mask += ~(np.isnan(fact_data) | np.isnan(cfact_data))
         #count_map.data = count_map.data * 100.0/(len(fact_files)-1)
         count_map.data /= mask
-        count_map.data *= 99.3
+        count_map.data *= 100.0
         iris.save(  count_map,   temp_file)
     if ax is None: plt.figure(figsize=(10*0.7, 6*0.7))
     
