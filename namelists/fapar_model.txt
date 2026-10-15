@@ -1,5 +1,5 @@
 ## model info
-model_title::  'test16'
+model_title::  'test17'
 dir_training:: "data/data/driving_data_40year_gs/"
 dir_projecting:: "data/data/driving_data_40year_gs/" 
 y_filen::"fapar_mask.nc"
@@ -55,7 +55,7 @@ priors:: {'pname': "weakers",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1
 
 ### optimization info
 inference_step_type:: "metropolis"
-link_func_class:: MaxEnt
+link_func_class:: zero_inflated_logit
 niterations:: 1000
 cores:: 5
 fraction_data_for_sample:: 0.00000000000001
