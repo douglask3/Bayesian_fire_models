@@ -1,0 +1,77 @@
+model_title::  'model_test_baseline_qq20_test'
+dir_training:: "E:/bfm_new/data/mask/driving_data_40year_gs/"
+#dir_projecting:: "E://data/mask/driving_data_40year_gs/"
+y_filen:: "fapar_mask.nc"
+CA_filen:: None
+
+x_filen_list:: "logpre_mask.nc"  # 0 precipitation
+x_filen_list:: "logvpd_mask.nc"  # 1 vapour pressure deficit
+x_filen_list:: "chi_mask.nc"     # 2 atmospheric CO2
+x_filen_list:: "logppfd_mask.nc" # 3 light
+x_filen_list:: "tmp_mask.nc"     # 4 temperature
+x_filen_list:: "AI_mask.nc"      # 5 moisture index
+x_filen_list:: "loggpp_mask.nc"  # 6 maximum potential GPP
+x_filen_list:: "ph05_mask.nc"    # 7 soil acidity
+x_filen_list:: "logsoc_mask.nc"  # 8 soil organic carbon
+
+## Model info
+model_class:: ConFire
+
+priors:: {'pname': "link-sigma", 'np': 1, 'dist': 'HalfNormal', 'sigma': 0.5}
+priors:: {'pname': "link-p0", 'np': 1, 'dist': 'Uniform', 'lower': 0.0001, 'upper': 0.9999}
+priors:: {'pname': "link-p1", 'np': 1, 'dist': 'LogNormal', 'mu': -1.0, 'sigma': 1.0}
+priors:: {'pname': "Fmax", 'np': 1, 'dist': 'Uniform', 'lower': 0.00001, 'upper': 0.9999}
+
+control_names:: ['Moisture', 'CO2', 'Energy', 'Carbon', 'Soil condition']
+
+priors:: {'pname': "controlID", 'value': [[0, 1, 5], [2], [3, 4], [6], [7, 8]]}
+priors:: {'pname': "control_Direction", 'value': [1, 1, 1, 1, 1]}
+priors:: {'pname': "driver_Direction", 'value': [[1, -1, 1], [1], [1, 1], [1], [-1, 1]]}
+
+priors:: {'pname': "x0", 'np': 5, 'dist': 'Normal', 'mu': 0.0, 'sigma': 5.0}
+
+priors:: {'pname': "betas", 'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "betas", 'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.5}
+priors:: {'pname': "betas", 'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "betas", 'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "betas", 'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+
+#priors:: {'pname': "powers",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+#priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+#priors:: {'pname': "powers",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+#priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+#priors:: {'pname': "powers",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+
+### optimization info
+inference_step_type:: "nuts"
+link_func_class:: zero_inflated_logit
+niterations:: 1000
+cores:: 5
+fraction_data_for_sample:: 0.003
+
+# Training and evaluation use 2000-2009.
+subset_function:: [sub_year_range, constrain_natural_earth]
+subset_function_args:: [{'year_range':[1982,2019]}, {'Continent':['South America','Oceania','Europe','Africa','North America','Asia']}]
+subset_function_eval:: [sub_year_range, constrain_natural_earth]
+subset_function_args_eval:: [{'year_range':[1982,2019]}, {'Continent':['South America','Oceania','Europe','Africa','North America','Asia']}]
+
+grab_old_trace:: False
+
+### output info
+dir_outputs:: 'outputs/'
+
+## evaluation info
+sample_for_plot:: 25
+levels:: [0, 0.01, 0.03, 0.1, 0.3, 0.5, 1.0]
+dlevels:: [-20, -10, -5, -2, -1, -0.1, 0.1, 1, 2, 5, 10, 20]
+cmap:: 'OrRd'
+dcmap:: 'RdBu_r'
+
+# 0.0 writes the full-area mean; 95.0 writes the assessed pc-95.0 series.
+time_series_percentiles:: [0.0, 95.0]
+
+# The main run supports these two products. Sensitivity and driver response
+# are generated separately by the supplementation scripts.
+limitation_types:: ['standard', 'potential']
+controls_to_plot:: [0, 1, 2, 3, 4]
+plot_control_maps:: False
