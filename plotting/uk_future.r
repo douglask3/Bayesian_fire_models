@@ -22,17 +22,17 @@ sample_aggregate <- function(dat, datF, datM, datH, aggFun = mean) {
     datM = apply(datM, 1 ,mean)
     #browser()
     dat0 = apply(datH[,121:240], 1, mean)
-    prob = ((1-exp(-1+datM))*(1-exp(-1+datF)))^(1/2)
+    prob = ((1-exp(-1+datM))*(1-exp(-1+datM)))#^(1/2)
     BA = 0.00017
     prob = (exp(BA*log(dat0) + (1.0-BA)*log((1-dat0)))) * prob
-    #prob[dat0>0.1] = 0
-    set.seed(123458)
-    
-    samples = sample(1:nrow(dat), 200, TRUE, prob)
+    prob[dat0>0.01] = 0
+    #prob[dat0<0.0000001] = 0
+    #set.seed(123458)
+    #browser()
+    samples = sample(1:nrow(dat), 1000, TRUE, prob)
     decade <- function(year) {
         selectYr <- function(yr) which(substr(colnames(dat), 2, 5) == yr)
         index = unlist(lapply(year:(year+9), selectYr))  
-        #browser()
         return(as.vector(apply(dat[samples,index], 1, aggFun)))
     }   
     out = lapply(years,decade)
@@ -52,7 +52,7 @@ open_model <- function( model, ssp, dir, aggFun = mean, ...) {
     datH = open_period(period, filename = "Evaluate.csv")
     periods = list.dirs(paste0(dir, ssp, '/', model), recursive = FALSE)
     
-    
+      
     dat = lapply(periods, open_period, ...)
     dats = cbind(dat0, do.call(cbind, dat))
     return(sample_aggregate(dats, datF, datM, datH, aggFun))
@@ -84,7 +84,10 @@ add_ssp <- function(dat, name, col, offset,
     if (all(is.na(dat))) return(NULL)
     for_year <- function(i, year) {
         x = year + offset
+        mask = dat[,i] > 1/1000
+        mask = dat[,i] < 1000
         ys = quantile(dat[,i], c(0.05, 0.25, 0.5, 0.75, 0.95), na.rm = TRUE)
+        #if (ys[1] < 0.1) browser()
         if (!is.null(transform)) ys = transform(ys)
         if (!tplot) return(c(ys, 100*mean(dat[,i]>1, na.rm = TRUE)))
         for_line <- function(j, wd = width, ...) {
@@ -133,7 +136,6 @@ af_axis <- function() {
     }
     axis(2, at = labels, labels = labels_txt)
     lapply(labels, function(y) lines( c(-9E9, 9E9), c(y, y),  col = 'grey', lty = 3))
-    #browser()
 }
 
 mit_axis <- function() {
@@ -239,7 +241,9 @@ plot_output <- function(dir, filename = "Evaluate.csv", pname = "Burned Area",
     
     if (plot_return_time) return(mapply(calc_extreme, dats, ssps, region = region))
     normalise_dat <- function(dat) apply(dat, 2, function(i) (i)/(dat[,1]))
+    dats0 = dats
     dats = lapply(dats, normalise_dat)
+    
     out_AF = af_plot(dats, pname) 
     out_MI = mit_plot(dats)
     out_names = paste("figs/", strsplit(dir, '/', fixed = T)[[1]][5], region, pname, tabname, 
@@ -259,12 +263,13 @@ plot_for_region_AF <- function(region, name) {
             layout(rbind(1:2, 3:4, 5:6, c(7,0)), heights = c(1,1, 1, 0.5))
             par(mar = c(2.5, 3, 1.5, 1))
             plot_output(dir, tabname = paste(name,type, sep ='-'), ...)
+           # browser()
             plot_output(dir, "standard-Moisture.csv", "Dryness", 
                         tabname = paste(name,type, sep ='-'),...)
             plot_output(dir, "standard-Fuel.csv", "Fuel", 
                         tabname = paste(name,type, sep ='-'), ...)
             #par(mar = c(0, 1, 1,0))
-            
+                
             add_legend()
         dev.off()
     }
