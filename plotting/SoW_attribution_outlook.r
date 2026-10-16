@@ -275,8 +275,8 @@ futr_annotaion <- function(exp, factual_name, xp, xoffset, width, ylim0, years, 
                            addSSPlab = TRUE)  {
     if (exp == BA_varname) {
         if (length(factual_name) > 1) factual_name = factual_name[2]
-        fname_test = substr(factual_name, nchar(factual_name)-5, nchar(factual_name))
-        if (fname_test == "ssp370" || fname_test == 'igated') {
+        fname_test = substr(factual_name, nchar(factual_name)-5, nchar(factual_name)) 
+        if (fname_test == "ssp370" || fname_test == 'utures') {
             polygon(width/2 + c(xoffset, xoffset + 0.3)[c(1, 1, 2, 2)], c(0, 1, 1, 0),
                      col = '#00000011', border = NA)
             text(xp + xoffset, ylim0, adj = c(0.5, 1.3), xpd = NA,
@@ -360,6 +360,13 @@ futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
     plot_af(afs, xp/3 + xoffset, 
             name = paste(cfactual_name[2], min(years[[2]]), name), csv_out_name = 'AF-futr',
             col = col, bwidth = 0.025, ...)
+    dirs = paste0(gsub('<<region>>', gsub(' ', '_', region), dir), '/futureAFs/')
+    dir.create(dirs)
+    fname = paste(dirs, region, cell_sample, c('normal', 'background_BA')[background_BA+1],
+                  name, paste0(range(years[[2]]), collapse = '_'), 
+                  cfactual_name[2], '.Rd', sep = '--')
+    fname = gsub(' ', '_', fname)
+    save(outs, file = fname)
     return(outs)
 }
 
@@ -522,9 +529,9 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
     if (mitigate) {
         
         plot(c(0,1), c(0.7, 1), type = 'n', xaxt = 'n', yaxt = 'n', axes = FALSE)
-        
+        leg_pnts = runif(1000, 0.8, 1)
         legend_point <- function(col, x, name) {
-            plot_af(runif(1000, 0.8, 1), x, col, FUN = function(i) i)
+            plot_af(leg_pnts, x, col, FUN = function(i) i)
             text(x, 0.8, adj = c(0.5, 1.1), name)
         }
         mapply(legend_point, cols, c(0.25, 0.5, 0.75), 
@@ -534,7 +541,7 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
         ylim0 = new_empty_plot_mitigate(xlim = c(0, length(yearss)-0.075), 
                            xaxs = 'i', ylim = ylim[[3]],
                            add_xlabs = TRUE)
-        mapply(plot_ssp_diff, 1:2, c("Mitigation\npotential", "Already\nmitigated"), c(0, 0.3), 
+        mapply(plot_ssp_diff, 1:2, c("Mitigation\npotential", "Past vs current\nhigh-end futures"), c(0, 0.3), 
                       MoreArgs = list(yearss, ylim0 = ylim0)) 
         
         mapply(function(x, yrss)
@@ -557,9 +564,9 @@ plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NU
     csv_out = paste0("outputs/SoW_att_outlook", extra_filename, '.csv')
     file.create(csv_out)
     
-    fout = paste("figs/att_outlook", extra_filename, '-7.pdf', sep = '-')
+    fout = paste("figs/att_outlook", extra_filename, '-8.png', sep = '-')
     
-    pdf(fout, width = 14 - 7*reduced, height = 7*2.75/3)#, units = 'in')#, res = 300)
+    png(fout, width = 14 - 7*reduced, height = 7*2.75/3, units = 'in', res = 300)
     if (reduced)
         widths = c(0.15, 0.05, 0.4)
     else
@@ -612,7 +619,7 @@ background_BA = FALSE
 BA_varname = "Evaluate"
 
 mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2)
-#mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)
+mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)
 ylim1 = list(list(c(0.48, 9E9), c(0, 9E9),c(-100, 20)),
              list(c(0.65, 9E9), c(0.8, 1.8), c(-25,5)),
              list(c(0.65, 9E9), c(0.75, 4.2), c(-52, 5)),
@@ -620,7 +627,7 @@ ylim1 = list(list(c(0.48, 9E9), c(0, 9E9),c(-100, 20)),
 
 cell_sample = "pc-95.0"
 mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2)
-#mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)
+mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)
 
 mnths = c(paste0('0', 1:9), 10:12)
 mnths = list(mnths, mnths, mnths)
@@ -633,4 +640,4 @@ ylim1 = list(list(c(0.65, 4), c(0, 9E9),c(-100, 20)),
              list(c(0.65, 8), c(0.75, 4.2), c(-52, 5)))
 
 mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2)
-#mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)
+mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)
