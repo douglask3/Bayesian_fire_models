@@ -30,33 +30,7 @@ plot_nested_circles <- function(diameters, theta = 135, col_fill = '#00000002',
          y = (0.076+ranges[3]) * (sin(angle+0.52) + yshift), 
          name, font = 2, col = border_col, xpd = NA)
     return()
-  # Centre positions
-  x <- numeric(n)
-  y <- numeric(n)
-
-  for (i in 2:n) {
-    # Offset the smaller circle so it touches at theta
-    d <- r[i - 1] - r[i]
-    #browser()
-    x[i] <- x[i - 1] - d * cos(angle)
-    y[i] <- y[i - 1] - d * sin(angle) #+ sin(angle)
-  }
-    #x = x 
-    #y = y + 0.25*sin(angle)
-    print(range(x))
-    print(range(y))
-  # Draw circles
-  
-
-  for (i in seq_len(n)) {
-    polygon(x[i] + r[i] * cos(a),
-          y[i] + r[i] * sin(a),
-          border = NA, col = '#FF000005')
-  }
 }
-
-# Example
-#plot_nested_circles(c(10, 8, 6, 4, 2), theta = 90+45)
 
 variable = "Burned_Area"
 yearss = c("2030_2039", "2040_2049", "2090_2099")
@@ -103,11 +77,8 @@ load_and_plot <- function(years, tplot = TRUE, names = rep('', 3), region = regi
     mtext(side = 1, adj = 0.5, gsub('_', ' to ', years), line = lines)
 }
 
-#par(mfrow = c(2, 3))
-
 plot_region <- function(region, lines = -2, ...) {
     out = sapply(yearss, load_and_plot, tplot = FALSE, region = region)
-    #("figure.pdf", family = "Work Sans")
     cairo_pdf(paste0('figs/future_circles', region, '.pdf'), 
         height = max(out)*7.2/sum(out), width = 7.2, family = "Work Sans")#, units = 'in', res = 300)
     layout(rbind(1:3, 1:3), widths = out)
