@@ -235,6 +235,19 @@ calc_extreme <- function(dat, ssp, region) {
 }
 
 
+output_AFs_for_circle <- function(dats, ssp, dir, filename, pname, region, tabname) {
+    diro = paste0(strsplit(dir, 'time_series')[[1]][1], 'data_store/futures/')
+    dir.create(diro)
+    filename = paste(diro, ssp, strsplit(filename, '.csv')[[1]][1], tabname, sep = '-')
+    
+    for (yr in 1:length(years)) {
+        year = years[yr]
+        filename_yr = paste(filename, paste0(year, '_', year + 9), '.Rd', sep = '-')
+        outs = as.matrix(dats[,yr])
+        save(outs, file = filename_yr)
+    }
+}
+
 plot_output <- function(dir, filename = "Evaluate.csv", pname = "Burned Area", 
                         plot_return_time = FALSE, region = '', tabname = "", ...) {
     dats = lapply(ssps, open_ssp, dir = dir, filename = filename, ...)
@@ -243,8 +256,9 @@ plot_output <- function(dir, filename = "Evaluate.csv", pname = "Burned Area",
     normalise_dat <- function(dat) apply(dat, 2, function(i) (i)/(dat[,1]))
     dats0 = dats
     dats = lapply(dats, normalise_dat)
-    
+    mapply(output_AFs_for_circle, dats, ssps, dir, filename, pname, region, tabname)
     out_AF = af_plot(dats, pname) 
+    
     out_MI = mit_plot(dats)
     out_names = paste("figs/", strsplit(dir, '/', fixed = T)[[1]][5], region, pname, tabname, 
                       c('AF', 'MIT'), '.csv', sep = '-')
