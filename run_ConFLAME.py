@@ -48,18 +48,6 @@ def Standard_limitation(training_namelist, namelist,
                      name + '/Standard_'+ str(controlID), extra_params, hyper = False,
                      *args, **kws)
 
-def Potential_limitation(training_namelist, namelist,
-                        controlID, name, control_direction, *args, **kws):   
-    control_Directioni = np.array(control_direction.copy())
-    control_Directioni[controlID] = 0.0
-    
-    extra_params = {"control_Direction": control_Directioni}
-    
-    return call_eval(training_namelist, namelist,
-                     name + '/Potential'+ str(controlID), extra_params, hyper = False,
-                     *args, **kws)
-
-
 
 def Without_limitation(training_namelist, namelist,
                         controlID, name, control_direction, *args, **kws):   
@@ -73,29 +61,32 @@ def Without_limitation(training_namelist, namelist,
                      *args, **kws)
 
 def Potential_limitation(training_namelist, namelist,
-                        controlID, name, control_direction, *args, **kws):   
-    Others = Without_limitation(training_namelist, namelist,
-                              controlID, name, control_direction,
-                              *args, **kws)[0]   
+                        controlID, name, control_direction, *args, **kws):  
+    info = read_variables_from_namelist(training_namelist) 
+    
+    Others = Without_limitation(training_namelist, namelist, controlID, name, control_direction,
+                              *args, **kws) 
     Control = call_eval(training_namelist, namelist,
                      name + '/control', hyper = False,
                      *args, **kws)
-
+    
     def for_realization(r):
-        ens_no = Control[0].coord('realization').points[r]
+        print(Control)
+        
+        ens_no = Control.coord('realization').points[r]
         filename = info['dir_outputs'] + '/samples/' + \
                    info['filename_out'] + '/' + name + \
                    '/Potential_' + str(controlID) + '/'
         makeDir(filename) 
         filename = filename  + 'sample-pred' + str(ens_no) + '.nc'
-        if os.path.exists(filename):
-            return iris.load_cube(filename)
+        #if os.path.exists(filename):
+        #    return iris.load_cube(filename)
         
-        out = Other[r] - Control[r]
+        out = Others[r] - Control[r]
         iris.save(out, filename)
         return out
     
-    outs = [for_realization(r) for r in range(Control[0].shape[0])]
+    outs = [for_realization(r) for r in range(Control.shape[0])]
     outs = iris.cube.CubeList(outs).merge_cube()
     
     return  [outs]
@@ -146,7 +137,44 @@ def Potential_climateology_limitation(training_namelist, namelist,
     
     return [outs]
 
-  
+ 
+def Sensitivity_limitation(training_namelist, namelist,
+                        controlID, name, control_direction, *args, **kws):   
+    
+    control_Directioni = np.array(control_direction.copy())
+    control_Directioni[controlID] *= 1.01
+    extra_params = {"control_Direction": control_Directioni}
+
+    Plus = call_eval(training_namelist, namelist,
+                     name + '/Plus1pc_'+ str(controlID), extra_params, hyper = False,
+                     *args, **kws)
+
+    control_Directioni[controlID] /= (1.01 * 1.01)
+    extra_params = {"control_Direction": control_Directioni}
+
+    Minus = call_eval(training_namelist, namelist,
+                     name + '/Minus1pc_'+ str(controlID), extra_params, hyper = False,
+                     *args, **kws)
+
+    def for_realization(r):
+        ens_no = Control[0].coord('realization').points[r]
+        filename = info['dir_outputs'] + '/samples/' + \
+                   info['filename_out'] + '/' + name + \
+                   '/Sensitivity' + str(controlID) + '/'
+        makeDir(filename) 
+        filename = filename  + 'sample-pred' + str(ens_no) + '.nc'
+        if os.path.exists(filename):
+            return iris.load_cube(filename)
+        
+        out = Plus[r] - Minus[r]
+        iris.save(out, filename)
+        return out
+    
+    outs = [for_realization(r) for r in range(Plus.shape[0])]
+    outs = iris.cube.CubeList(outs).merge_cube()
+    
+    return [outs]
+ 
 def make_time_series(cube, name, output_path, percentile = None, cube_assess = None, 
                      grab_old = False, *args, **kw):
     
@@ -258,12 +286,15 @@ def run_experiment(training_namelist, namelist, control_direction,
                    control_names, control_colours, plot_control_maps,
                    output_dir, output_file, fig_dir, 
                    name = '', time_series_percentiles = None, 
-                   limitation_types = None, controls_to_plot = None,*args, **kws):
-    
-    if "baseline" in name: 
-        run_only = False
+                   limitation_types = None, controls_to_plot = None, 
+                   plot_evaluation_plots = None, *args, **kws):
+    if plot_evaluation_plots is None:
+        if "baseline" in name: 
+            run_only = False
+        else:
+            run_only = True
     else:
-        run_only = True
+        run_only = not plot_evaluation_plots
     print("running: " + name)
     name = name + '-'
     
@@ -273,12 +304,13 @@ def run_experiment(training_namelist, namelist, control_direction,
 
     figName = fig_dir + '/' + name + 'control_TS'
     makeDir(figName + '/')
-    
+     
     Evaluate, Y, X, lmask, scalers  = call_eval(training_namelist, namelist,
                         name + '/Evaluate', run_only = run_only, return_inputs = True,
                         filename_out_ext = 'stochastic', fig_dir = fig_dir, 
                         test_eg_cube = True,
                         *args, **kws)
+    
 
     Control, Y, X, lmask, scalers  = call_eval(training_namelist, namelist,
                         name + '/control', run_only = run_only, return_inputs = True, 
@@ -325,6 +357,8 @@ def run_experiment(training_namelist, namelist, control_direction,
                 limitation_types_funs += [Potential_limitation]
             if ltype == 'potential_climateology':
                 limitation_types_funs += [Potential_climateology_limitation]
+            if ltype == 'sensitivity':
+                limitation_types_funs += [Sensitivity_limitation]
          
         for ltype, FUN in zip(limitation_types,limitation_types_funs):
             limitation = [FUN(training_namelist, namelist, i, 
@@ -415,6 +449,7 @@ def run_ConFire(namelist):
                         train_MaxEnt_model_from_namelist(namelist, model_title = model_title,
                                                          dir_training = dir_training,
                                                          subset_function_args = subset_function_args)
+        
         params = read_variables_from_namelist(training_namelist)
         output_dir = params['dir_outputs']
         output_file = params['filename_out']
@@ -459,19 +494,23 @@ def run_ConFire(namelist):
         common_noises = [True]
         limitation_types = select_from_info('limitation_types')
         max_no_ensembles =  select_from_info('max_no_ensembles')
-        try:
-            y_filen1 = [select_from_info('y_filen_eval', run_info['x_filen_list'][0])]
+        
+        
+        y_filen1 = [select_from_info('y_filen_eval', run_info['x_filen_list'][0])]
+        experiments = select_from_info('experiment_experiment')
+
+        controls_to_plot = select_from_info('controls_to_plot', 
+                                            range(len(control_direction)))
+        if experiments is not None:
             experiment_dirs  = select_from_info('experiment_dir')
             experiment_names = select_from_info('experiment_names')
-            experiments = select_from_info('experiment_experiment')
             periods = select_from_info('experiment_period')
             models = select_from_info('experiment_model')
-            controls_to_plot = select_from_info('controls_to_plot', 
-                                                 range(len(control_direction)))
+             
             experiment_dirs = find_replace_period_model(experiment_dirs, experiments, 
-                                                        periods, region)
+                                                        periods)
             experiment_names = find_replace_period_model(experiment_names, experiments, 
-                                                         periods, region)
+                                                         periods)
             dir_filter = np.array([[dir, name] for dir, name in \
                                   zip(experiment_dirs, experiment_names) if os.path.isdir(dir)])
             
@@ -483,10 +522,7 @@ def run_ConFire(namelist):
             dirs_all = dirs_all + experiment_dirs
             y_filen = y_filen + y_filen1 * len(experiment_dirs)
             common_noises = common_noises + \
-                select_from_info('experiment_common_noise',[True] * len(experiment_names))
-            
-        except:
-            pass   
+                select_from_info('experiment_common_noise',[True] * len(experiment_names))  
         
         args_list = [dict(training_namelist=training_namelist,
                           namelist=region_namelist,
@@ -508,13 +544,14 @@ def run_ConFire(namelist):
                           subset_function = subset_function_eval,
                           subset_function_args = subset_function_args_eval,
                           max_no_ensembles = max_no_ensembles,
-                          common_noise = common_noise
+                          common_noise = common_noise,
+                          plot_evaluation_plots = False
                          )
                     for name, dir, expt, yfile, common_noise \
                         in zip(names_all, dirs_all, exp_type, y_filen, common_noises)
                 ]
-        
-        args_list.reverse()
+        args_list[0]['plot_evaluation_plots'] = select_from_info('plot_evaluation_plots', True)
+        #args_list.reverse()
         
         if len(args_list) > 1 and select_from_info('parallelize', True): 
             try:
