@@ -125,6 +125,22 @@ def same_grid(cube1, cube2):
     return True
 
 
+
+def subset_dataset(dataset, subset_function, subset_function_args):
+    dataset0 = dataset.copy()
+    if subset_function is not None:
+        if isinstance(subset_function, list):
+            for FUN, sfargs in zip(subset_function, subset_function_args):
+                try:    
+                    dataset = FUN(dataset, **sfargs)
+                except:
+                    set_trace()
+                    print("Warning! function: " + FUN.__name__ + " not applied to file: " + \
+                          dir + filename)
+        else:      
+            dataset = subset_function(dataset, **subset_function_args) 
+    return dataset
+
 def read_variable_from_netcdf(filename, dir = '', subset_function = None, 
                               make_flat = False, units = None, 
                               subset_function_args = None,
@@ -172,6 +188,7 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
         
     if find_no_files: return dataset
      
+    dataset = subset_dataset(dataset, subset_function, subset_function_args)
     coord_names = [coord.name() for coord in dataset.coords()]
     
     if time_points is not None:     
@@ -201,17 +218,6 @@ def read_variable_from_netcdf(filename, dir = '', subset_function = None,
         dataset = dataset.regrid(extent, iris.analysis.Linear())
     
     if units is not None: dataset.units = units
-    if subset_function is not None:
-        if isinstance(subset_function, list):
-            for FUN, sfargs in zip(subset_function, subset_function_args):
-                try:    
-                    dataset = FUN(dataset, **sfargs)
-                except:
-                    set_trace()
-                    print("Warning! function: " + FUN.__name__ + " not applied to file: " + \
-                          dir + filename)
-        else:      
-            dataset = subset_function(dataset, **subset_function_args) 
     if return_time_points: 
         time_points = dataset.coord('time')
         
