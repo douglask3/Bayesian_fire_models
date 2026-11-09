@@ -81,6 +81,8 @@ class zero_inflated_logit(object):
     
     def random_sample_given_central_limit_(self, mod, sigma, params = None, CA = None): #
         if np.any(mod < 0.0): set_trace()
+        if params is None:
+            return mod
         sigma, p0, p1 = self.get_stocastic_params(params)
         mod0 = mod.copy()
         
