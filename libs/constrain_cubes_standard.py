@@ -158,7 +158,8 @@ def sub_year_range(cube, year_range, time_coord_name = None):
     """
     if time_coord_name is None:
         time_coord_name = cube.coords()[0].name()
-    
+    if 'time' not in time_coord_name: 
+        return cube
     if len(year_range) == 1: year_range = [year_range[0], year_range[0]]
      
     try:
