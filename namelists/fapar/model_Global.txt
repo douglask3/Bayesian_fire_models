@@ -1,4 +1,4 @@
-model_title::  'fapar/model_test_baseline_qq20_test-full2-extra-N-GLOBAL'
+model_title::  'fapar/model-GLOBAL3'
 dir_training:: "data/data/driving_data_40year_gs/"
 dir_projecting:: "data/data/driving_data_40year_gs/" 
 y_filen:: "fapar_mask.nc"
@@ -31,6 +31,7 @@ priors:: {'pname': "controlID", 'value': [[0, 1, 5], [2], [3, 4], [6], [7, 8], [
 priors:: {'pname': "control_Direction", 'value': [1, 1, 1, 1, 1, 1, 1]}
 priors:: {'pname': "driver_Direction", 'value': [[1, -1, 1], [1], [1, 1], [1], [-1, 1], [1], [1]]}
 priors:: {'pname': "x0", 'np': 7, 'dist': 'Normal', 'mu': 0.0, 'sigma': 5.0}
+priors:: {'pname': "pow0", 'np': 7, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
 
 priors:: {'pname': "betas", 'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "betas", 'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.5}
@@ -40,13 +41,29 @@ priors:: {'pname': "betas", 'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.
 priors:: {'pname': "betas", 'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
 priors:: {'pname': "betas", 'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
 
-#priors:: {'pname': "powers",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
-#priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
-#priors:: {'pname': "powers",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
-#priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
-#priors:: {'pname': "powers",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
-#priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
-#priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "powers",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "powers",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "powers",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+
+priors:: {'pname': "gammas", 'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
+priors:: {'pname': "gammas", 'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.5}
+priors:: {'pname': "gammas", 'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "gammas", 'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "gammas", 'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "gammas", 'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "gammas", 'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+
+priors:: {'pname': "weakers",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "weakers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "weakers",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "weakers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "weakers",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "weakers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "weakers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
 #parallelize:: False
 
 ### optimization info
@@ -60,8 +77,8 @@ min_data_points_for_sample:: 5000
 # Training and evaluation use 2000-2009.
 #subset_function:: [sub_year_range, constrain_natural_earth]
 #subset_function_args:: [{'year_range':[2000,2002]}, {'Continent':['South America']}]
-subset_function_eval:: [sub_year_range, constrain_natural_earth]
-subset_function_args_eval:: [{'year_range':[1982,2019]}, {'Continent':['South America']}]
+subset_function_eval:: [sub_year_range]#, constrain_natural_earth]
+subset_function_args_eval:: [{'year_range':[1982,2019]}]#, {'Continent':['South America']}]
 
 grab_old_trace:: True
 
@@ -81,7 +98,7 @@ time_series_percentiles:: [0.0, 95.0]
 # The main run supports these two products. Sensitivity and driver response
 # are generated separately by the supplementation scripts.
 limitation_types:: ['standard', 'potential', 'sensitivity']
-controls_to_plot:: [0, 1, 2, 3, 4]
+controls_to_plot:: [0, 1, 2, 3, 4, 5, 6]
 plot_control_maps:: True
 plot_evaluation_plots:: True
 
