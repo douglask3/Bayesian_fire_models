@@ -1,4 +1,4 @@
-model_title::  'fapar/model_test_baseline_qq20_test-full2-extra-N'
+model_title::  'fapar/model_test_scaling3'
 dir_training:: "data/data/driving_data_40year_gs/"
 dir_projecting:: "data/data/driving_data_40year_gs/" 
 y_filen:: "fapar_mask.nc"
@@ -10,10 +10,10 @@ x_filen_list:: "chi_mask.nc"     # 2 atmospheric CO2                    CO2
 x_filen_list:: "logppfd_mask.nc" # 3 light                              Energy
 x_filen_list:: "tmp_mask.nc"     # 4 temperature                        Energy
 x_filen_list:: "AI_mask.nc"      # 5 moisture index                     Moisture
-x_filen_list:: "loggpp_mask.nc"  # 6 maximum potential GPP              GPP
-x_filen_list:: "ph05_mask.nc"    # 7 soil acidity ####                  Stress
-x_filen_list:: "logsoc_mask.nc"  # 8 soil organic carbon ####           Soil Carbon
-x_filen_list:: "logNC_mask.nc"   # 9 Soil N:C ratio = easure of soil N. ### + Nitrogen
+#x_filen_list:: "loggpp_mask.nc"  # 6 maximum potential GPP              GPP
+#x_filen_list:: "ph05_mask.nc"    # 7 soil acidity ####                  Stress
+#x_filen_list:: "logsoc_mask.nc"  # 8 soil organic carbon ####           Soil Carbon
+#x_filen_list:: "logNC_mask.nc"   # 9 Soil N:C ratio = easure of soil N. ### + Nitrogen
 #x_filen_list:: "logtp_mask_wmean.nc" # 10 total soil phosphous ###  +  Phosphereous
 #x_filen_list :: logsoilp_mask_wmean.nc # 11 total soil phosphous ### + Phosphereous
 #x_filen_list :: logcec_mask.nc ## 12 Cation exchange (Iron) ###  -     Iron - leave out for now
@@ -25,24 +25,25 @@ priors:: {'pname': "link-p0", 'np': 1, 'dist': 'Uniform', 'lower': 0.0001, 'uppe
 priors:: {'pname': "link-p1", 'np': 1, 'dist': 'LogNormal', 'mu': -1.0, 'sigma': 1.0}
 priors:: {'pname': "Fmax", 'np': 1, 'dist': 'Uniform', 'lower': 0.00001, 'upper': 0.9999}
 
-control_names:: ['Moisture', 'CO2', 'Energy', 'Carbon', 'Soil condition']
+control_names:: ['Moisture', 'CO2', 'Energy']# 'Carbon', 'Soil condition']
 
-priors:: {'pname': "controlID", 'value': [[0, 1, 5], [2], [3, 4], [6], [7], [8], [9]]}
-priors:: {'pname': "control_Direction", 'value': [1, 1, 1, 1, 1, 1, 1]}
-priors:: {'pname': "driver_Direction", 'value': [[1, -1, 1], [1], [1, 1], [1], [-1], [1], [1]]}
-priors:: {'pname': "x0", 'np': 7, 'dist': 'Normal', 'mu': 0.0, 'sigma': 5.0}
+priors:: {'pname': "controlID", 'value': [[0, 1, 5], [2], [3, 4]]}#, [6], [7], [8], [9]]}
+priors:: {'pname': "control_Direction", 'value': [1, 1, 1]}
+priors:: {'pname': "driver_Direction", 'value': [[1, -1, 1], [1], [1, 1]]}#, [1], [-1], [1], [1]]}
+priors:: {'pname': "x0", 'np': 3, 'dist': 'Normal', 'mu': 0.0, 'sigma': 5.0}
+priors:: {'pname': "pow0", 'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
 
 priors:: {'pname': "betas", 'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 2.0}
 priors:: {'pname': "betas", 'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.5}
 priors:: {'pname': "betas", 'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
-priors:: {'pname': "betas", 'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
-priors:: {'pname': "betas", 'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
-priors:: {'pname': "betas", 'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
-priors:: {'pname': "betas", 'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+#priors:: {'pname': "betas", 'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+#priors:: {'pname': "betas", 'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+#priors:: {'pname': "betas", 'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+#priors:: {'pname': "betas", 'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
 
-#priors:: {'pname': "powers",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
-#priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
-#priors:: {'pname': "powers",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "powers",'np': 3, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
+priors:: {'pname': "powers",'np': 2, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
 #priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
 #priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
 #priors:: {'pname': "powers",'np': 1, 'dist': 'LogNormal', 'mu': 0.0, 'sigma': 1.0}
@@ -55,13 +56,13 @@ link_func_class:: zero_inflated_logit
 niterations:: 1000
 cores:: 10
 fraction_data_for_sample:: 0.00000000000001
-min_data_points_for_sample:: 5000
+min_data_points_for_sample:: 1000
 
 # Training and evaluation use 2000-2009.
 subset_function:: [sub_year_range, constrain_natural_earth]
 subset_function_args:: [{'year_range':[2000,2002]}, {'Continent':['South America']}]
 subset_function_eval:: [sub_year_range, constrain_natural_earth]
-subset_function_args_eval:: [{'year_range':[1982,2019]}, {'Continent':['South America']}]
+subset_function_args_eval:: [{'year_range':[2002,20012]}, {'Continent':['South America']}]
 
 grab_old_trace:: True
 
