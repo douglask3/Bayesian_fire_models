@@ -40,7 +40,8 @@ class ConFire(object):
         self.driver_Direction = self.params['driver_Direction']
         self.Fmax = select_param_or_default('Fmax', None, stack = False)
         self.lin_correct = select_param_or_default('lin_correct', None, stack = False)
-
+        self.pow0 = select_param_or_default('pow0', None, stack = False)
+    
     def burnt_area(self, X, return_controls = False, return_limitations = False):
         ## finds controls        
         def cal_control(cid = 0):
@@ -89,11 +90,20 @@ class ConFire(object):
             return self.numPCK.log(x/(1.0-x))
         
         limitations = [sigmoid(y, k) for y, k in zip(controls, self.control_Direction)]
+        if self.pow0 is not None:
+            try:
+                limitations = [self.numPCK.power(lim, pow) \
+                           for lim, pow in zip(limitations, self.pow0) if lim is not None]
+            except:
+                set_trace()
         
         if return_limitations:
             return limitations
 
         limitations = [lim for lim in limitations if lim is not None]
+        
+    
+    
         
         BA =  self.numPCK.prod(limitations, axis = 0)
         if self.Fmax is not None: sigmoid(self.Fmax, 1.0) * BA
