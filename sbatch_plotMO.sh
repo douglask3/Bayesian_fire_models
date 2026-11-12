@@ -1,15 +1,17 @@
 #!/bin/bash -l
-#SBATCH --mem=200000M
+#SBATCH --mem=100000M
 #SBATCH --ntasks=1                     # Number of nodes
 #SBATCH --output=outputs/ConFLAME_output_%j.txt         # Output file (%j expands to job ID)
 #SBATCH --error=outputs/ConFLAME_error_%j.txt           # Error file (%j expands to job ID)
-#SBATCH --time=24:00:00  
-#SBATCH --partition=cpu-long
+#SBATCH --time=6:00:00  
+#SBATCH --partition=cpu#-long
 
 
 python plot_trend_maps.py
 #python make_input/isimip/sow2526.py
 #python make_input/isimip/global.py
+python make_input/isimip/indonesia.py
+#python make_input/isimip/uk.py
 #python make_input/nrt/SoW2526.py
 # Rscript plotting/driver_control_vs_fire.r
 #Rscript make_input/isimip/regrid_vcf.r

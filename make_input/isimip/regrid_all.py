@@ -7,12 +7,14 @@ from combine_path_and_make_dir import *
 from plot_maps import *
 import os
 from pathlib import Path
+import re
 
 from   io     import StringIO
 import numpy  as np
 import math
 import glob
 import hashlib
+from dateutil.relativedelta import relativedelta
 
 import cartopy.io.shapereader as shpreader
 import shapely.geometry as sgeom
@@ -34,8 +36,9 @@ def read_variable_from_netcdf_stack(filenames, example_cube = None,
         cubes = cubes.concatenate_cube()
     except:
     #    try:
+        print(filenames)
         iris.util.equalise_attributes(cubes)
-
+        
         for cube in cubes:
             for name in ["time", "latitude", "longitude"]:
                 coord = cube.coord(name)
@@ -86,28 +89,34 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
     
     temp_out = dir  + dataset_name + output_year + region_name
     print(temp_out)
-    def open_variable(varname, MinusYr = False):
-        
+    def open_variable(varname, MinusYr = False, baseline_year = False):
+        dir_i = dir
         filename = filenames[varname]
+        if baseline_year and "ssp" in dir:
+            dir_i = re.sub(r"ssp.*?_2015soc-from-", "historical_", dir_i)
+            files =  glob.glob(dir_i + '*')
+        else:
+            files =  glob.glob(dir_i + '*')
         
-        files =  glob.glob(dir + '*')
-        #set_trace()
         if len(files) == 0:
             set_trace()
-         
-        file_years = set([file[-12:-3] for file in glob.glob(dir + '*')]) 
+        
+        file_years = set([file[-12:-3] for file in glob.glob(dir_i + '*')]) 
         file_years = list(file_years)
-        #set_trace()
-        try:
-            yeari = year.copy()
-        except:
-            set_trace() 
+        if baseline_year:
+            yeari = [yr + base_year - year[0] for yr in year]
+        else:
+            try:
+                yeari = year.copy()
+            except:
+                set_trace() 
         if MinusYr:
             yeari[0] = yeari[0] - 1
             #yeari[1] = yeari[1] + 1
         
         file_years_ranges = [(int(pair.split('_')[0]), int(pair.split('_')[1])) \
                              for pair in file_years]
+        
         # Find overlapping elements
         overlapping_years = []
         for i, range_pair in enumerate(file_years_ranges):
@@ -124,10 +133,35 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
         
         out = None
         
-        out = read_variable_from_netcdf_stack(filename, example_cube, dir,  
+        out = read_variable_from_netcdf_stack(filename, example_cube, dir_i,  
                                               subset_function = sbs_funs,  
                                               subset_function_args = sbs_args)
         
+        if baseline_year:
+            mn = out.collapsed('time', iris.analysis.MEAN).data
+            out.data = np.tile(mn, (out.data.shape[0], 1,1))
+            
+            X = yeari[0] - year[0]
+            
+            time = out.coord("time")
+            dates = time.units.num2date(time.points)
+
+            shifted_dates = [
+                type(d)(
+                    d.year - X,
+                    d.month,
+                    d.day,
+                    d.hour,
+                    d.minute,
+                    d.second,
+                    d.microsecond
+                )
+                for d in dates
+            ]
+            time.points = time.units.date2num(shifted_dates)
+            year_coord = out.coord("year")
+            year_coord.points = year_coord.points - X
+            
         return out
 
 
@@ -151,21 +185,25 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
             save_ncdf(mdat, var + '_mean') 
             open(temp_file, 'a').close()   
 
-    def cal_cover(cover_vars, name, minus1 = False, logT = False):
+    def cal_cover(cover_vars, name, minus1 = False, logT = False, *args, **kw):
         print(name)
-        
-        dat = open_variable(cover_vars[0])
-        
-        for i in cover_vars[1:]:
-            dat.data = dat.data + open_variable(i).data
-        dat.rename(name)
-        if minus1:
-            dat.data = 1-dat.data
-        if logT:
-            dat.data = np.log(dat.data)
-        
-        save_ncdf(dat, name + '_jules-es')
-        return dat
+        def cal_cover_yr(baseline_year, name_ext):
+            dat = open_variable(cover_vars[0], baseline_year = baseline_year, *args, **kw)
+            
+            for i in cover_vars[1:]:
+                dat.data = dat.data + \
+                    open_variable(i, baseline_year = baseline_year, *args, **kw).data
+            dat.rename(name)
+            if minus1:
+                dat.data = 1-dat.data
+            if logT:
+                dat.data = np.log(dat.data)
+            
+            save_ncdf(dat, name + '_jules-es' + name_ext)
+            return dat
+        cal_cover_yr(False, '')
+        cal_cover_yr(True, '_base')
+
     print("\tFinding Montly means for")
     for var, fun in zip(process_standard, process_function):
         print("\t\t" + var)
@@ -192,7 +230,7 @@ def make_variables_for_year_range(year, process, dir, dataset_name, filenames,
         
         try:
             temp_file = generate_temp_fname(temp_out, 'crop')
-            if test_if_process('crop', temp_file)  : 
+            if test_if_process('crop', temp_file): 
                 cal_cover(["c3crop", "c4crop"], 'crop')
                 open(temp_file, 'a').close()
         except:
@@ -333,8 +371,8 @@ process_clim = ['vpd', 'tas', 'tas_range', 'pr', 'lightn']
 process_jules =['cover', 'crop', 'pasture', "urban"]
 
 example_cube = None
-grab_old_data = True
-
+grab_old_data = False
+base_year = 2005
 
 
 def process_clim_and_jules(process_jules, dir_jules, process_clim, dir_clim, years,

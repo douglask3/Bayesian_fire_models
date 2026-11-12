@@ -205,8 +205,8 @@ plot_af <- function(af, xpos = 1, col = 'red', name = '', bar = TRUE,
 att_af_calc <- function(dir, region,factual_name, cfactual_name, exp, mnths, years,
                         BA = NULL, xp, xoffset, samples = NULL, ...) {
     
-    fact = openDat(dir, region, factual_name, exp, cell_sample, mnths, years)
-    cfact = openDat(dir, region, cfactual_name, exp, cell_sample, mnths, years)
+    fact =  = openDat(dir, region, factual_name, exp, cell_sample, mnths, years)
+    cfact = cfact0 = openDat(dir, region, cfactual_name, exp, cell_sample, mnths, years)
     
     if (is.null(samples)) {
         if (is.null(BA))
@@ -219,6 +219,7 @@ att_af_calc <- function(dir, region,factual_name, cfactual_name, exp, mnths, yea
             samples = sample(1:length(fact), 1000, TRUE)
         } else {
             prob = exp(BA*log(fact) + (1.0-BA)*log((1-fact)))
+            prob[fact < BA*0.0001] = 0.0
             samples = sample(1:length(prob), 1000, TRUE, prob)
         }
     } else {
@@ -231,9 +232,10 @@ att_af_calc <- function(dir, region,factual_name, cfactual_name, exp, mnths, yea
         fact = sort(fact) + 0.0000001
         cfact = sort(cfact) + 0.0000001
     } else {
-        fact = sort(fact[samples])
-        cfact = sort(cfact[samples] )
+        fact = (fact[samples])
+        cfact = (cfact[samples] )
     }
+    
     plot_af(fact/cfact, xp + xoffset, ...)
     return(list(samples, BA))
 }
@@ -273,8 +275,8 @@ futr_annotaion <- function(exp, factual_name, xp, xoffset, width, ylim0, years, 
                            addSSPlab = TRUE)  {
     if (exp == BA_varname) {
         if (length(factual_name) > 1) factual_name = factual_name[2]
-        fname_test = substr(factual_name, nchar(factual_name)-5, nchar(factual_name))
-        if (fname_test == "ssp370" || fname_test == 'igated') {
+        fname_test = substr(factual_name, nchar(factual_name)-5, nchar(factual_name)) 
+        if (fname_test == "ssp370" || fname_test == 'utures') {
             polygon(width/2 + c(xoffset, xoffset + 0.3)[c(1, 1, 2, 2)], c(0, 1, 1, 0),
                      col = '#00000011', border = NA)
             text(xp + xoffset, ylim0, adj = c(0.5, 1.3), xpd = NA,
@@ -358,6 +360,13 @@ futr_af_calc <- function(dir, region, factual_name, cfactual_name, exp, mnths, y
     plot_af(afs, xp/3 + xoffset, 
             name = paste(cfactual_name[2], min(years[[2]]), name), csv_out_name = 'AF-futr',
             col = col, bwidth = 0.025, ...)
+    dirs = paste0(gsub('<<region>>', gsub(' ', '_', region), dir), '/futureAFs/')
+    dir.create(dirs)
+    fname = paste(dirs, region, cell_sample, c('normal', 'background_BA')[background_BA+1],
+                  name, paste0(range(years[[2]]), collapse = '_'), 
+                  cfactual_name[2], '.Rd', sep = '--')
+    fname = gsub(' ', '_', fname)
+    save(outs, file = fname)
     return(outs)
 }
 
@@ -520,9 +529,9 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
     if (mitigate) {
         
         plot(c(0,1), c(0.7, 1), type = 'n', xaxt = 'n', yaxt = 'n', axes = FALSE)
-        
+        leg_pnts = runif(1000, 0.8, 1)
         legend_point <- function(col, x, name) {
-            plot_af(runif(1000, 0.8, 1), x, col, FUN = function(i) i)
+            plot_af(leg_pnts, x, col, FUN = function(i) i)
             text(x, 0.8, adj = c(0.5, 1.1), name)
         }
         mapply(legend_point, cols, c(0.25, 0.5, 0.75), 
@@ -532,7 +541,7 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
         ylim0 = new_empty_plot_mitigate(xlim = c(0, length(yearss)-0.075), 
                            xaxs = 'i', ylim = ylim[[3]],
                            add_xlabs = TRUE)
-        mapply(plot_ssp_diff, 1:2, c("Mitigation\npotential", "Already\nmitigated"), c(0, 0.3), 
+        mapply(plot_ssp_diff, 1:2, c("Mitigation\npotential", "Past vs current\nhigh-end futures"), c(0, 0.3), 
                       MoreArgs = list(yearss, ylim0 = ylim0)) 
         
         mapply(function(x, yrss)
@@ -545,13 +554,17 @@ plot_region <- function(region, HadGEM_dir, ISIMIP_dir, mnths, years,
 }
 
 plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NULL, reduced = TRUE) {
+<<<<<<< HEAD
     if (region != regions[4]) return()
+=======
+    if (region == regions[4]) return()
+>>>>>>> SoW2526_revisions
     extra_filename = paste(cell_sample, c('', 'reduced')[reduced+1], 
                  c('event', 'background')[background_BA+1], region, sep = '-')
     csv_out = paste0("outputs/SoW_att_outlook", extra_filename, '.csv')
     file.create(csv_out)
     
-    fout = paste("figs/att_outlook", extra_filename, '-7.png', sep = '-')
+    fout = paste("figs/att_outlook", extra_filename, '-8.png', sep = '-')
     
     png(fout, width = 14 - 7*reduced, height = 7*2.75/3, units = 'in', res = 300)
     if (reduced)
@@ -563,11 +576,13 @@ plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NU
         plot_region(region,  HadGEM_dir, ISIMIP_dir, mnths, years, 
                     reduced = reduced, 
                      ylim = ylim1, csv_out = csv_out, mitigate = TRUE)
-    #    plot_region(region,  HadGEM_dir, ISIMIP_dir, mnths, years, 
-    #                empty_plot = new_empty_plot_rr,
-    #                att_FUN = att_rr_calc, futr_FUN = futr_rr_calc, ylim = ylim2, 
-    #                reduced = reduced, csv_out = csv_out)
-    #browser()
+    
+    dev.off()
+
+        plot_region(region,  HadGEM_dir, ISIMIP_dir, mnths, years, 
+                    empty_plot = new_empty_plot_rr,
+                    att_FUN = att_rr_calc, futr_FUN = futr_rr_calc, ylim = ylim2, 
+                    reduced = reduced, csv_out = csv_out)
     dev.off()
 }
 
@@ -575,9 +590,12 @@ plot_region_all_plots <- function(region, mnths, years, ylim1 = NULL, ylim2 = NU
 cols = c("#B50000", "#E98400", "#0096A1")#, "#EE0074")#, "purple", "grey")
 
 HadGEM_dir = "outputs/outputs_scratch/SoW2526/attribution-HadGEM-test29-fuelcf4-rerun2/<<region>>/time_series/_16-frac_points_0.5/"
+HadGEM_dir = "outputs/outputs_scratch/SoW2526/Zenodo/<<region>>/hadgem3/time_series/_16-frac_points_0.5/"
+HadGEM_dir = "outputs/outputs_scratch/SoW2526/Final2/<<region>>/hadgem3/time_series/_16-frac_points_1e-08/"
+
 #ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-4-notree-notreechange/<<region>>/time_series/_15-frac_points_0.5/"
-ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-11-notree-notreechange-noGP/<<region>>/time_series/_15-frac_points_0.5/"
-ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-5-notree-notreechange/<<region>>/time_series/_15-frac_points_0.5/"
+ISIMIP_dir = "outputs/outputs_scratch/SoW2526/Zenodo/<<region>>/isimip/time_series/_15-frac_points_0.5/"
+#ISIMIP_dir = "outputs/outputs_scratch/SoW2526/isimip/full-5-notree-notreechange/<<region>>/time_series/_15-frac_points_0.5/"
 gcms = c("GFDL-ESM4-", "IPSL-CM6A-LR-", "MPI-ESM1-2-HR-", "MRI-ESM2-0-", "UKESM1-0-LL-")
 
 regions = c("Northwest Iberia", "Midwestern Canadian Shield forests", 
@@ -601,15 +619,15 @@ background_BA = FALSE
 BA_varname = "Evaluate"
 
 mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2)
-#mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)
+mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)
 ylim1 = list(list(c(0.48, 9E9), c(0, 9E9),c(-100, 20)),
              list(c(0.65, 9E9), c(0.8, 1.8), c(-25,5)),
              list(c(0.65, 9E9), c(0.75, 4.2), c(-52, 5)),
              list(c(0,9E9), c(0, 9E9), c(-100, 100)))
 
 cell_sample = "pc-95.0"
-#mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2)
-#mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)
+mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2)
+mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)
 
 mnths = c(paste0('0', 1:9), 10:12)
 mnths = list(mnths, mnths, mnths)
@@ -622,4 +640,4 @@ ylim1 = list(list(c(0.65, 4), c(0, 9E9),c(-100, 20)),
              list(c(0.65, 8), c(0.75, 4.2), c(-52, 5)))
 
 mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2)
-#mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)
+mapply(plot_region_all_plots,regions, mnths, years, ylim1, ylim2, reduced = FALSE)

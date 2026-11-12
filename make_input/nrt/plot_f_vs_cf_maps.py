@@ -272,7 +272,7 @@ for mnths, region in zip(months, regions):
     #region_info = get_region_info(region)[region]
     
     eg_cube = iris.load_cube('data/data/driving_data2526/' + region + \
-                           '/nrt/factual/' + variable_info[variables[0]]['file'] + '.nc')
+                           '/nrt24/factual/' + variable_info[variables[0]]['file'] + '.nc')
     fig, axes = set_up_sow_plot_windows(len(variables), 5, 
                                         eg_cube = eg_cube, figsize = (30, 30))
     if eg_cube.ndim == 3:
@@ -282,9 +282,13 @@ for mnths, region in zip(months, regions):
         plot_factual_and_cf(
             variable =  info['file'],
             factual_path = 'data/data/driving_data2526/' + region + \
-                           '/nrt/factual/' + info['file'] + '.nc',
+                           '/nrt24/factual/' + info['file'] + '.nc',
             cf_dir = 'data/data/driving_data2526/' + region + \
+<<<<<<< HEAD
                      '/nrt//counterfactual//',
+=======
+                     '/nrt24//counterfactual//',
+>>>>>>> SoW2526_revisions
             months = mnths,
             years = [2025],
             label = info['label'],

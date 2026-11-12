@@ -370,9 +370,9 @@ if __name__=="__main__":
     regions = [
                #"Midwestern Canadian Shield forests", 
                "Chilean Temperate Forests and Matorral", 
-               "Southeast South Korea", 
-            #"Northwest Iberia", 
-               "Scottish Highlands"
+               #"Southeast South Korea", 
+               #"Northwest Iberia", 
+               #"Scottish Highlands"
                ]
 
     make_all_variable_inputs(variables_obs, variables_mod, variables_out, 

@@ -15,7 +15,7 @@ from constrain_cubes_standard import *
 
 from plot_maps import *
 # Define paths
-base_dir = "data/data/driving_data2526/Global/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019/"
+base_dir = "data/data/driving_data2526/Indonesia/isimp3a/obsclim/GSWP3-W5E5/period_2000_2019/"
 
 # File names and labels
 files_labels = {
@@ -70,7 +70,7 @@ def plot_map(ax, data, title, cmap):#, vmin=None, vmax=None):
 
 def save_to_files(fig, fig_title, pdf):
     
-    fig.savefig(f"{fig_title}.png", dpi=300, bbox_inches='tight')
+    fig.savefig(f"{fig_title}.png", dpi=100, bbox_inches='tight')
     fig.savefig(f"{fig_title}.pdf", bbox_inches='tight')
     pdf.savefig(fig, bbox_inches='tight')
     plt.close(fig)  
@@ -179,7 +179,7 @@ base_dir0 = "data/data/driving_data2526/"
 #regions = ['Amazon', 'NWIndia', 'Alberta', 'LA', 'Congo', 'Pantanal']
 #
 with PdfPages("fire_analysis_all_regions.pdf") as pdf:
-    plot_isimip_drivers_for_region(pdf, 'Global')
+    plot_isimip_drivers_for_region(pdf, 'Indonesia')
 #    for region in regions:
 #        plot_isimip_drivers_for_region(pdf, region)
 

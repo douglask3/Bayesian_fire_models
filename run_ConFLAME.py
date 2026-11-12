@@ -17,7 +17,7 @@ from above_percentile_mean import *
 from plot_maps import *
 from plot_multimaps import *
 from attribution import *
-
+import pickle
 try:
     from concurrent.futures import ProcessPoolExecutor, as_completed
     from multiprocessing import get_context
@@ -436,9 +436,32 @@ def run_ConFire(namelist):
                 else:
                     ssa['months_of_year'] = run_info['region_months'][region]
                 return ssa
+            def replace_in_args(args): 
+                for arg in args:
+                    for key, value in arg.items():
+                        print(f"{key}: {value}")
+                        if isinstance(value, list):
+                            for i in range(len(value)):
+                                if isinstance(value[i], str):
+                                    value[i] = value[i].replace('<<region>>', region)
+                        else:
+                            if isinstance(value[i], str):
+                                value = value.replace('<<region>>', region)
+                    arg[key] = value
+                return args
+            
+            try:
+                replace_in_args(subset_function_args)
+            except:
+                pass
+            try:
+                replace_in_args(subset_function_args_eval)
+            except:
+                pass
             if select_from_info('region_mnths') is not None:
                 set_region_months(subset_function_args)
                 set_region_months(subset_function_args_eval)
+                
         model_title = run_info['model_title'].replace('<<region>>', region)
         dir_training = run_info['dir_training'].replace('<<region>>', region)
         if 'dir_projecting' in run_info.keys():
@@ -495,13 +518,13 @@ def run_ConFire(namelist):
         limitation_types = select_from_info('limitation_types')
         max_no_ensembles =  select_from_info('max_no_ensembles')
         
-        
         y_filen1 = [select_from_info('y_filen_eval', run_info['x_filen_list'][0])]
         experiments = select_from_info('experiment_experiment')
 
         controls_to_plot = select_from_info('controls_to_plot', 
                                             range(len(control_direction)))
         if experiments is not None:
+
             experiment_dirs  = select_from_info('experiment_dir')
             experiment_names = select_from_info('experiment_names')
             periods = select_from_info('experiment_period')
@@ -511,8 +534,10 @@ def run_ConFire(namelist):
                                                         periods)
             experiment_names = find_replace_period_model(experiment_names, experiments, 
                                                          periods)
+
             dir_filter = np.array([[dir, name] for dir, name in \
-                                  zip(experiment_dirs, experiment_names) if os.path.isdir(dir)])
+                                  zip(experiment_dirs, experiment_names) \
+                                    if os.path.isdir(dir.split('||')[0])])
             
             experiment_dirs = [str(i) for i in dir_filter[:,0]]
             experiment_names = [str(i) for i in dir_filter[:,1]]
@@ -522,7 +547,14 @@ def run_ConFire(namelist):
             dirs_all = dirs_all + experiment_dirs
             y_filen = y_filen + y_filen1 * len(experiment_dirs)
             common_noises = common_noises + \
+<<<<<<< HEAD
                 select_from_info('experiment_common_noise',[True] * len(experiment_names))  
+=======
+                select_from_info('experiment_common_noise',[True] * len(experiment_names))
+            
+        except:
+            pass   
+>>>>>>> origin/SoW2627
         
         args_list = [dict(training_namelist=training_namelist,
                           namelist=region_namelist,
@@ -550,8 +582,15 @@ def run_ConFire(namelist):
                     for name, dir, expt, yfile, common_noise \
                         in zip(names_all, dirs_all, exp_type, y_filen, common_noises)
                 ]
+<<<<<<< HEAD
         args_list[0]['plot_evaluation_plots'] = select_from_info('plot_evaluation_plots', True)
         #args_list.reverse()
+=======
+        
+        args_list.reverse()
+
+        #args_list = [args_list[1]]
+>>>>>>> origin/SoW2627
         
         if len(args_list) > 1 and select_from_info('parallelize', True): 
             try:
