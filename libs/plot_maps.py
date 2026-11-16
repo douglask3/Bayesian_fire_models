@@ -115,7 +115,17 @@ def plot_annual_mean(cube, levels = None, cmap = 'gradient_hues', plot_name = No
     if plot_name is not None: aa.long_name = plot_name
     if scale is not None: aa.data = aa.data * scale
     if levels is None:
-        lower_bound = 10**(math.floor(math.log10(np.nanmax(aa.data))) -3)
+        try:
+            lower_bound = 10**(math.floor(math.log10(np.nanmax(aa.data))) -3)
+        except:
+            lower_bound = 0.0
+            #print(aa.data)
+            #print(len(aa.data))
+            #print(np.nanmax(aa.data))
+            #print(np.nanmin(aa.data))
+            #set_trace()
+
+            
         levels = auto_pretty_levels(aa.data[np.abs(aa.data) > lower_bound], n_levels=7, ignore_v = 0.0)
         if levels.min() > 0.0:
             levels = np.append(0, levels)
