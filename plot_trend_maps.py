@@ -83,34 +83,46 @@ def plot_absolute_map(p5_cube, p50_cube, p95_cube, prob_cube,
     return levels
 
 
+def Trend_first_vs_second(data):
+    
+    # Split into halves
+    nhalf = int(data.shape[0]/2)
+    first_half = data[:nhalf, :, :]
+    second_half = data[nhalf:, :, :]
+    
+    # Mean over time
+    first_mean = np.mean(first_half, axis=0)
+    second_mean = np.mean(second_half, axis=0)
+    
+    # Difference
+    diff = second_mean - first_mean
+    return diff
+
+
+def Trend_linear_regrssion(data):
+    time = np.arange(0, data.shape[0])/12
+    slope = np.polyfit(time, data.reshape(len(time), -1), 1)[0]
+    return slope.reshape(data.shape[1:])
+
 
 def plot_experiment(experiment, axi, cmap, levels, plot_FUN, name, fig = None, axes  = None,
                     historgram = False):
     files = sorted(glob.glob(path + experiment + "/sample-pred*.nc"))
     
-    
-
     stand = []
     diffs = []
+    trend = []
     
     for f in files:
         cube = iris.load_cube(f)
         data = cube.data  # shape: (time, lat, lon)
         #if experiment != experiments[0]:
         #    dat = dat**4 
-        # Split into halves
-        first_half = data[:12, :, :]
-        second_half = data[12:, :, :]
         
-        # Mean over time
-        first_mean = np.mean(first_half, axis=0)
-        second_mean = np.mean(second_half, axis=0)
-        
-        # Difference
-        diff = second_mean - first_mean
-        diffs.append(diff)
+        diffs.append(Trend_first_vs_second(data))
+        trend.append(Trend_linear_regrssion(data))
         stand.append(np.mean(data, axis = 0))
-     
+        
     try:
         template = iris.load_cube(files[0])[0]  # just lat/lon grid
     except:
@@ -130,6 +142,7 @@ def plot_experiment(experiment, axi, cmap, levels, plot_FUN, name, fig = None, a
     #set_trace()
     diffs = np.stack(diffs, axis=0) * 10
     stand = np.stack(stand, axis = 0)
+    trend = np.stack(trend, axis = 0)
 
     if historgram:
         diffs_cube = make_cube(diffs, "deltas")
@@ -173,11 +186,8 @@ for cmap, FUN, pname in zip(cmaps, FUNs, pnames):
     fig = None
     levels = None
     for i, experiment in enumerate(experiments):
-        try:
-            fig, axes, levels = plot_experiment(experiment, i, cmap, levels, FUN, names[i], 
+        fig, axes, levels = plot_experiment(experiment, i, cmap, levels, FUN, names[i], 
                                             fig, axes)    
-        except:
-            set_trace()
     plt.tight_layout()
     plt.savefig("figs/v2-" + pname + ".png", dpi = 300)
 set_trace()
