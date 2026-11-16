@@ -547,14 +547,8 @@ def run_ConFire(namelist):
             dirs_all = dirs_all + experiment_dirs
             y_filen = y_filen + y_filen1 * len(experiment_dirs)
             common_noises = common_noises + \
-<<<<<<< HEAD
                 select_from_info('experiment_common_noise',[True] * len(experiment_names))  
-=======
-                select_from_info('experiment_common_noise',[True] * len(experiment_names))
-            
-        except:
-            pass   
->>>>>>> origin/SoW2627
+
         
         args_list = [dict(training_namelist=training_namelist,
                           namelist=region_namelist,
@@ -582,15 +576,9 @@ def run_ConFire(namelist):
                     for name, dir, expt, yfile, common_noise \
                         in zip(names_all, dirs_all, exp_type, y_filen, common_noises)
                 ]
-<<<<<<< HEAD
         args_list[0]['plot_evaluation_plots'] = select_from_info('plot_evaluation_plots', True)
         #args_list.reverse()
-=======
-        
-        args_list.reverse()
 
-        #args_list = [args_list[1]]
->>>>>>> origin/SoW2627
         
         if len(args_list) > 1 and select_from_info('parallelize', True): 
             try:
