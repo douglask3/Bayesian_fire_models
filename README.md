@@ -129,7 +129,7 @@ python run_ConFLAME.py [namelist]
 ## Results
 The results will be saved in the `outputs/` directory, though this can be updated in the namelists. There are some model specific files that will get produced, but common across all models are:
 
-```prior_predictive.png''' plots runs the fire model using priors (y-axis) and plots against training data (x-axis). This tests if the training data is within the model prior. If the blues lines fall within the model spread, then it does and all is great. If they fall outside, priors are too restrictive and you should redo them. Don't worry if the model is very broad or even stretches to the full bounds of the data for all models - that will get updated.
+`prior_predictive.png' plots runs the fire model using priors (y-axis) and plots against training data (x-axis). This tests if the training data is within the model prior. If the blues lines fall within the model spread, then it does and all is great. If they fall outside, priors are too restrictive and you should redo them. Don't worry if the model is very broad or even stretches to the full bounds of the data for all models - that will get updated.
 
 ## Contributing
 Contributions are welcome! Please read the [CONTRIBUTING.md](README/CONTRIBUTING.md) file for guidelines on how to contribute.
