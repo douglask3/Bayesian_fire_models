@@ -10,6 +10,7 @@ from pathlib import Path
 
 sys.path.append('../../libs/')
 sys.path.append('libs/')
+import hashlib
 from constrain_cubes_standard import *
 
 from shapely.ops import unary_union
@@ -44,8 +45,10 @@ def print_diffs(cube1, cube2):
 
 
 def HadGEM_extract_variable(experiment, variable, start_year, dir, sub_dir, out_dir, temp_dir,
-                     region_names = None, shapefile_path = None, region_in_shapefile = True):
+                     region_names = None, shapeinfo = None):
     
+    variable_varname = variable[1]
+    variable = variable[0]
     var_dir = dir  + '/' + experiment[0] + '/' + variable + '/' + sub_dir + '/'
     
     files = os.listdir(var_dir)
@@ -57,14 +60,16 @@ def HadGEM_extract_variable(experiment, variable, start_year, dir, sub_dir, out_
     except:
         set_trace()
     
-    #shapes = gpd.read_file(shapefile_path)
     ensembles = list(set(ensembles))
     
-    def process_memember(member):
-        print(member)
-        completed_file = temp_dir + experiment[1] + variable + member + str(start_year) + shapefile_path.replace('/', '-') + '.txt'
+    def process_memember(member, shapeinfo):
         
-        if os.path.isfile(completed_file) and False:
+        print(member)
+        completed_file = [[f.__name__, args] for f, args in shapeinfo]
+        
+        completed_file = temp_dir + experiment[1] + variable + member + str(start_year) + hashlib.sha256(str(completed_file).encode("utf-8")).hexdigest() + '.txt'
+         
+        if os.path.isfile(completed_file):
             return
         mfiles = [file for file in files if member in file]
         mfiles = [file for file in mfiles if int(file[-9:-5]) >= start_year]
@@ -73,20 +78,17 @@ def HadGEM_extract_variable(experiment, variable, start_year, dir, sub_dir, out_
         mfiles = [var_dir + file for file in mfiles]
         if len(mfiles) == 0:
             set_trace()
+        cube = iris.load(mfiles, variable_varname)
         
-        cube = iris.load(mfiles)
-        
-        #except:
-        #    set_trace()
         for cb in cube:
             cb.coord('time').bounds = None
         for i in range(len(cube)):
             cube[i].coord('time').bounds = None
-            #cube[i] = cube[i][0:90]
         iris.util.equalise_attributes(cube)
         iris.util.unify_time_units(cube)
         all_slices = []
         cubes = cube.copy()
+        
         cube = cube.concatenate()        
         
         if len(cube) > 1:
@@ -106,21 +108,11 @@ def HadGEM_extract_variable(experiment, variable, start_year, dir, sub_dir, out_
                 unique_slices = [time_to_slice[t] for t in unique_times]
                 
                 cube = iris.cube.CubeList(unique_slices).merge_cube()
-                '''
-                print_diffs(cube[0], cube[1])
-                set_trace()
-                for i, cb in enumerate(cube):
-                    print(f"--- Cube {i} ---")
-                    for coord in cb.coords():
-                        print(f"{coord.name()} ({coord.shape}) units={coord.units} bounds={coord.bounds is not None}")
-                '''
             except:
                 return None
         else:
             cube = cube[0]
-        print("yay")
         
-
         icc.add_year(cube, 'time')
         icc.add_day_of_year(cube, 'time')
         cyrs = cube.coord('year').points
@@ -139,8 +131,7 @@ def HadGEM_extract_variable(experiment, variable, start_year, dir, sub_dir, out_
             out_file = out_dir + '/' + region_name.replace(' ', '_') + \
                        '/HadGEM_' + experiment[1] + \
                        '/' + variable + '/' + member + '-' + str(start_year) + '-2.nc'
-            #if os.path.isfile(out_file):
-            #    return
+            
             print(region_name) 
             print(out_file) 
 
@@ -148,17 +139,13 @@ def HadGEM_extract_variable(experiment, variable, start_year, dir, sub_dir, out_
             
             cube.coord("longitude").circular = True
             cube = cube.intersection(longitude=(-180, 180))
-            
-            if region_in_shapefile:
-                cube = contrain_to_sow_shapefile(cube, shapefile_path, 
-                                                 region_name, mask = False)
-            else:
-                cube = contrain_to_shapefile(cube, shapefile_path, mask = False)
-            
+            for shpinfo in shapeinfo:
+                cube = shpinfo[0](cube, **shpinfo[1])
+             
             iris.save(cube, out_file, local_keys=['calendar'])
         
         [process_region(cube, region_name) for region_name in region_names]
-            
+        
         os.makedirs(os.path.dirname(completed_file), exist_ok=True)
         Path(completed_file).touch()
 
@@ -167,7 +154,7 @@ def HadGEM_extract_variable(experiment, variable, start_year, dir, sub_dir, out_
             process_memember(*args, **kw)
         except:
             pass 
-    [process_memember_try(member) for member in ensembles]
+    [process_memember_try(member, shapeinfo) for member in ensembles]
 
 def HadGEM_extract_variables(experiments, variables, *args, **kw):
     for experiment in experiments:
@@ -181,12 +168,12 @@ dir = "/data/users/opatt/HadGEM3-A-N216/"
 sub_dir = '/day/'  
 start_years = [2020, 2023]
 
-variables = ['pr', 'tasmax']#
-variables = ['hursmin', 'tas']
-variables = ['sfcWind', 'uas']
-variables = ['vas',  'mrros']
-#variables = ['tas','sfcWind', 'uas', 'vas',  'mrros']
-#variables = ['sfcWind', 'uas', 'vas',  'mrros']
+variables = [['pr', "precipitation_flux"], ['tasmax', "air_temperature"],
+             ['hursmin', "relative_humidity"], ['tas', "air_temperature"],
+             ['sfcWind', "wind_speed"], 
+             ['uas', "x_wind"], ['vas', "y_wind"],
+             ['mrros', "surface_runoff_flux"]]
+
 experiments = [['historicalExt', 'ALL'], ['historicalNatExt', 'NAT']]
     
 

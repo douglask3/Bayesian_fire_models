@@ -25,7 +25,7 @@ import cf_units
 def common_time_coord(cubes, time_coord = 'valid_time'):
     # Define a common reference time unit (e.g., days since 1970-01-01)
     common_time_unit = cf_units.Unit('days since 1970-01-01 00:00:00', calendar='gregorian')
-    
+     
     # Standardize time coordinates across all cubes
     for cube in cubes:
         try: 
@@ -67,22 +67,8 @@ def download_era5(variables, years = [1940], months = range(13),
                   dataset = "derived-era5-single-levels-daily-statistics", 
                   out_dir = 'data/',
                   temp_dir = 'temp/',
-                  shapefile_path = None, region_in_shapefile = True):
+                  shapeinfo = None, region_in_shapefile = True):
     
-    if shapefile_path is not None: 
-        shapes = gpd.read_file(shapefile_path)
-        shapes["geometry"] = shapes["geometry"].buffer(0)
-        if region_in_shapefile:
-            ## Extract the shape containing region_name in the name
-            
-            region_shape = shapes[shapes['name'].str.contains(region_name, 
-                                                              case=False, na=False)]
-        
-            # Convert to a single geometry (union of multiple polygons if needed)
-            region_geom = unary_union(region_shape.geometry)
-        else:
-            region_geom = shapes.geometry.unary_union
-     
     def download_var(variable, statistics, year, mnths): 
         mnths = ['0' + str(i) if i < 10 else str(i) for i in mnths]
         temp_file =  temp_dir + '/download_era5_' + variable + statistics + \
@@ -132,32 +118,8 @@ def download_era5(variables, years = [1940], months = range(13),
         client.retrieve(dataset, request, temp_file)
         return(temp_file)
 
-    def crop_cube(file):
-        cube = iris.load_cube(file)
-        lons, lats = np.meshgrid(cube.coord('longitude').points, cube.coord('latitude').points)
-    
-        # Create a mask where True means outside and False means inside the shape
-        mask = ~shapely.intersects_xy(region_geom, lons, lats)
-        
-        cube.data = np.where(mask, np.nan, cube.data)
-        
-        # Get bounding box (minx, miny, maxx, maxy)
-        min_lon, min_lat, max_lon, max_lat = region_geom.bounds
-
-        # Define constraint functions for lat/lon bounds
-        def lon_constraint(cell):
-            return min_lon <= cell <= max_lon
-
-        def lat_constraint(cell):
-            return min_lat <= cell <= max_lat
-
-        # Apply constraints to crop the cube
-        cropped_cube = cube.extract(iris.Constraint(latitude=lat_constraint, 
-                                                    longitude=lon_constraint))
-        
-        return cropped_cube   
          
-    def process_var(variable, statistics, variable_out):
+    def process_var(variable, statistics, variable_out, shapeinfo):
         
         out_file = out_dir + '/' + region_name.replace(' ', '_')
         try:
@@ -165,8 +127,6 @@ def download_era5(variables, years = [1940], months = range(13),
         except:
             pass
         
-        #out_file =  out_file + '/' + dataset + '/' + variable_out + '/' + statistics + \
-        #           '_years' +  str(years[0]) + '-' + str(years[-1]) 
         out_file = out_dir + '/' + region_name.replace(' ', '_') + \
                        '/Era5_' + dataset + \
                        '/' + variable_out + '/_years' +  str(years[0]) + '-' + str(years[-1])
@@ -179,20 +139,20 @@ def download_era5(variables, years = [1940], months = range(13),
         
         if os.path.isfile(out_file): return(out_file)
         
-        def for_month(variable, statistics, year, month):
+        def for_month(variable, statistics, year, month, shapeinfo):
             if year == yr_now and month > mnth_now:
                 return 
             file = download_var(variable, statistics, year, [month + 1])
-            if shapefile_path is not None: 
-                out = crop_cube(file)
-            else:
-                out = iris.load_cube(file)
+            cube = iris.load_cube(file)
+            for shinfo in shapeinfo:
+                cube = shinfo[0](cube, **shinfo[1])
+                
             
-            return out     
+            return cube     
             
         
         def for_year(year):
-            cubes = [for_month(variable, statistics, year, month) for month in months]
+            cubes = [for_month(variable, statistics, year, month, shapeinfo) for month in months]
             return cubes
 
         cubes = [for_year(year) for year in years]
@@ -208,7 +168,7 @@ def download_era5(variables, years = [1940], months = range(13),
         return out_file
         
     for var in variables:
-        process_var(var[0], var[1], var[2])
+        process_var(var[0], var[1], var[2], shapeinfo)
 
 yr_now = DT.now().year
 yearss = [range(2002, yr_now + 1)] #range(2020, yr_now + 1), range(yr_now-2, yr_now + 1),  range(2010, yr_now + 1),range(2024, yr_now + 1),  
@@ -217,7 +177,7 @@ mnth_now = DT.now().month - 3
 area = [90, -180, -60, 180]
 dataset = "derived-era5-single-levels-daily-statistics"
 
-variables = [#["total_precipitation", "daily_mean", "pr"], 
+variables = [["total_precipitation", "daily_mean", "pr"], 
              ["2m_temperature", "daily_maximum", "tasmax"],
              ["2m_temperature", "daily_mean", "tas"],
              ["2m_dewpoint_temperature", "daily_minimum", "tasdew"],
@@ -233,7 +193,7 @@ variables = [#["total_precipitation", "daily_mean", "pr"],
             ]
 temp_dir_default = "/data/users/douglas.kelley/Bayesian_fire_models/data-cds/era5_nrt/"
 
-def run_era5_download_for_report(shapefile_path, region_names,  out_dir, 
+def run_era5_download_for_report(shapeinfo, region_names,  out_dir, 
                                  temp_dir = temp_dir_default):
 
     for region_name in region_names:
@@ -244,7 +204,7 @@ def run_era5_download_for_report(shapefile_path, region_names,  out_dir,
                           dataset = dataset, 
                           out_dir = out_dir, 
                           temp_dir = temp_dir,
-                          shapefile_path = shapefile_path)
+                          shapeinfo = shapeinfo)
     '''    
     for years in yearss:
         download_era5(variables, years, months = range(12), 

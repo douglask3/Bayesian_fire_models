@@ -98,6 +98,7 @@ def extrapolate_masked_timeseries(cube, method='nearest'):
 
 # Load cubes
 def regrid_hyde_cube(hyde_file, target_file, hyde_dir = "", target_dir = ""):
+    set_trace()
     hyde_cube = iris.load_cube(hyde_dir + hyde_file)
     era5_cube = iris.load_cube(target_dir + target_file)
     

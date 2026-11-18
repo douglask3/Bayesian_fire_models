@@ -5,6 +5,9 @@ import os
 import numpy as np
 import iris
 import iris.analysis
+import iris.coord_categorisation
+
+
 import cftime
 import cf_units
 import sys
@@ -13,10 +16,6 @@ from constrain_cubes_standard import *
 
 import random
 import itertools
-
-import iris.quickplot as qplt
-import matplotlib.pyplot as plt
-
 
 def interplate_hadgem_to_era5_time(era5_cut, hadgem_cut, era5_time = 'time', hadgem_time = 'time'):
 
@@ -164,8 +163,10 @@ def pc_map(ALL, era5):
 
 def make_variable_inputs(variable_obs, variable_mod, variable_out, 
                          scale_obs, scale_mod, transformation, inverse, 
-                         datadir, regions, model_dir, 
-                         experiments, obs_dataset, hadgem_start_year = 2023, npairs = 10,
+                         datadir, regions, model_dir = "/hadgem_nrt/",
+                         experiments = ["ALL", "NAT"], 
+                         obs_dataset = "/Era5_derived-era5-single-levels-daily-statistics/", 
+                         hadgem_start_year = 2023, npairs = 10,
                          randomise = False):
     
     def make_region_input(region):
@@ -176,10 +177,10 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
             
             files = [dir + file for file in  os.listdir(dir)]
             files = [file for file in files if str(hadgem_start_year) in file.split('/')[-1]]
-            
+                        
             return files
         file_lists = [exp_files(experiment) for experiment in experiments]
-        
+         
         if randomise:
             all_pairs = list(itertools.product(file_lists[0], file_lists[1]))
         else: 
@@ -212,15 +213,15 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
             if transformation is not None and transform: 
                 cube.data = transformation(cube.data)
             return cube
-    
+        
         era5 = open_data(obs_file, scale_obs)
         era5.coord('valid_time').rename('time')
+        #make_ENSO_cf(era5, obs_file, variable_out)
         for i, exp_file in enumerate(exp_files):
             ALL = open_data(exp_file[0], scale_mod)
             NAT = open_data(exp_file[1], scale_mod)
             [ALL, NAT] = constrain_to_common_time([ALL, NAT])
             ALL, NAT = grab_year_info_hadgem(ALL, NAT, 2024)#exp_file[2])
-            
             
             def map_exp(cube):
                 era5_cut, cube = cut_era5_hadgem_to_time(era5, cube)
@@ -233,7 +234,6 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
                 return cube, era5_cut
             ALL, era5_cut = map_exp(ALL)
             NAT, era5_cut = map_exp(NAT)
-            
             
             if variable_out == "dry_days": 
                 '''
@@ -278,7 +278,7 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
             
                 cf = era5_cut.copy()
                 cf.data += NAT.data - ALL.data
-            
+             
             #cf_blank, correct = cut_era5_hadgem_to_time(era5, correct)
             #correct = interplate_hadgem_to_era5_time(cf_blank, correct)
             
@@ -312,13 +312,8 @@ def make_variable_inputs(variable_obs, variable_mod, variable_out,
             
             os.makedirs(os.path.dirname(counter_file), exist_ok=True)
             iris.save(cf, counter_file)
-            
         
-    [make_region_input(region) for region in regions]
-    
-
-model_dir = "/hadgem_nrt/"
-obs_dataset = "/Era5_derived-era5-single-levels-daily-statistics/"
+    [make_region_input(region) for region in regions] 
 
 def dry_dayx(x, thresh = 0.1):
     x = x < thresh
@@ -346,27 +341,41 @@ def slog(x):
 def sexp(y):
     return np.exp(y) - 0.0000000001
 
-transformations = [log1, dry_dayx, logit, None, None, log1, slog, slog, slog]
-inverses = [exp1, conv2float, logistic, None, None, exp1, sexp, sexp, sexp]
-variables_obs = ["vpd", "pr", 'hursmin', 'tasmax', 'tas', 'pr', 'wind', 'WindGust1', 'WindGust2']
-variables_mod = ["vpd", "pr", 'hursmin', 'tasmax', 'tas', 'pr', 'sfcWind', 'sfcWind', 'sfcWind']
-variables_out = ["vpd", "dry_days", 'hursmin', 'tas_max', 'tas_mean', 'pr', 'wind', 'WindGust1', 'WindGust2']
-scales_mod = [1/1000, 60*60*24, 1/100, 1, 1, 60*60*24, 1, 1, 1]
-scales_obs = [1/1000, 24*1000, 1, 1, 1, 24*1000, 1, 1, 1]
 
 
-def make_all_variable_inputs(variables_obs, variables_mod, variables_out, scales_mod,
-                             transformations, inverses, *args, **kw):
 
-    for vobs, vmod, vout, sco, scm, tran, invr in zip(variables_obs, variables_mod, variables_out, 
-                                                scales_obs, scales_mod, transformations, inverses): 
-        if vobs != "vpd":
+def make_all_variable_inputs(variables_obs   = ["vpd", "pr", 'hursmin', 
+                                                'tasmax', 'tas', 
+                                                'pr', 'wind', 'WindGust1', 'WindGust2'], 
+                             variables_mod   = ["vpd", "pr", 'hursmin', 
+                                                'tasmax', 'tas', 
+                                                'pr', 'sfcWind', 'sfcWind', 'sfcWind'], 
+                             variables_out   = ["vpd", "dry_days", 'hursmin', 
+                                                'tas_max', 'tas_mean', 
+                                                'pr', 'wind', 'WindGust1', 'WindGust2'], 
+                             scales_mod      = [1/1000, 60*60*24, 1/100, 
+                                                1, 1, 
+                                                60*60*24, 1, 1, 1],
+                             scales_obs      = [1/1000, 24*1000, 
+                                                1, 1, 
+                                                1, 24*1000, 1, 1, 1],
+                             transformations = [log1, dry_dayx, logit, 
+                                                None, None, 
+                                                log1, slog, slog, slog], 
+                             inverses        = [exp1, conv2float, logistic, 
+                                                None, None, 
+                                                exp1, sexp, sexp, sexp], 
+                             *args, **kw):
+                     
+    for vobs, vmod, vout, sco, scm, tran, invr in zip(variables_obs, variables_mod, 
+                                                      variables_out, scales_obs, scales_mod, 
+                                                      transformations, inverses): 
+        if vout == "tas_max":
             make_variable_inputs(vobs, vmod, vout, sco, scm, tran, invr, *args, **kw)
 
 if __name__=="__main__":
     dir = "data/data/driving_data2526/nrt_raw/"
-
-    experiments = ["ALL", "NAT"]
+    
     regions = [
                #"Midwestern Canadian Shield forests", 
                "Chilean Temperate Forests and Matorral", 
@@ -374,9 +383,6 @@ if __name__=="__main__":
                #"Northwest Iberia", 
                #"Scottish Highlands"
                ]
-
-    make_all_variable_inputs(variables_obs, variables_mod, variables_out, 
-                             scales_mod, transformations, inverses, 
-                             dir, regions, model_dir, 
-                             experiments, obs_dataset)
+    
+    make_all_variable_inputs(datadir = dir, regions = regions)
 

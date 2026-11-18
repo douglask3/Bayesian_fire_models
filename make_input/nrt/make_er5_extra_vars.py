@@ -2,6 +2,7 @@ from pdb import set_trace
 import os.path
 import os
 from pathlib import Path
+import glob
 
 import numpy as np
 import iris
@@ -54,29 +55,39 @@ def make_wind(inputs):
     out.rename('wind speed')
     return out
     
-def make_extra_var(variables, FUN, out_name, region, dir, experiment, file):
+def make_extra_var(variables, FUN, out_name, region, dir, experiment, file, shapeinfo):
     def open_var(var):
         filename = dir + region.replace(' ', '_')  + '/'  + experiment + '/' + var + '/' + file
-        cube = iris.load_cube(filename)
-        cube = contrain_to_sow_shapefile(cube, "data/data/driving_data2526/Focal_regions/SoW2526_Focal_MASTER_20260218.shp", region)
         
-        return cube
+        filenames = glob.glob(filename)
+        def open_constrain(filename):
+            cube = iris.load_cube(filename)
+            if shapeinfo is not None:
+                for shpinf in shapeinfo:
+                    cube = shpinf[0](cube, **shpinf[1])
+            return cube, filename
+        return [open_constrain(filename) for filename in filenames]
 
-    out_filename = dir + region.replace(' ', '_')  + '/'  + \
-                    experiment + '/' + out_name + '/' + file
     
-    #if Path(out_filename).exists(): 
-    #    return None
+    
+    
     inputs = [open_var(var) for var in variables]
-    inputs = constrain_to_common_time(inputs)
-    
-    output = FUN(inputs)
-    Path(out_filename).parent.mkdir(parents=True, exist_ok=True)
-    iris.save(output, out_filename)
+    for i in range(len(inputs[0])):
+        
+        out_filename = dir + region.replace(' ', '_')  + '/'  + \
+                    experiment + '/' + out_name + '/' + inputs[0][i][1].split('/')[-1]
+        if Path(out_filename).exists(): 
+            continue
+        input = [cubes[i][0] for cubes in inputs]
+        input = constrain_to_common_time(input)
+        
+        output = FUN(input)
+        Path(out_filename).parent.mkdir(parents=True, exist_ok=True)
+        iris.save(output, out_filename)
 
-def make_era5_extra_vars(dir, regions, 
+def make_era5_extra_vars(dir, regions, shapeinfo,
                          experiment = "Era5_derived-era5-single-levels-daily-statistics/",
-                         files = ['_years2002-20262.nc'],
+                         files = ['_years*.nc'],
                          variables = [["u-wind", "v-wind"], 
                                       ["tasdew", "tasmax"], 
                                       ["tasdew", "tas"], 
@@ -86,7 +97,7 @@ def make_era5_extra_vars(dir, regions,
     for region in regions:
         for file in files:
             for vars, FUN, outname in zip(variables, FUNs, output_names):
-                make_extra_var(vars, FUN, outname, region, dir, experiment, file)
+                make_extra_var(vars, FUN, outname, region, dir, experiment, file, shapeinfo)
 
 if __name__=="__main__":
     dir = "data/data/driving_data2526/nrt_raw/"
