@@ -171,6 +171,7 @@ def runSim_MaxEntFire(trace, sample_for_plot, X, eg_cube, lmask, run_name,
         try:
             prob = iris.cube.CubeList(mout).merge_cube()
         except:
+            print(iris.cube.CubeList(mout).merge())
             set_trace()
         
         prob = prob.collapsed('realization', iris.analysis.MEAN)
