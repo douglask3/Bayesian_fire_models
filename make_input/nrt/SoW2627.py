@@ -74,8 +74,7 @@ if __name__=="__main__":
                  [constrain_natural_earth, {"Country": ["Indonesia"]}]]
     regions = "Indonesia"
     
-    #make_nrt_inputs(data_dir, shapeinfo, regions)
-
+    make_nrt_inputs(data_dir, shapeinfo, regions)
 
     Europe_counties = ["Norway", "France", "Sweden", "Belarus", "Ukraine", "Poland", "Austria", "Hungary", "Moldova", "Romania", "Lithuania", "Latvia", "Estonia", "Germany", "Bulgaria", "Greece", "Albania", "Croatia", "Switzerland", "Luxembourg", "Belgium", "Netherlands", "Portugal", "Spain", "Ireland", "Italy", "Denmark", "United Kingdom", "Iceland", "Slovenia", "Finland", "Slovakia", "Czechia", "Bosnia and Herz", "North Macedonia", "Serbia", "Montenegro", "Kosovo"]
     shapeinfo = [[contrain_coords, {"extent": [-25, 60, 32, 73]}],
