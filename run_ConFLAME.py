@@ -12,6 +12,9 @@ import datetime
 import sys
 sys.path.append('libs/')
 sys.path.append('src/attribution/')
+sys.path.append('src/train/')
+sys.path.append('src/evaluate/')
+
 from climtatology_difference import *
 from above_percentile_mean import *
 from plot_maps import *
