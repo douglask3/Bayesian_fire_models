@@ -69,12 +69,11 @@ def attribution_analysis(dir1, dir2, obs_dir, obs_file_nc = "burned_area.nc",
     
 
 if __name__=="__main__":
-
+    
     dir1 = "outputs/outputs_scratch/SoW2526/attribution-HadGEM-test29/"
     dir1 = "outputs/outputs_scratch/SoW2526/attribution-HadGEM-test29-fuelcf4/"
     dir1 = "outputs/outputs_scratch/SoW2526/attribution-HadGEM-test29-fuelcf4-rerun2/"
     dir2 = "/_16-frac_points_0.5/"
-
     dir1 = "outputs/outputs_scratch/SoW2526/Final2/<<region>>/hadgem3/samples/_16-frac_points_1e-08/"
     dir2 = None
 

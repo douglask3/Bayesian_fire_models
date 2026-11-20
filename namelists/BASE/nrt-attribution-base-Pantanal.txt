@@ -1,6 +1,6 @@
 ## model info
 regions:: ['Pantanal']
-model_title::  'ConFLAME_nrt-attribution-base-2/<<region>>'
+model_title::  'BASE/ConFLAME_nrt-attribution-base-2/<<region>>'
 
 ## input data paths and filenames
 dir_training:: "data/data/driving_data2425/<<region>>/nrt/era5_monthly/"
