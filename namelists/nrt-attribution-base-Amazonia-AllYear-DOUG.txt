@@ -1,6 +1,6 @@
 ## model info
 regions:: ['Amazon']
-model_title::  'Amazon-Maria-full-3-all-year-masked/<<region>>'
+model_title::  'Amazon-Maria-full-3-all-year-masked-RERUN2/<<region>>'
 
 ## input data paths and filenames
 dir_training:: "data/data/driving_data_base/<<region>>/nrt/era5_monthly/"
@@ -56,7 +56,7 @@ link_func_class:: MaxEnt
 niterations:: 1000
 cores:: 10
 
-fraction_data_for_sample:: 0.2
+fraction_data_for_sample:: 0.1
 min_data_points_for_sample:: 2000
 
 
