@@ -44,6 +44,10 @@ def print_diffs(cube1, cube2):
     print([coord.name() for coord in cube2.aux_coords])
 
 
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from itertools import repeat
+
+
 def HadGEM_extract_variable(experiment, variable, start_year, dir, sub_dir, out_dir, temp_dir,
                      region_names = None, shapeinfo = None):
     
@@ -156,12 +160,33 @@ def HadGEM_extract_variable(experiment, variable, start_year, dir, sub_dir, out_
             pass 
     [process_memember_try(member, shapeinfo) for member in ensembles]
 
-def HadGEM_extract_variables(experiments, variables, *args, **kw):
-    for experiment in experiments:
-        print(experiment)
-        for variable in variables:
-            HadGEM_extract_variable(experiment, variable, *args, **kw)
+#def HadGEM_extract_variables(experiments, variables, *args, **kw):
+#    for experiment in experiments:
+#        print(experiment)
+#        for variable in variables:
+#            HadGEM_extract_variable(experiment, variable, *args, **kw)
 
+
+def HadGEM_extract_variables(experiments, variables, *args, **kw):
+    with ProcessPoolExecutor() as pool:
+
+        futures = [
+            pool.submit(
+                HadGEM_extract_variable,
+                experiment,
+                variable,
+                *args,
+                **kw
+            )
+            for experiment in experiments
+            for variable in variables
+        ]
+
+        for future in as_completed(futures):
+            try:
+                future.result()
+            except Exception:
+                pass
 
 
 dir = "/data/users/opatt/HadGEM3-A-N216/"
